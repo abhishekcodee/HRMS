@@ -1,0 +1,50 @@
+export const theme = {
+  dark: {
+    bgApp: '#0b0f19',
+    background: '#0b0f19',
+    bgSurface: '#111827',
+    bgSurfaceHover: '#1f2937',
+    surface: '#111827',
+    card: '#1f2937',
+    border: 'rgba(255, 255, 255, 0.08)',
+    textPrimary: '#f9fafb',
+    textSecondary: '#9ca3af',
+    textMuted: '#6b7280',
+    text: '#f9fafb',
+    primary: '#6366f1',
+    primaryDark: '#4f46e5',
+    success: '#34d399',
+    successBg: 'rgba(16, 185, 129, 0.15)',
+    warning: '#fbbf24',
+    warningBg: 'rgba(245, 158, 11, 0.15)',
+    error: '#f87171',
+    errorBg: 'rgba(239, 68, 68, 0.15)',
+    info: '#60a5fa',
+    infoBg: 'rgba(59, 130, 246, 0.15)'
+  },
+  light: {
+    bgApp: '#f8fafc',
+    background: '#f8fafc',
+    bgSurface: '#ffffff',
+    bgSurfaceHover: '#f1f5f9',
+    surface: '#ffffff',
+    card: '#ffffff',
+    border: '#e2e8f0',
+    textPrimary: '#0f172a',
+    textSecondary: '#475569',
+    textMuted: '#64748b',
+    text: '#0f172a',
+    primary: '#4f46e5',
+    primaryDark: '#4338ca',
+    success: '#047857',
+    successBg: '#ecfdf5',
+    warning: '#b45309',
+    warningBg: '#fffbeb',
+    error: '#b91c1c',
+    errorBg: '#fef2f2',
+    info: '#1d4ed8',
+    infoBg: '#eff6ff'
+  }
+};
+
+export const colors = theme.dark;
