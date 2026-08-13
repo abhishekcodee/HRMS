@@ -290,48 +290,6 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
         </Card>
-
-        {/* Quick Demo Test Credentials Helper */}
-        <div
-          style={{
-            marginTop: '1.5rem',
-            padding: '1rem',
-            borderRadius: '12px',
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            textAlign: 'center',
-          }}
-        >
-          <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Local MySQL Test Credentials
-          </p>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickFill('admin@hrms.com', 'Admin@123')}
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
-            >
-              Admin View
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickFill('employer@hrms.com', 'Employer@123')}
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
-            >
-              Employer View
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleQuickFill('EMP001', 'Employee1@123')}
-              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
-            >
-              Employee View (EMP001)
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Forgot Password Modal */}

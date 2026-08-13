@@ -51,7 +51,7 @@ export const NotificationDrawer: React.FC<{ isOpen: boolean; onClose: () => void
                 />
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <Badge variant={n.type === 'LEAVE' ? 'warning' : n.type === 'PAYROLL' ? 'success' : 'info'}>
+                <Badge variant={n.type === 'LEAVE' ? 'warning' : 'info'}>
                   {n.type}
                 </Badge>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>

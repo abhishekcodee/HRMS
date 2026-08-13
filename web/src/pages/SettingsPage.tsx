@@ -83,7 +83,6 @@ export const SettingsPage: React.FC = () => {
           { id: 'company', label: 'Company Info', icon: <Building2 size={16} /> },
           { id: 'attendance', label: 'Attendance Rules', icon: <Clock size={16} /> },
           { id: 'leave', label: 'Leave Policies' },
-          { id: 'payroll', label: 'Payroll & Tax Setup', icon: <DollarSign size={16} /> },
           { id: 'notifications', label: 'Notifications', icon: <Bell size={16} /> },
           { id: 'security', label: 'Security & Auth', icon: <Lock size={16} /> }
         ]}
@@ -236,39 +235,7 @@ export const SettingsPage: React.FC = () => {
               </FormSection>
             )}
 
-            {activeTab === 'payroll' && (
-              <FormSection title="India Compliance Payroll Setup" description="Provident Fund (PF), ESI, and Tax Year configuration">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      PF Contribution (%)
-                    </label>
-                    <Input
-                      value={settings.pfRate}
-                      onChange={e => setSettings({ ...settings, pfRate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      ESI Contribution (%)
-                    </label>
-                    <Input
-                      value={settings.esiRate}
-                      onChange={e => setSettings({ ...settings, esiRate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
-                      Tax Year Start Month
-                    </label>
-                    <Input
-                      value={settings.taxYearStart}
-                      onChange={e => setSettings({ ...settings, taxYearStart: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </FormSection>
-            )}
+
 
             {activeTab === 'notifications' && (
               <FormSection title="Notification Preferences" description="Configure automated email alerts and daily digests">

@@ -5,7 +5,6 @@ import {
   getEmployeeProfile,
   getEmployeeAttendance,
   getEmployeeLeave,
-  getEmployeePayroll,
   getEmployeeDocuments,
 } from '../modules/employee/employeeSelfServiceController.js';
 
@@ -18,5 +17,4 @@ employeeRouter.get('/dashboard', getEmployeeDashboard);
 employeeRouter.get('/profile', getEmployeeProfile);
 employeeRouter.get('/attendance', getEmployeeAttendance);
 employeeRouter.get('/leave', getEmployeeLeave);
-employeeRouter.get('/payroll', getEmployeePayroll);
 employeeRouter.get('/documents', getEmployeeDocuments);

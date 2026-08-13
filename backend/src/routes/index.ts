@@ -10,11 +10,11 @@ import { employeesModule } from '../modules/employees/index.js';
 import { attendanceModule } from '../modules/attendance/index.js';
 import { zktecoModule } from '../modules/zkteco/index.js';
 import { leaveModule } from '../modules/leave/index.js';
-import { payrollModule } from '../modules/payroll/index.js';
 import { documentsModule } from '../modules/documents/index.js';
 import { notificationsModule } from '../modules/notifications/index.js';
 import { reportsModule } from '../modules/reports/index.js';
 import { auditModule } from '../modules/audit/index.js';
+import { masterRouter } from './master.routes.js';
 
 export const v1Router = Router();
 
@@ -31,10 +31,10 @@ v1Router.use('/roles', rolesModule.router);
 v1Router.use('/permissions', permissionsModule.router);
 v1Router.use('/organization', organizationModule.router);
 v1Router.use('/employees', employeesModule.router);
+v1Router.use('/master', masterRouter);
 v1Router.use('/attendance', attendanceModule.router);
 v1Router.use('/zkteco', zktecoModule.router);
 v1Router.use('/leave', leaveModule.router);
-v1Router.use('/payroll', payrollModule.router);
 v1Router.use('/documents', documentsModule.router);
 v1Router.use('/notifications', notificationsModule.router);
 v1Router.use('/reports', reportsModule.router);

@@ -72,7 +72,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/teams', label: 'Teams', icon: <Users2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll', label: 'Payroll', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/documents', label: 'Documents', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
 
@@ -81,7 +80,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/my-attendance', label: 'My Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-leave', label: 'My Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-documents', label: 'My Documents', icon: <FileText size={20} />, roles: [UserRole.EMPLOYEE] },
-    { path: '/my-payslips', label: 'My Payslips', icon: <Receipt size={20} />, roles: [UserRole.EMPLOYEE] },
 
     // Admin Only System Controls
     { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN] },

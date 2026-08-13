@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardBody, Button, Modal, Select, DatePicker } from '../components/ui';
-import { BarChart3, FileSpreadsheet, Download, CalendarDays, Users, Receipt, FileCheck2 } from 'lucide-react';
+import { BarChart3, FileSpreadsheet, Download, CalendarDays, Users, FileCheck2 } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
@@ -26,13 +26,6 @@ export const ReportsPage: React.FC = () => {
       title: 'Workforce Census & Demographic Report',
       description: 'Active headcount analysis, department distribution, team hierarchy, and tenure metrics.',
       icon: <Users size={24} color="var(--info-text)" />
-    },
-    {
-      id: 'pay-register',
-      category: 'Payroll',
-      title: 'Monthly India Payroll Register (Form 16/PF/ESI)',
-      description: 'Gross salary totals, Provident Fund (PF), ESI, and Tax Deducted at Source (TDS) summary.',
-      icon: <Receipt size={24} color="var(--success-text)" />
     }
   ];
 
@@ -41,7 +34,7 @@ export const ReportsPage: React.FC = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Executive Reports Catalog</h1>
-          <p className="page-subtitle">Generate & export compliance analytics across 4 operational modules</p>
+          <p className="page-subtitle">Generate & export compliance analytics across 3 operational modules</p>
         </div>
       </div>
 

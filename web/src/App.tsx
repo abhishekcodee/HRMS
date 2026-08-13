@@ -15,7 +15,6 @@ import EmployeeDetailPage from './pages/EmployeeDetailPage';
 import DepartmentsTeamsPage from './pages/DepartmentsTeamsPage';
 import AttendancePage from './pages/AttendancePage';
 import LeavePage from './pages/LeavePage';
-import PayrollPage from './pages/PayrollPage';
 import DocumentsPage from './pages/DocumentsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -95,10 +94,6 @@ export function App() {
                           {/* Leave Management */}
                           <Route path="/leave" element={<LeavePage />} />
                           <Route path="/my-leave" element={<LeavePage />} />
-                          
-                          {/* Payroll Engine */}
-                          <Route path="/payroll" element={<PayrollPage />} />
-                          <Route path="/my-payslips" element={<PayrollPage />} />
                           
                           {/* Documents & Vault */}
                           <Route path="/documents" element={<DocumentsPage />} />

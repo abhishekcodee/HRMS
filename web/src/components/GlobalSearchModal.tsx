@@ -33,7 +33,7 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
     <Modal isOpen={isOpen} onClose={onClose} title="Global HRMS Search" maxWidth="560px">
       <div>
         <Input
-          placeholder="Search employees, departments, attendance, payroll..."
+          placeholder="Search employees, departments, attendance, documents..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           icon={<Search size={18} />}

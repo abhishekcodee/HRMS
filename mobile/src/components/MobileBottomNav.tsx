@@ -20,7 +20,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           { id: 'home', label: 'Home', icon: '🏠' },
           { id: 'attendance', label: 'Attendance', icon: '📅' },
           { id: 'leave', label: 'Leave', icon: '📝' },
-          { id: 'payslips', label: 'Payslips', icon: '🧾' },
           { id: 'profile', label: 'Profile', icon: '👤' }
         ];
       case UserRole.EMPLOYER:

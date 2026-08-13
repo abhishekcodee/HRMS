@@ -34,18 +34,97 @@ export async function seedDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // Master Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_departments (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        code VARCHAR(20) NOT NULL UNIQUE,
+        description TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_designations (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        department_id VARCHAR(36),
+        department_name VARCHAR(100),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_branches (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        code VARCHAR(20) NOT NULL,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        country VARCHAR(100) DEFAULT 'India',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_shifts (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        start_time VARCHAR(20) NOT NULL,
+        end_time VARCHAR(20) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_employment_types (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        code VARCHAR(20) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS employee_profiles (
         id VARCHAR(36) PRIMARY KEY,
         user_id VARCHAR(36) NOT NULL,
         department_name VARCHAR(100),
         designation VARCHAR(100),
+        branch_name VARCHAR(100),
+        shift_name VARCHAR(100),
+        employment_type VARCHAR(50),
         joining_date VARCHAR(20),
         salary DECIMAL(12,2),
+        gender VARCHAR(20),
+        dob VARCHAR(20),
+        address TEXT,
+        emergency_contact VARCHAR(255),
+        emergency_phone VARCHAR(50),
+        manager_id VARCHAR(36),
+        manager_name VARCHAR(255),
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Ensure columns exist on employee_profiles if previously created
+    const extraCols = [
+      'ALTER TABLE employee_profiles ADD COLUMN branch_name VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN shift_name VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN employment_type VARCHAR(50);',
+      'ALTER TABLE employee_profiles ADD COLUMN gender VARCHAR(20);',
+      'ALTER TABLE employee_profiles ADD COLUMN dob VARCHAR(20);',
+      'ALTER TABLE employee_profiles ADD COLUMN address TEXT;',
+      'ALTER TABLE employee_profiles ADD COLUMN emergency_contact VARCHAR(255);',
+      'ALTER TABLE employee_profiles ADD COLUMN emergency_phone VARCHAR(50);',
+      'ALTER TABLE employee_profiles ADD COLUMN manager_id VARCHAR(36);',
+      'ALTER TABLE employee_profiles ADD COLUMN manager_name VARCHAR(255);',
+    ];
+    for (const sql of extraCols) {
+      try { await conn.query(sql); } catch (_) {}
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS employer_profiles (
@@ -83,22 +162,6 @@ export async function seedDatabase() {
         days_count INT NOT NULL,
         reason TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS payroll_records (
-        id VARCHAR(36) PRIMARY KEY,
-        user_id VARCHAR(36) NOT NULL,
-        pay_period VARCHAR(50) NOT NULL,
-        basic_salary DECIMAL(12,2) NOT NULL,
-        allowances DECIMAL(12,2) NOT NULL,
-        deductions DECIMAL(12,2) NOT NULL,
-        net_salary DECIMAL(12,2) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'DISBURSED',
-        disbursed_at DATETIME,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -152,10 +215,58 @@ export async function seedDatabase() {
 
     logger.info('✅ MySQL Tables created/verified.');
 
+    // 1b. Seed Master Tables if empty
+    const [depts]: any = await conn.query('SELECT COUNT(*) as count FROM master_departments');
+    if (depts[0].count === 0) {
+      await conn.query(`INSERT INTO master_departments (id, name, code, description) VALUES
+        (UUID(), 'Information Technology', 'IT', 'Core software development, infrastructure, QA and IT support'),
+        (UUID(), 'Human Resources', 'HR', 'Talent acquisition, employee relations, and HR policies'),
+        (UUID(), 'Finance & Accounts', 'FIN', 'Corporate accounting, tax compliance, and auditing'),
+        (UUID(), 'Sales & Business', 'SLS', 'Enterprise business development and client relations'),
+        (UUID(), 'Operations & Logistics', 'OPS', 'Facilities management and operational planning');`);
+    }
+
+    const [desigs]: any = await conn.query('SELECT COUNT(*) as count FROM master_designations');
+    if (desigs[0].count === 0) {
+      await conn.query(`INSERT INTO master_designations (id, name, department_name) VALUES
+        (UUID(), 'Senior Software Engineer', 'Information Technology'),
+        (UUID(), 'Frontend UI/UX Specialist', 'Information Technology'),
+        (UUID(), 'QA Automation Engineer', 'Information Technology'),
+        (UUID(), 'Talent Acquisition Lead', 'Human Resources'),
+        (UUID(), 'Senior Financial Analyst', 'Finance & Accounts'),
+        (UUID(), 'Director of HR & Operations', 'Human Resources'),
+        (UUID(), 'Chief System Administrator', 'Management');`);
+    }
+
+    const [branches]: any = await conn.query('SELECT COUNT(*) as count FROM master_branches');
+    if (branches[0].count === 0) {
+      await conn.query(`INSERT INTO master_branches (id, name, code, city, state, country) VALUES
+        (UUID(), 'Corporate Headquarters', 'HQ-BLR', 'Bengaluru', 'Karnataka', 'India'),
+        (UUID(), 'Regional Operations Centre', 'ROC-MUM', 'Mumbai', 'Maharashtra', 'India'),
+        (UUID(), 'Tech Innovation Lab', 'TIL-HYD', 'Hyderabad', 'Telangana', 'India');`);
+    }
+
+    const [shifts]: any = await conn.query('SELECT COUNT(*) as count FROM master_shifts');
+    if (shifts[0].count === 0) {
+      await conn.query(`INSERT INTO master_shifts (id, name, start_time, end_time) VALUES
+        (UUID(), 'General Day Shift', '09:00 AM', '06:00 PM'),
+        (UUID(), 'Morning Shift', '07:00 AM', '04:00 PM'),
+        (UUID(), 'Evening Support Shift', '02:00 PM', '11:00 PM');`);
+    }
+
+    const [empTypes]: any = await conn.query('SELECT COUNT(*) as count FROM master_employment_types');
+    if (empTypes[0].count === 0) {
+      await conn.query(`INSERT INTO master_employment_types (id, name, code) VALUES
+        (UUID(), 'Full-Time Permanent', 'FT'),
+        (UUID(), 'Probationary Employee', 'PROB'),
+        (UUID(), 'Contractual Specialist', 'CONT'),
+        (UUID(), 'Internship', 'INT');`);
+    }
+
     // 2. Seed Distinct Individual Test Accounts
     const defaultAccounts = [
       {
-        employeeId: 'ADM001',
+        employeeId: 'ADMIN001',
         fullName: 'Chief System Administrator',
         email: 'admin@hrms.com',
         phone: '+91 98765 00001',
@@ -167,7 +278,7 @@ export async function seedDatabase() {
         designation: 'Chief Administrator',
       },
       {
-        employeeId: 'EMPLOYER001',
+        employeeId: 'ER001',
         fullName: 'Enterprise Employer Officer',
         email: 'employer@hrms.com',
         phone: '+91 98765 00002',
@@ -232,8 +343,14 @@ export async function seedDatabase() {
     ];
 
     for (const acc of defaultAccounts) {
+      // First remove any stale user record having matching email or employee_id that doesn't match both
+      await conn.query(
+        'DELETE FROM users WHERE (email = ? OR employee_id = ?) AND NOT (email = ? AND employee_id = ?)',
+        [acc.email, acc.employeeId, acc.email, acc.employeeId]
+      );
+
       const [existingUsers]: any = await conn.query(
-        'SELECT id FROM users WHERE email = ? OR employee_id = ?',
+        'SELECT id FROM users WHERE email = ? AND employee_id = ?',
         [acc.email, acc.employeeId]
       );
 
@@ -264,9 +381,10 @@ export async function seedDatabase() {
         userId = existingUsers[0].id;
         const passwordHash = await bcrypt.hash(acc.passwordRaw, 10);
         await conn.query(
-          `UPDATE users SET must_change_password = ?, password_hash = ? WHERE id = ?`,
-          [acc.mustChangePassword, passwordHash, userId]
+          `UPDATE users SET full_name = ?, phone = ?, password_hash = ?, role = ?, status = ?, must_change_password = ? WHERE id = ?`,
+          [acc.fullName, acc.phone, passwordHash, acc.role, acc.status, acc.mustChangePassword, userId]
         );
+        logger.info(`Updated user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
       }
 
       if (acc.role === 'employee') {
@@ -310,25 +428,6 @@ export async function seedDatabase() {
               2,
               `Personal leave request for ${acc.fullName}`,
               acc.employeeId === 'EMP001' ? 'APPROVED' : 'PENDING',
-            ]
-          );
-        }
-
-        // Payroll records
-        const [existingPayroll]: any = await conn.query('SELECT id FROM payroll_records WHERE user_id = ?', [userId]);
-        if (existingPayroll.length === 0) {
-          await conn.query(
-            `INSERT INTO payroll_records (id, user_id, pay_period, basic_salary, allowances, deductions, net_salary, status, disbursed_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [
-              uuidv4(),
-              userId,
-              'July 2026',
-              acc.basicSalary,
-              acc.allowances,
-              acc.deductions,
-              acc.salary,
-              'DISBURSED',
             ]
           );
         }

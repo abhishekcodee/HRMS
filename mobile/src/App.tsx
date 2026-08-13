@@ -8,7 +8,6 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeScreen } from './screens/HomeScreen';
 import { AttendanceScreen } from './screens/AttendanceScreen';
 import { LeaveScreen } from './screens/LeaveScreen';
-import { PayslipsScreen } from './screens/PayslipsScreen';
 import { EmployeesScreen } from './screens/EmployeesScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 
@@ -24,8 +23,6 @@ export default function App() {
         return <AttendanceScreen />;
       case 'leave':
         return <LeaveScreen />;
-      case 'payslips':
-        return <PayslipsScreen />;
       case 'employees':
         return <EmployeesScreen />;
       case 'profile':

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { UserRole, MOCK_EMPLOYEES, MOCK_ATTENDANCE, MOCK_LEAVE_REQUESTS, MOCK_PAYSLIPS } from '@hrms/shared';
+import { UserRole, MOCK_EMPLOYEES, MOCK_ATTENDANCE, MOCK_LEAVE_REQUESTS } from '@hrms/shared';
 import { MobileCard } from '../components/MobileCard';
 import { MobileBadge } from '../components/MobileBadge';
 import { MobileButton } from '../components/MobileButton';
@@ -50,7 +50,6 @@ export const HomeScreen: React.FC<{ role: UserRole }> = ({ role }) => {
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>Quick Mobile Actions</Text>
       <MobileButton title="+ Apply for Leave" onPress={() => alert('Mobile Apply Leave (UI Placeholder)')} />
-      <MobileButton title="View July 2026 Payslip" variant="secondary" onPress={() => alert('Viewing Payslip (UI Placeholder)')} />
     </ScrollView>
   );
 };

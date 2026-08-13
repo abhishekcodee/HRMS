@@ -50,16 +50,7 @@ export async function getEmployeeDashboard(req: AuthRequest, res: Response): Pro
       [userId]
     );
 
-    // 4. Fetch Isolated Latest Payroll Record
-    const [payrollRows]: any = await pool.query(
-      `SELECT id, pay_period as payPeriod, basic_salary as basicSalary, allowances, deductions, net_salary as netSalary, status, disbursed_at as disbursedAt
-       FROM payroll_records
-       WHERE user_id = ?
-       ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
-
-    // 5. Fetch Isolated Documents
+    // 4. Fetch Isolated Documents
     const [docRows]: any = await pool.query(
       `SELECT id, title, document_type as documentType, file_url as fileUrl, file_size as fileSize, uploaded_at as uploadedAt
        FROM employee_documents
@@ -79,7 +70,6 @@ export async function getEmployeeDashboard(req: AuthRequest, res: Response): Pro
           sickLeave: 7,
           earnedLeave: 15,
         },
-        latestPayroll: payrollRows[0] || null,
         documents: docRows,
       },
     });
@@ -165,27 +155,6 @@ export async function getEmployeeLeave(req: AuthRequest, res: Response): Promise
     });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch leave records.' } });
-  }
-}
-
-/**
- * Get Logged-In Employee Payslips
- * Strictly WHERE user_id = req.user.id
- */
-export async function getEmployeePayroll(req: AuthRequest, res: Response): Promise<void> {
-  try {
-    const userId = req.user?.id;
-    const [rows]: any = await pool.query(
-      `SELECT id, pay_period as payPeriod, basic_salary as basicSalary, allowances, deductions, net_salary as netSalary, status, disbursed_at as disbursedAt
-       FROM payroll_records
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [userId]
-    );
-
-    res.json({ success: true, data: rows });
-  } catch (error) {
-    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch payslips.' } });
   }
 }
 

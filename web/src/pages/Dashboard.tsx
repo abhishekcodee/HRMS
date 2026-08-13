@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRole } from '../context/RoleContext';
-import { UserRole, MOCK_EMPLOYEES, MOCK_ATTENDANCE, MOCK_LEAVE_REQUESTS, MOCK_LEAVE_BALANCE, MOCK_PAYSLIPS } from '@hrms/shared';
+import { UserRole, MOCK_EMPLOYEES, MOCK_ATTENDANCE, MOCK_LEAVE_REQUESTS, MOCK_LEAVE_BALANCE } from '@hrms/shared';
 import { StatCard, Card, CardHeader, CardTitle, CardBody, Badge, Button, Modal, TableContainer, Table, Thead, Tbody, Tr, Th, Td } from '../components/ui';
 import {
   Users,
@@ -9,7 +9,6 @@ import {
   CalendarDays,
   Clock,
   UserPlus,
-  Receipt,
   CheckCircle2,
   TrendingUp,
   Plus,
@@ -23,7 +22,6 @@ import { useNavigate } from 'react-router-dom';
 export const Dashboard: React.FC = () => {
   const { role, currentUser } = useRole();
   const navigate = useNavigate();
-  const [payrollModalOpen, setPayrollModalOpen] = useState(false);
   const [applyLeaveModalOpen, setApplyLeaveModalOpen] = useState(false);
 
   // Stats Calculations from Mock Data
@@ -91,16 +89,16 @@ export const Dashboard: React.FC = () => {
             subtext="Available for cashout/carryover"
           />
           <StatCard
-            title="Latest Net Salary"
-            value={`₹${(MOCK_PAYSLIPS[0]?.netSalary || 151400).toLocaleString('en-IN')}`}
-            icon={<Receipt size={20} />}
-            subtext="July 2026 Payslip Disbursed"
-            change="PAID"
+            title="Company Attendance Rate"
+            value="94.2%"
+            icon={<TrendingUp size={20} />}
+            subtext="Avg monthly compliance"
+            change="+1.4%"
             changeType="positive"
           />
         </div>
 
-        {/* Recent Payslip & Attendance Overview */}
+        {/* Recent Leave & Attendance Overview */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
           <Card>
             <CardHeader>
@@ -229,19 +227,14 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="page-actions">
           {(role === UserRole.ADMIN || role === UserRole.EMPLOYER) && (
-            <>
-              <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => navigate('/employees')}>
-                + Add Employee
-              </Button>
-              <Button variant="secondary" icon={<Receipt size={16} />} onClick={() => setPayrollModalOpen(true)}>
-                Run Payroll
-              </Button>
-            </>
+            <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => navigate('/employees')}>
+              + Add Employee
+            </Button>
           )}
         </div>
       </div>
 
-      {/* 8 KPI Cards Grid */}
+      {/* KPI Cards Grid */}
       <div className="stat-grid">
         <StatCard
           title="Total Headcount"
@@ -295,15 +288,6 @@ export const Dashboard: React.FC = () => {
           subtext="Completed onboarding"
           change="IT & HR"
           changeType="positive"
-        />
-        <StatCard
-          title="Payroll Status"
-          value="July Paid"
-          icon={<Receipt size={20} />}
-          subtext="₹24.8L Total Disbursed"
-          change="100% Cleared"
-          changeType="positive"
-          onClick={() => navigate('/payroll')}
         />
         <StatCard
           title="Attendance Rate"
@@ -461,31 +445,6 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
       </div>
-
-      {/* Run Payroll Placeholder Modal */}
-      <Modal isOpen={payrollModalOpen} onClose={() => setPayrollModalOpen(false)} title="Execute Monthly Payroll Batch">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            This action triggers monthly payroll computation for all active headcount. All Statutory Deductions (PF, ESI, TDS) will be calculated based on attendance records.
-          </p>
-          <div className="form-group">
-            <label className="form-label">Select Payroll Month</label>
-            <select className="select">
-              <option>August 2026 (Upcoming)</option>
-              <option>July 2026 (Disbursed)</option>
-            </select>
-          </div>
-          <div style={{ padding: '0.85rem', backgroundColor: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-md)', fontSize: '0.825rem', color: 'var(--info-text)' }}>
-            ⚡ Note: Real payroll computation engine will execute statutory rules in Phase 2.
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-            <Button variant="outline" onClick={() => setPayrollModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={() => { setPayrollModalOpen(false); alert('Payroll batch triggered (UI Placeholder).'); }}>
-              Run Payroll Batch
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

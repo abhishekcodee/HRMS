@@ -21,15 +21,81 @@ export const users = mysqlTable('users', {
 });
 
 /**
- * Employee Profiles Table
+ * Master Departments Table
+ */
+export const masterDepartments = mysqlTable('master_departments', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  code: varchar('code', { length: 20 }).notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Master Designations Table
+ */
+export const masterDesignations = mysqlTable('master_designations', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  departmentId: varchar('department_id', { length: 36 }),
+  departmentName: varchar('department_name', { length: 100 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Master Branches / Locations Table
+ */
+export const masterBranches = mysqlTable('master_branches', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  code: varchar('code', { length: 20 }).notNull(),
+  city: varchar('city', { length: 100 }),
+  state: varchar('state', { length: 100 }),
+  country: varchar('country', { length: 100 }).default('India'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Master Shifts Table
+ */
+export const masterShifts = mysqlTable('master_shifts', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  startTime: varchar('start_time', { length: 20 }).notNull(),
+  endTime: varchar('end_time', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Master Employment Types Table
+ */
+export const masterEmploymentTypes = mysqlTable('master_employment_types', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  code: varchar('code', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Employee Profiles Table - Extended Database First Metadata
  */
 export const employeeProfiles = mysqlTable('employee_profiles', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('user_id', { length: 36 }).notNull(),
   departmentName: varchar('department_name', { length: 100 }),
   designation: varchar('designation', { length: 100 }),
+  branchName: varchar('branch_name', { length: 100 }),
+  shiftName: varchar('shift_name', { length: 100 }),
+  employmentType: varchar('employment_type', { length: 50 }),
   joiningDate: varchar('joining_date', { length: 20 }),
   salary: decimal('salary', { precision: 12, scale: 2 }),
+  gender: varchar('gender', { length: 20 }),
+  dob: varchar('dob', { length: 20 }),
+  address: text('address'),
+  emergencyContact: varchar('emergency_contact', { length: 255 }),
+  emergencyPhone: varchar('emergency_phone', { length: 50 }),
+  managerId: varchar('manager_id', { length: 36 }),
+  managerName: varchar('manager_name', { length: 255 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -74,21 +140,7 @@ export const leaveRequests = mysqlTable('leave_requests', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-/**
- * Payroll Records Table - User Isolated & Sensitive
- */
-export const payrollRecords = mysqlTable('payroll_records', {
-  id: varchar('id', { length: 36 }).primaryKey(),
-  userId: varchar('user_id', { length: 36 }).notNull(),
-  payPeriod: varchar('pay_period', { length: 50 }).notNull(), // e.g. "July 2026"
-  basicSalary: decimal('basic_salary', { precision: 12, scale: 2 }).notNull(),
-  allowances: decimal('allowances', { precision: 12, scale: 2 }).notNull(),
-  deductions: decimal('deductions', { precision: 12, scale: 2 }).notNull(),
-  netSalary: decimal('net_salary', { precision: 12, scale: 2 }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('DISBURSED'),
-  disbursedAt: timestamp('disbursed_at'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+
 
 /**
  * Employee Documents Table - User Isolated

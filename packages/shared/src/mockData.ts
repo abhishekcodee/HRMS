@@ -81,27 +81,7 @@ export interface LeaveBalanceMock {
   earnedLeave: { total: number; used: number; remaining: number };
 }
 
-export interface PayslipMock {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeCode: string;
-  departmentName: string;
-  designation: string;
-  monthYear: string;
-  paymentDate: string;
-  grossSalary: number;
-  basicSalary: number;
-  hra: number;
-  specialAllowance: number;
-  pfDeduction: number;
-  esiDeduction: number;
-  tdsDeduction: number;
-  otherDeductions: number;
-  totalDeductions: number;
-  netSalary: number;
-  status: 'PAID' | 'PROCESSING' | 'PENDING';
-}
+
 
 export interface DocumentMock {
   id: string;
@@ -601,71 +581,7 @@ export const MOCK_LEAVE_BALANCE: LeaveBalanceMock = {
   earnedLeave: { total: 15, used: 4, remaining: 11 }
 };
 
-export const MOCK_PAYSLIPS: PayslipMock[] = [
-  {
-    id: 'pay-202607-1001',
-    employeeId: 'emp-1001',
-    employeeName: 'Aarav Patel',
-    employeeCode: 'EMP-1001',
-    departmentName: 'Information Technology',
-    designation: 'Head of IT',
-    monthYear: 'July 2026',
-    paymentDate: '2026-08-01',
-    grossSalary: 185000,
-    basicSalary: 92500,
-    hra: 46250,
-    specialAllowance: 46250,
-    pfDeduction: 11100,
-    esiDeduction: 0,
-    tdsDeduction: 22500,
-    otherDeductions: 0,
-    totalDeductions: 33600,
-    netSalary: 151400,
-    status: 'PAID'
-  },
-  {
-    id: 'pay-202607-1002',
-    employeeId: 'emp-1002',
-    employeeName: 'Priya Sharma',
-    employeeCode: 'EMP-1002',
-    departmentName: 'Human Resources',
-    designation: 'HR Manager',
-    monthYear: 'July 2026',
-    paymentDate: '2026-08-01',
-    grossSalary: 140000,
-    basicSalary: 70000,
-    hra: 35000,
-    specialAllowance: 35000,
-    pfDeduction: 8400,
-    esiDeduction: 0,
-    tdsDeduction: 14000,
-    otherDeductions: 0,
-    totalDeductions: 22400,
-    netSalary: 117600,
-    status: 'PAID'
-  },
-  {
-    id: 'pay-202607-1008',
-    employeeId: 'emp-1008',
-    employeeName: 'Karan Verma',
-    employeeCode: 'EMP-1008',
-    departmentName: 'Information Technology',
-    designation: 'Full Stack Developer',
-    monthYear: 'July 2026',
-    paymentDate: '2026-08-01',
-    grossSalary: 85000,
-    basicSalary: 42500,
-    hra: 21250,
-    specialAllowance: 21250,
-    pfDeduction: 5100,
-    esiDeduction: 637.5,
-    tdsDeduction: 4500,
-    otherDeductions: 0,
-    totalDeductions: 10237.5,
-    netSalary: 74762.5,
-    status: 'PAID'
-  }
-];
+
 
 export const MOCK_DOCUMENTS: DocumentMock[] = [
   {
@@ -725,15 +641,6 @@ export const MOCK_NOTIFICATIONS: NotificationMock[] = [
     link: '/my-leave'
   },
   {
-    id: 'notif-2',
-    type: 'PAYROLL',
-    title: 'July 2026 Payslip Released',
-    message: 'Your salary payslip for July 2026 is now available for download.',
-    timestamp: '2 hours ago',
-    read: false,
-    link: '/my-payslips'
-  },
-  {
     id: 'notif-3',
     type: 'ATTENDANCE',
     title: 'Attendance Punch Exception',
@@ -772,15 +679,5 @@ export const MOCK_AUDIT_LOGS: AuditLogMock[] = [
     module: 'Employee Directory',
     details: 'Updated role & designation for Divya Nair (EMP-1010)',
     ipAddress: '192.168.1.12'
-  },
-  {
-    id: 'log-803',
-    timestamp: '2026-08-10 16:12:00 UTC',
-    actorName: 'Neha Gupta',
-    actorRole: UserRole.EMPLOYEE,
-    action: 'PAYROLL_DISBURSED',
-    module: 'Payroll Engine',
-    details: 'Generated July 2026 salary batch disbursal for 65 active employees',
-    ipAddress: '192.168.1.88'
   }
 ];

@@ -130,9 +130,8 @@ export const UsersRolesPage: React.FC = () => {
     { module: 'Organization Hierarchy (Depts & Teams)', admin: true, employer: true, employee: false },
     { module: 'Attendance Ingestion & Work Duration Logs', admin: true, employer: true, employee: false },
     { module: 'Leave Request Approvals', admin: true, employer: true, employee: false },
-    { module: 'Payroll Disbursal & Compliance Reports', admin: true, employer: true, employee: false },
     { module: 'Company Documents Vault', admin: true, employer: true, employee: false },
-    { module: 'Personal Profile, My Leave & My Payslips', admin: true, employer: true, employee: true },
+    { module: 'Personal Profile & My Leave', admin: true, employer: true, employee: true },
     { module: 'Admin User Creation & Account Status', admin: true, employer: false, employee: false },
     { module: 'System Security & MySQL Audit Logs', admin: true, employer: false, employee: false },
   ];
