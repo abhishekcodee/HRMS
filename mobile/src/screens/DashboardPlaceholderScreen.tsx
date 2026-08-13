@@ -22,7 +22,7 @@ export function DashboardPlaceholderScreen({ onLogout }: Props) {
       <View style={styles.grid}>
         <View style={styles.card}>
           <Text style={styles.cardHeader}>Biometric Attendance</Text>
-          <Text style={styles.cardStatus}>ZKTeco Auto-Synced</Text>
+          <Text style={styles.cardStatus}>eSSL Biometric Auto-Synced</Text>
           <Text style={styles.cardSub}>No manual check-in required</Text>
         </View>
 

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { v1Router } from './routes/index.js';
+import { zktecoRouter } from './routes/zkteco.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { AppError } from './utils/app-error.js';
 
@@ -22,6 +23,9 @@ app.use(
 app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// eSSL / ZKTeco Biometric ADMS Hardware Direct Push Handler
+app.use('/iclock', zktecoRouter);
 
 // API Versioned Routing
 app.use(env.API_PREFIX, v1Router);

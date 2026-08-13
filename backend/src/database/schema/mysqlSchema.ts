@@ -137,10 +137,64 @@ export const leaveRequests = mysqlTable('leave_requests', {
   daysCount: int('days_count').notNull(),
   reason: text('reason'),
   status: varchar('status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'APPROVED' | 'REJECTED'
+  rejectionRemarks: text('rejection_remarks'),
+  reviewedBy: varchar('reviewed_by', { length: 36 }),
+  reviewedAt: timestamp('reviewed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+/**
+ * Email Notifications Log Table
+ */
+export const emailNotifications = mysqlTable('email_notifications', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  employeeId: varchar('employee_id', { length: 50 }),
+  leaveRequestId: varchar('leave_request_id', { length: 36 }),
+  recipientEmail: varchar('recipient_email', { length: 255 }).notNull(),
+  emailType: varchar('email_type', { length: 50 }).notNull(), // 'LEAVE_APPLIED' | 'LEAVE_APPROVED' | 'LEAVE_REJECTED' | 'SALARY_SLIP'
+  subject: varchar('subject', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'SENT' | 'FAILED'
+  sentAt: timestamp('sent_at'),
+  errorMessage: text('error_message'),
+  retryCount: int('retry_count').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
 
+/**
+ * Salary Slip Email Logs Table (Duplicate Protection)
+ */
+export const salarySlipEmailLogs = mysqlTable('salary_slip_email_logs', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  employeeId: varchar('employee_id', { length: 50 }).notNull(),
+  employeeEmail: varchar('employee_email', { length: 255 }).notNull(),
+  salaryMonth: varchar('salary_month', { length: 20 }).notNull(),
+  salaryYear: varchar('salary_year', { length: 10 }).notNull(),
+  salarySlipFile: varchar('salary_slip_file', { length: 555 }),
+  emailSubject: varchar('email_subject', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'SENT' | 'FAILED'
+  sentAt: timestamp('sent_at'),
+  errorMessage: text('error_message'),
+  retryCount: int('retry_count').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Leave Audit Trail Table
+ */
+export const leaveAuditTrail = mysqlTable('leave_audit_trail', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  leaveRequestId: varchar('leave_request_id', { length: 36 }).notNull(),
+  employeeId: varchar('employee_id', { length: 50 }).notNull(),
+  action: varchar('action', { length: 50 }).notNull(), // 'LEAVE_APPLIED' | 'LEAVE_APPROVED' | 'LEAVE_REJECTED' | 'LEAVE_CANCELLED'
+  previousStatus: varchar('previous_status', { length: 20 }),
+  newStatus: varchar('new_status', { length: 20 }).notNull(),
+  actionBy: varchar('action_by', { length: 255 }).notNull(),
+  actionDate: timestamp('action_date').notNull().defaultNow(),
+  remarks: text('remarks'),
+  ipAddress: varchar('ip_address', { length: 50 }),
+});
 
 /**
  * Employee Documents Table - User Isolated
@@ -180,3 +234,35 @@ export const auditLogs = mysqlTable('audit_logs', {
   ipAddress: varchar('ip_address', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+/**
+ * eSSL / ZKTeco Biometric Devices Table
+ */
+export const biometricDevices = mysqlTable('biometric_devices', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  deviceSn: varchar('device_sn', { length: 100 }).notNull().unique(),
+  deviceName: varchar('device_name', { length: 150 }).notNull(),
+  ipAddress: varchar('ip_address', { length: 50 }),
+  port: int('port').default(4370),
+  location: varchar('location', { length: 150 }),
+  status: varchar('status', { length: 20 }).notNull().default('OFFLINE'), // 'ONLINE' | 'OFFLINE'
+  lastPingAt: timestamp('last_ping_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Raw eSSL / ZKTeco Biometric Punch Logs Table
+ */
+export const biometricPunchLogs = mysqlTable('biometric_punch_logs', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  deviceSn: varchar('device_sn', { length: 100 }).notNull(),
+  employeeId: varchar('employee_id', { length: 50 }).notNull(),
+  punchTime: timestamp('punch_time').notNull(),
+  verifyType: varchar('verify_type', { length: 50 }).default('Fingerprint'), // 'Fingerprint' | 'Face' | 'Card' | 'Pin'
+  punchState: varchar('punch_state', { length: 20 }).default('0'), // '0'=In, '1'=Out
+  rawPayload: text('raw_payload'),
+  processed: boolean('processed').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+

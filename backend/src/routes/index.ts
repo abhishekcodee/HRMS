@@ -15,6 +15,8 @@ import { notificationsModule } from '../modules/notifications/index.js';
 import { reportsModule } from '../modules/reports/index.js';
 import { auditModule } from '../modules/audit/index.js';
 import { masterRouter } from './master.routes.js';
+import { payrollRouter } from './payroll.routes.js';
+import { zktecoRouter } from './zkteco.routes.js';
 
 export const v1Router = Router();
 
@@ -33,8 +35,10 @@ v1Router.use('/organization', organizationModule.router);
 v1Router.use('/employees', employeesModule.router);
 v1Router.use('/master', masterRouter);
 v1Router.use('/attendance', attendanceModule.router);
-v1Router.use('/zkteco', zktecoModule.router);
+v1Router.use('/zkteco', zktecoRouter);
+v1Router.use('/essl', zktecoRouter);
 v1Router.use('/leave', leaveModule.router);
+v1Router.use('/payroll', payrollRouter);
 v1Router.use('/documents', documentsModule.router);
 v1Router.use('/notifications', notificationsModule.router);
 v1Router.use('/reports', reportsModule.router);

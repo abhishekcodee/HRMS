@@ -47,7 +47,7 @@ export const AttendancePage: React.FC = () => {
         <div>
           <h1 className="page-title">Biometric Attendance Logs</h1>
           <p className="page-subtitle">
-            {role === UserRole.EMPLOYEE ? 'My Daily Punch & Work Hours Log' : 'Automated ZKTeco Ingestion & Daily Work Duration Processing'}
+            {role === UserRole.EMPLOYEE ? 'My Daily Punch & Work Hours Log' : 'Automated eSSL Biometric Ingestion & Daily Work Duration Processing'}
           </p>
         </div>
         <div className="page-actions">
@@ -59,9 +59,9 @@ export const AttendancePage: React.FC = () => {
 
       {role !== UserRole.EMPLOYEE && (
         <>
-          {/* ZKTeco Integration Note Banner */}
-          <Alert variant="info" title="ZKTeco Biometric Device Automated Sync Enabled">
-            Attendance punches are automatically captured from physical biometric terminal IP endpoints. Manual employee check-in creation is prohibited as per compliance policy.
+          {/* eSSL Integration Note Banner */}
+          <Alert variant="info" title="eSSL Biometric Machine Automated Sync Enabled">
+            Attendance punches are automatically captured from your physical eSSL biometric hardware terminal. Manual employee check-in creation is prohibited as per compliance policy.
           </Alert>
 
           {/* Attendance Stats Cards */}

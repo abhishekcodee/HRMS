@@ -21,6 +21,9 @@ import SettingsPage from './pages/SettingsPage';
 import UsersRolesPage from './pages/UsersRolesPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 
+import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
+import BiometricDevicesPage from './pages/BiometricDevicesPage';
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
   const location = useLocation();
@@ -87,13 +90,17 @@ export function App() {
                           <Route path="/departments" element={<DepartmentsTeamsPage />} />
                           <Route path="/teams" element={<DepartmentsTeamsPage />} />
                           
-                          {/* Attendance */}
+                          {/* Attendance & Biometric Machine Integration */}
                           <Route path="/attendance" element={<AttendancePage />} />
                           <Route path="/my-attendance" element={<AttendancePage />} />
+                          <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
                           
                           {/* Leave Management */}
                           <Route path="/leave" element={<LeavePage />} />
                           <Route path="/my-leave" element={<LeavePage />} />
+
+                          {/* Salary Slip Bulk Mail Module */}
+                          <Route path="/salary-slips" element={<ProtectedRoute adminOnly><SalarySlipBulkPage /></ProtectedRoute>} />
                           
                           {/* Documents & Vault */}
                           <Route path="/documents" element={<DocumentsPage />} />

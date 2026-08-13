@@ -205,12 +205,109 @@ export async function seedDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS email_notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        employee_id VARCHAR(50),
+        leave_request_id VARCHAR(36),
+        recipient_email VARCHAR(255) NOT NULL,
+        email_type VARCHAR(50) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        sent_at DATETIME,
+        error_message TEXT,
+        retry_count INT NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS salary_slip_email_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        employee_id VARCHAR(50) NOT NULL,
+        employee_email VARCHAR(255) NOT NULL,
+        salary_month VARCHAR(20) NOT NULL,
+        salary_year VARCHAR(10) NOT NULL,
+        salary_slip_file VARCHAR(555),
+        email_subject VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        sent_at DATETIME,
+        error_message TEXT,
+        retry_count INT NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_emp_month_year (employee_id, salary_month, salary_year)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS leave_audit_trail (
+        id VARCHAR(36) PRIMARY KEY,
+        leave_request_id VARCHAR(36) NOT NULL,
+        employee_id VARCHAR(50) NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        previous_status VARCHAR(20),
+        new_status VARCHAR(20) NOT NULL,
+        action_by VARCHAR(255) NOT NULL,
+        action_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        remarks TEXT,
+        ip_address VARCHAR(50)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS biometric_devices (
+        id VARCHAR(36) PRIMARY KEY,
+        device_sn VARCHAR(100) NOT NULL UNIQUE,
+        device_name VARCHAR(150) NOT NULL,
+        ip_address VARCHAR(50),
+        port INT DEFAULT 4370,
+        location VARCHAR(150),
+        status VARCHAR(20) NOT NULL DEFAULT 'OFFLINE',
+        last_ping_at DATETIME,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS biometric_punch_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        device_sn VARCHAR(100) NOT NULL,
+        employee_id VARCHAR(50) NOT NULL,
+        punch_time DATETIME NOT NULL,
+        verify_type VARCHAR(50) DEFAULT 'Fingerprint',
+        punch_state VARCHAR(20) DEFAULT '0',
+        raw_payload TEXT,
+        processed TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Seed default eSSL / ZKTeco device if table empty
+    const [bioDevs]: any = await conn.query('SELECT COUNT(*) as count FROM biometric_devices');
+    if (bioDevs[0].count === 0) {
+      await conn.query(`INSERT INTO biometric_devices (id, device_sn, device_name, ip_address, port, location, status, last_ping_at) VALUES
+        (UUID(), 'ESSL-X990-BLR-01', 'Main Entrance eSSL X990 Biometric Scanner', '192.168.1.201', 4370, 'Bengaluru HQ Gate 1', 'ONLINE', NOW()),
+        (UUID(), 'ESSL-K30-MUM-02', 'Lobby eSSL K30 Attendance Punch Terminal', '192.168.2.105', 4370, 'Mumbai Office Reception', 'ONLINE', NOW());`);
+    }
+
     // Ensure columns exist if table was created previously
     try {
       await conn.query(`ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 1;`);
     } catch (_) {}
     try {
       await conn.query(`ALTER TABLE users ADD COLUMN password_changed_at DATETIME;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN rejection_remarks TEXT;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN reviewed_by VARCHAR(36);`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN reviewed_at DATETIME;`);
     } catch (_) {}
 
     logger.info('✅ MySQL Tables created/verified.');

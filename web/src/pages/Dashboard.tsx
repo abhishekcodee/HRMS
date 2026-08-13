@@ -305,7 +305,7 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Attendance Trend (Last 7 Days)</CardTitle>
-            <Badge variant="info">Live ZKTeco Sync</Badge>
+            <Badge variant="info">Live eSSL Biometric Sync</Badge>
           </CardHeader>
           <CardBody>
             <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', paddingTop: '1rem' }}>

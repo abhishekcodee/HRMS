@@ -12,6 +12,7 @@ import {
   Building2,
   Users2,
   CalendarDays,
+  Fingerprint,
   FileCheck2,
   Receipt,
   FileText,
@@ -71,7 +72,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/departments', label: 'Departments', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/teams', label: 'Teams', icon: <Users2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/salary-slips', label: 'Salary Slips (Bulk Mail)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/documents', label: 'Documents', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
 
@@ -116,6 +119,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <div className="hrms-layout">
+      {/* Mobile Backdrop Overlay (Click to auto-close menu) */}
+      {mobileOpen && (
+        <div
+          className="mobile-overlay-backdrop"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside className={`hrms-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
@@ -263,10 +274,24 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               />
             )}
 
-            {/* Dark/Light Theme Toggle */}
-            <Button variant="ghost" size="sm" onClick={toggleTheme} aria-label="Toggle theme">
-              {theme === 'dark' ? <Sun size={18} color="var(--warning-text)" /> : <Moon size={18} />}
-            </Button>
+            {/* Senior Designer Theme Mode Toggle Switcher */}
+            <button
+              onClick={toggleTheme}
+              className="theme-mode-toggle"
+              aria-label="Toggle dark/light theme mode"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={15} style={{ color: '#fbbf24' }} />
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={15} style={{ color: '#6366f1' }} />
+                  <span>Night Mode</span>
+                </>
+              )}
+            </button>
 
             {/* Notifications Trigger */}
             <div style={{ position: 'relative' }}>
@@ -315,6 +340,50 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         {/* Content Body */}
         <main className="hrms-content">{children}</main>
+
+        {/* Senior Design System: Floating Glassmorphic Mobile Bottom Navigation Bar */}
+        <nav className="mobile-bottom-nav">
+          <Link
+            to="/"
+            className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}
+          >
+            <LayoutDashboard size={20} />
+            <span>Dashboard</span>
+          </Link>
+
+          <Link
+            to={role === UserRole.EMPLOYEE ? '/my-profile' : '/employees'}
+            className={`bottom-nav-item ${location.pathname.startsWith('/employees') || location.pathname === '/my-profile' ? 'active' : ''}`}
+          >
+            <Users size={20} />
+            <span>{role === UserRole.EMPLOYEE ? 'Profile' : 'Employees'}</span>
+          </Link>
+
+          <Link
+            to={role === UserRole.EMPLOYEE ? '/my-attendance' : '/attendance'}
+            className={`bottom-nav-item ${location.pathname.includes('attendance') ? 'active' : ''}`}
+          >
+            <CalendarDays size={20} />
+            <span>Attendance</span>
+          </Link>
+
+          <Link
+            to={role === UserRole.EMPLOYEE ? '/my-leave' : '/leave'}
+            className={`bottom-nav-item ${location.pathname.includes('leave') ? 'active' : ''}`}
+          >
+            <FileCheck2 size={20} />
+            <span>Leave</span>
+          </Link>
+
+          <button
+            className={`bottom-nav-item ${mobileOpen ? 'active' : ''}`}
+            onClick={() => setMobileOpen(prev => !prev)}
+            aria-label="Toggle mobile menu"
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            <span>Menu</span>
+          </button>
+        </nav>
       </div>
 
       {/* Global Search & Notification Center Overlay Modals */}

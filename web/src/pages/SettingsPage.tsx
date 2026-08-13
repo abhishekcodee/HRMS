@@ -151,7 +151,7 @@ export const SettingsPage: React.FC = () => {
             )}
 
             {activeTab === 'attendance' && (
-              <FormSection title="Biometric Attendance Rules" description="Configure ZKTeco grace periods and shift timings">
+              <FormSection title="Biometric Attendance Rules" description="Configure eSSL Biometric grace periods and shift timings">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
