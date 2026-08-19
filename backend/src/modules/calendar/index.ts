@@ -20,6 +20,19 @@ router.get('/events', async (req: AuthRequest, res: Response) => {
        ORDER BY event_date ASC`
     );
 
+    const adaptedCompanyEvents = eventsRows.map((e: any) => {
+      if (!e.date) return e;
+      const parts = e.date.split('-');
+      if (parts.length === 3 && e.type === 'FESTIVAL') {
+        // Adapt annual festival to requested year (e.g. 2028)
+        return {
+          ...e,
+          date: `${year}-${parts[1]}-${parts[2]}`,
+        };
+      }
+      return e;
+    });
+
     // 2. Fetch Employee Birthdays
     const [birthdayRows]: any = await pool.query(
       `SELECT u.id, u.full_name as fullName, u.employee_id as employeeId, u.profile_photo as profilePhoto,
@@ -74,7 +87,7 @@ router.get('/events', async (req: AuthRequest, res: Response) => {
     }));
 
     // Combine all events
-    const allEvents = [...eventsRows, ...birthdayEvents, ...leaveEvents];
+    const allEvents = [...adaptedCompanyEvents, ...birthdayEvents, ...leaveEvents];
 
     res.json({
       success: true,

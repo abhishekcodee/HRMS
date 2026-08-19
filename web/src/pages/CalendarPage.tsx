@@ -27,7 +27,8 @@ import {
 
 export const CalendarPage: React.FC = () => {
   const { activeRoleView } = useAuth();
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // Default August 2026
+  // Default to Year 2028 as requested!
+  const [currentDate, setCurrentDate] = useState(new Date(2028, 0, 1));
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -39,7 +40,7 @@ export const CalendarPage: React.FC = () => {
   const [addForm, setAddForm] = useState({
     title: '',
     type: 'FESTIVAL' as 'FESTIVAL' | 'EVENT',
-    date: '2026-08-25',
+    date: '2028-08-25',
     description: '',
     location: '',
   });
@@ -56,8 +57,8 @@ export const CalendarPage: React.FC = () => {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const year = currentDate.getFullYear();
-      const data = await fetchCalendarEventsFromDb(year);
+      const targetYear = currentDate.getFullYear();
+      const data = await fetchCalendarEventsFromDb(targetYear);
       setEvents(data);
     } catch (err) {
       console.error('Failed to load calendar events:', err);
@@ -91,7 +92,11 @@ export const CalendarPage: React.FC = () => {
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date(2026, 7, 19)); // System date 2026-08-19
+    setCurrentDate(new Date(2028, 0, 1)); // Default 2028
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setCurrentDate(new Date(newYear, month, 1));
   };
 
   const handleAddEventSubmit = async (e: React.FormEvent) => {
@@ -99,7 +104,7 @@ export const CalendarPage: React.FC = () => {
     const res = await createCalendarEventInDb(addForm);
     if (res.success) {
       setAddEventOpen(false);
-      setAddForm({ title: '', type: 'FESTIVAL', date: '2026-08-25', description: '', location: '' });
+      setAddForm({ title: '', type: 'FESTIVAL', date: `${year}-08-25`, description: '', location: '' });
       showToast('success', 'Event added successfully to company calendar!');
       await loadEvents();
     } else {
@@ -107,7 +112,7 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
-  // Rich Festival Visual & Generated Image Artwork Helper
+  // Rich Festival Visual & Gemini Generated Image Artwork Helper
   const getFestivalVisual = (title: string) => {
     const t = title.toLowerCase();
     if (t.includes('independence') || t.includes('republic')) {
@@ -137,6 +142,7 @@ export const CalendarPage: React.FC = () => {
         borderColor: 'rgba(236, 72, 153, 0.6)',
         color: '#f472b6',
         tagLabel: 'Festival of Colors 🎨',
+        imageUrl: '/assets/festival_holi.jpg',
       };
     }
     if (t.includes('christmas')) {
@@ -146,6 +152,7 @@ export const CalendarPage: React.FC = () => {
         borderColor: 'rgba(34, 197, 94, 0.6)',
         color: '#4ade80',
         tagLabel: 'Christmas Festival 🎄',
+        imageUrl: '/assets/festival_christmas.jpg',
       };
     }
     if (t.includes('new year')) {
@@ -234,11 +241,11 @@ export const CalendarPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
             <Sparkles size={22} color="var(--primary-400)" />
             <h1 className="page-title" style={{ margin: 0, fontSize: '1.65rem' }}>
-              Company Interactive Calendar
+              Company Interactive Calendar ({year})
             </h1>
           </div>
           <p className="page-subtitle" style={{ margin: 0, opacity: 0.9 }}>
-            Live database tracking for team birthdays 🎂, festive holidays 🇮🇳 🪔 🎨, employee leaves 🏖️, and events
+            Live database tracking for team birthdays 🎂, 2028 festive holidays 🇮🇳 🪔 🎨 🎄 🎆, employee leaves 🏖️, and events
           </p>
         </div>
 
@@ -273,10 +280,10 @@ export const CalendarPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Toolbar: Navigation, Layout View Switcher & Category Filters */}
+      {/* Toolbar: Navigation, Year Selector, Layout View Switcher & Category Filters */}
       <Card padding="1rem">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Row 1: Month Nav & Layout Switcher */}
+          {/* Row 1: Month Nav, Year Selector & Layout Switcher */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Button variant="outline" size="sm" icon={<ChevronLeft size={16} />} onClick={handlePrevMonth} title="Previous Month" />
@@ -284,8 +291,23 @@ export const CalendarPage: React.FC = () => {
                 {monthNames[month]} {year}
               </h2>
               <Button variant="outline" size="sm" icon={<ChevronRight size={16} />} onClick={handleNextMonth} title="Next Month" />
-              <Button variant="secondary" size="sm" onClick={handleToday} style={{ marginLeft: '0.5rem', fontWeight: 700 }}>
-                Today
+              
+              {/* Year Selector Dropdown Pill */}
+              <select
+                value={year}
+                onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
+                className="select"
+                style={{ width: 'auto', padding: '0.35rem 0.75rem', fontWeight: 800, fontSize: '0.85rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-500)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                <option value={2026} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2026 Calendar</option>
+                <option value={2027} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2027 Calendar</option>
+                <option value={2028} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2028 Calendar (Selected)</option>
+                <option value={2029} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2029 Calendar</option>
+                <option value={2030} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2030 Calendar</option>
+              </select>
+
+              <Button variant="secondary" size="sm" onClick={handleToday} style={{ fontWeight: 700 }}>
+                Reset 2028
               </Button>
             </div>
 
@@ -421,7 +443,7 @@ export const CalendarPage: React.FC = () => {
             {loading ? (
               <div style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <Sparkles size={32} style={{ animation: 'birthdayBounce 1s infinite', marginBottom: '1rem', color: 'var(--primary-400)' }} />
-                <div>Fetching live database events, birthdays & leaves...</div>
+                <div>Fetching live database events, birthdays & leaves for {year}...</div>
               </div>
             ) : (
               <div>
@@ -459,7 +481,7 @@ export const CalendarPage: React.FC = () => {
                     const dayEvents = getEventsForDay(dayNum);
                     const dayOfWeek = (firstDayOfWeek + i) % 7;
                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                    const isToday = year === 2026 && month === 7 && dayNum === 19;
+                    const isToday = year === 2028 && month === 0 && dayNum === 1;
 
                     return (
                       <div
@@ -564,14 +586,14 @@ export const CalendarPage: React.FC = () => {
               <CardHeader style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
                 <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={18} color="var(--primary-400)" />
-                  Upcoming in {monthNames[month]} ({upcomingMonthEvents.length})
+                  Upcoming in {monthNames[month]} {year} ({upcomingMonthEvents.length})
                 </CardTitle>
               </CardHeader>
               <CardBody style={{ paddingTop: '1rem' }}>
                 {upcomingMonthEvents.length === 0 ? (
                   <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <Sparkles size={24} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
-                    <p style={{ fontSize: '0.85rem', margin: 0 }}>No events found for {monthNames[month]}.</p>
+                    <p style={{ fontSize: '0.85rem', margin: 0 }}>No events found for {monthNames[month]} {year}.</p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '600px', overflowY: 'auto', paddingRight: '4px' }}>
@@ -684,7 +706,7 @@ export const CalendarPage: React.FC = () => {
           <CardBody>
             {filteredEvents.length === 0 ? (
               <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No events or holidays matching search criteria.
+                No events or holidays matching search criteria for {year}.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
