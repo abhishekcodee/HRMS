@@ -91,7 +91,7 @@ export const CalendarPage: React.FC = () => {
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date(2026, 7, 19)); // Current time in system 2026-08-19
+    setCurrentDate(new Date(2026, 7, 19)); // System date 2026-08-19
   };
 
   const handleAddEventSubmit = async (e: React.FormEvent) => {
@@ -105,6 +105,81 @@ export const CalendarPage: React.FC = () => {
     } else {
       showToast('error', res.error || 'Failed to add event.');
     }
+  };
+
+  // Rich Festival Visual & Image Icon Helper
+  const getFestivalVisual = (title: string) => {
+    const t = title.toLowerCase();
+    if (t.includes('independence') || t.includes('republic')) {
+      return {
+        emoji: '🇮🇳',
+        gradient: 'linear-gradient(135deg, rgba(255, 153, 51, 0.25) 0%, rgba(18, 136, 7, 0.25) 100%)',
+        borderColor: 'rgba(255, 153, 51, 0.6)',
+        color: '#ffaa44',
+        tagLabel: 'National Holiday 🇮🇳',
+      };
+    }
+    if (t.includes('diwali') || t.includes('deepavali')) {
+      return {
+        emoji: '🪔',
+        gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.3) 100%)',
+        borderColor: 'rgba(245, 158, 11, 0.6)',
+        color: '#fbbf24',
+        tagLabel: 'Festival of Lights 🪔',
+      };
+    }
+    if (t.includes('holi')) {
+      return {
+        emoji: '🎨',
+        gradient: 'linear-gradient(135deg, rgba(236, 72, 153, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)',
+        borderColor: 'rgba(236, 72, 153, 0.6)',
+        color: '#f472b6',
+        tagLabel: 'Festival of Colors 🎨',
+      };
+    }
+    if (t.includes('christmas')) {
+      return {
+        emoji: '🎄',
+        gradient: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)',
+        borderColor: 'rgba(34, 197, 94, 0.6)',
+        color: '#4ade80',
+        tagLabel: 'Christmas Festival 🎄',
+      };
+    }
+    if (t.includes('new year')) {
+      return {
+        emoji: '🎆',
+        gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)',
+        borderColor: 'rgba(99, 102, 241, 0.6)',
+        color: '#818cf8',
+        tagLabel: 'New Year Celebration 🎆',
+      };
+    }
+    if (t.includes('gandhi')) {
+      return {
+        emoji: '🕊️',
+        gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)',
+        borderColor: 'rgba(16, 185, 129, 0.6)',
+        color: '#34d399',
+        tagLabel: 'Gandhi Jayanti 🕊️',
+      };
+    }
+    if (t.includes('raksha') || t.includes('rakhi')) {
+      return {
+        emoji: '🎗️',
+        gradient: 'linear-gradient(135deg, rgba(244, 63, 94, 0.3) 0%, rgba(251, 113, 133, 0.3) 100%)',
+        borderColor: 'rgba(244, 63, 94, 0.6)',
+        color: '#fb7185',
+        tagLabel: 'Raksha Bandhan 🎗️',
+      };
+    }
+    return {
+      emoji: '🌴',
+      gradient: 'linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.25) 100%)',
+      borderColor: 'rgba(34, 197, 94, 0.5)',
+      color: '#4ade80',
+      tagLabel: 'Public Holiday 🌴',
+    };
   };
 
   // Filter events by Category
@@ -161,7 +236,7 @@ export const CalendarPage: React.FC = () => {
             </h1>
           </div>
           <p className="page-subtitle" style={{ margin: 0, opacity: 0.9 }}>
-            Live database tracking for team birthdays 🎂, festive holidays 🌴, employee leaves 🏖️, and events
+            Live database tracking for team birthdays 🎂, festive holidays 🇮🇳 🪔 🎨, employee leaves 🏖️, and events
           </p>
         </div>
 
@@ -174,7 +249,7 @@ export const CalendarPage: React.FC = () => {
 
           <div style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.3)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <PartyPopper size={18} color="#4ade80" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#bbf7d0' }}>{festivalCount} Festivals</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#bbf7d0' }}>{festivalCount} Festivals & Holidays</span>
           </div>
 
           <div style={{ padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -196,7 +271,7 @@ export const CalendarPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Toolbar: Navigation, Layout View Mode Switcher & Category Filters */}
+      {/* Toolbar: Navigation, Layout View Switcher & Category Filters */}
       <Card padding="1rem">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Row 1: Month Nav & Layout Switcher */}
@@ -321,7 +396,7 @@ export const CalendarPage: React.FC = () => {
             </div>
 
             {/* Event Live Search Input */}
-            <div style={{ minWidth: '240px', position: 'relative' }}>
+            <div style={{ minWidth: '260px', position: 'relative' }}>
               <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
@@ -373,7 +448,7 @@ export const CalendarPage: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
                   {/* Empty Start Padding */}
                   {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ minHeight: '115px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
+                    <div key={`empty-${i}`} style={{ minHeight: '130px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
                   ))}
 
                   {/* Month Days */}
@@ -389,13 +464,13 @@ export const CalendarPage: React.FC = () => {
                         key={`day-${dayNum}`}
                         className={`calendar-cell-card ${isToday ? 'calendar-today-glow' : ''} ${isWeekend ? 'weekend-cell-highlight' : ''}`}
                         style={{
-                          minHeight: '115px',
-                          padding: '0.5rem',
+                          minHeight: '130px',
+                          padding: '0.6rem',
                           borderRadius: 'var(--radius-lg)',
                           border: isToday ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '0.35rem',
+                          gap: '0.4rem',
                           animationDelay: `${i * 0.015}s`,
                         }}
                       >
@@ -425,9 +500,10 @@ export const CalendarPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Event Badges inside Cell */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', maxHeight: '80px', paddingRight: '2px' }}>
+                        {/* Event Badges inside Day Cell (FULL TEXT, NO CUTOFF!) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '100px', paddingRight: '2px' }}>
                           {dayEvents.map((evt) => {
+                            const festVisual = evt.type === 'FESTIVAL' ? getFestivalVisual(evt.title) : null;
                             const pillClass =
                               evt.type === 'BIRTHDAY'
                                 ? 'event-pill-birthday'
@@ -443,23 +519,30 @@ export const CalendarPage: React.FC = () => {
                                 className={pillClass}
                                 onClick={() => setSelectedEvent(evt)}
                                 style={{
-                                  padding: '3px 7px',
+                                  padding: '4px 7px',
                                   borderRadius: '6px',
-                                  fontSize: '0.7rem',
+                                  fontSize: '0.725rem',
                                   fontWeight: 700,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'normal',
+                                  wordBreak: 'break-word',
+                                  lineHeight: 1.3,
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '4px',
+                                  gap: '5px',
+                                  background: festVisual ? festVisual.gradient : undefined,
+                                  borderColor: festVisual ? festVisual.borderColor : undefined,
                                 }}
                                 title={evt.title}
                               >
                                 {evt.type === 'BIRTHDAY' && evt.employeeName && (
                                   <Avatar name={evt.employeeName} src={evt.profilePhoto} size="xs" />
                                 )}
+
+                                {evt.type === 'FESTIVAL' && festVisual && (
+                                  <span style={{ fontSize: '0.9rem' }}>{festVisual.emoji}</span>
+                                )}
+
                                 <span>{evt.title}</span>
                               </div>
                             );
@@ -473,7 +556,7 @@ export const CalendarPage: React.FC = () => {
             )}
           </Card>
 
-          {/* Right Sidebar */}
+          {/* Right Sidebar: Upcoming Events with Images */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <Card>
               <CardHeader style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
@@ -489,75 +572,82 @@ export const CalendarPage: React.FC = () => {
                     <p style={{ fontSize: '0.85rem', margin: 0 }}>No events found for {monthNames[month]}.</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '580px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {upcomingMonthEvents.map((evt) => (
-                      <div
-                        key={evt.id}
-                        onClick={() => setSelectedEvent(evt)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.85rem',
-                          padding: '0.85rem',
-                          borderRadius: 'var(--radius-lg)',
-                          backgroundColor: 'var(--bg-surface-hover)',
-                          border: '1px solid var(--border-color)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
-                          e.currentTarget.style.borderColor = 'var(--primary-400)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                          e.currentTarget.style.borderColor = 'var(--border-color)';
-                        }}
-                      >
-                        {evt.type === 'BIRTHDAY' ? (
-                          <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
-                        ) : (
-                          <div
-                            style={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: 'var(--radius-md)',
-                              backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.18)' : 'rgba(59, 130, 246, 0.18)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
-                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                            }}
-                          >
-                            {evt.type === 'FESTIVAL' ? <PartyPopper size={20} /> : <CalendarIcon size={20} />}
-                          </div>
-                        )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '600px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {upcomingMonthEvents.map((evt) => {
+                      const festVisual = evt.type === 'FESTIVAL' ? getFestivalVisual(evt.title) : null;
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {evt.title}
-                          </div>
-                          <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.3 }}>
-                            📅 {evt.date} {evt.location ? `• 📍 ${evt.location}` : ''}
-                          </div>
-                        </div>
-
-                        <Badge
-                          variant={
-                            evt.type === 'BIRTHDAY'
-                              ? 'info'
-                              : evt.type === 'FESTIVAL'
-                              ? 'success'
-                              : evt.type === 'LEAVE'
-                              ? 'warning'
-                              : 'neutral'
-                          }
+                      return (
+                        <div
+                          key={evt.id}
+                          onClick={() => setSelectedEvent(evt)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.85rem',
+                            padding: '0.85rem',
+                            borderRadius: 'var(--radius-lg)',
+                            backgroundColor: 'var(--bg-surface-hover)',
+                            border: '1px solid var(--border-color)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
+                            e.currentTarget.style.borderColor = 'var(--primary-400)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                            e.currentTarget.style.borderColor = 'var(--border-color)';
+                          }}
                         >
-                          {evt.type}
-                        </Badge>
-                      </div>
-                    ))}
+                          {evt.type === 'BIRTHDAY' ? (
+                            <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
+                          ) : (
+                            <div
+                              style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: 'var(--radius-lg)',
+                                background: festVisual ? festVisual.gradient : 'rgba(59, 130, 246, 0.18)',
+                                border: festVisual ? `1px solid ${festVisual.borderColor}` : '1px solid rgba(59, 130, 246, 0.3)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: festVisual ? '1.3rem' : '1.1rem',
+                                color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {festVisual ? festVisual.emoji : <CalendarIcon size={20} />}
+                            </div>
+                          )}
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35, wordBreak: 'break-word' }}>
+                              {evt.title}
+                            </div>
+                            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.3 }}>
+                              📅 {evt.date} {evt.location ? `• 📍 ${evt.location}` : ''}
+                            </div>
+                          </div>
+
+                          <Badge
+                            variant={
+                              evt.type === 'BIRTHDAY'
+                                ? 'info'
+                                : evt.type === 'FESTIVAL'
+                                ? 'success'
+                                : evt.type === 'LEAVE'
+                                ? 'warning'
+                                : 'neutral'
+                            }
+                          >
+                            {evt.type}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardBody>
@@ -582,87 +672,102 @@ export const CalendarPage: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {filteredEvents.map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="calendar-timeline-item"
-                    onClick={() => setSelectedEvent(evt)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {/* Date Block */}
-                    <div
-                      style={{
-                        padding: '0.65rem 1rem',
-                        borderRadius: 'var(--radius-md)',
-                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                        border: '1px solid rgba(99, 102, 241, 0.25)',
-                        textAlign: 'center',
-                        minWidth: '100px',
-                      }}
-                    >
-                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-400)', textTransform: 'uppercase' }}>
-                        {evt.date}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {evt.endDate ? `to ${evt.endDate}` : 'Single Day'}
-                      </div>
-                    </div>
+                {filteredEvents.map((evt) => {
+                  const festVisual = evt.type === 'FESTIVAL' ? getFestivalVisual(evt.title) : null;
 
-                    {/* Icon / Avatar */}
-                    {evt.type === 'BIRTHDAY' ? (
-                      <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="lg" />
-                    ) : (
+                  return (
+                    <div
+                      key={evt.id}
+                      className="calendar-timeline-item"
+                      onClick={() => setSelectedEvent(evt)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* Date Block */}
                       <div
                         style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: 'var(--radius-lg)',
-                          backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.18)' : 'rgba(59, 130, 246, 0.18)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                          padding: '0.65rem 1rem',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                          border: '1px solid rgba(99, 102, 241, 0.25)',
+                          textAlign: 'center',
+                          minWidth: '110px',
                         }}
                       >
-                        {evt.type === 'FESTIVAL' ? <PartyPopper size={24} /> : <CalendarIcon size={24} />}
+                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary-400)', textTransform: 'uppercase' }}>
+                          {evt.date}
+                        </div>
+                        <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {evt.endDate ? `to ${evt.endDate}` : 'Single Day'}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Event Content Details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                        {evt.title}
-                      </h3>
-                      {evt.description && (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
-                          {evt.description}
-                        </p>
-                      )}
-                      {evt.location && (
-                        <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                          📍 Location: {evt.location}
+                      {/* Festival Image / Icon Avatar */}
+                      {evt.type === 'BIRTHDAY' ? (
+                        <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="lg" />
+                      ) : (
+                        <div
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: 'var(--radius-lg)',
+                            background: festVisual ? festVisual.gradient : 'rgba(59, 130, 246, 0.18)',
+                            border: festVisual ? `1px solid ${festVisual.borderColor}` : '1px solid rgba(59, 130, 246, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: festVisual ? '1.5rem' : '1.2rem',
+                            color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {festVisual ? festVisual.emoji : <CalendarIcon size={24} />}
                         </div>
                       )}
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <Badge
-                        variant={
-                          evt.type === 'BIRTHDAY'
-                            ? 'info'
-                            : evt.type === 'FESTIVAL'
-                            ? 'success'
-                            : evt.type === 'LEAVE'
-                            ? 'warning'
-                            : 'neutral'
-                        }
-                      >
-                        {evt.type}
-                      </Badge>
-                      <ArrowRight size={18} color="var(--text-muted)" />
+                      {/* Event Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                            {evt.title}
+                          </h3>
+                          {festVisual && (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', background: festVisual.gradient, color: festVisual.color, border: `1px solid ${festVisual.borderColor}` }}>
+                              {festVisual.tagLabel}
+                            </span>
+                          )}
+                        </div>
+                        {evt.description && (
+                          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                            {evt.description}
+                          </p>
+                        )}
+                        {evt.location && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                            📍 Location: {evt.location}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Badge
+                          variant={
+                            evt.type === 'BIRTHDAY'
+                              ? 'info'
+                              : evt.type === 'FESTIVAL'
+                              ? 'success'
+                              : evt.type === 'LEAVE'
+                              ? 'warning'
+                              : 'neutral'
+                          }
+                        >
+                          {evt.type}
+                        </Badge>
+                        <ArrowRight size={18} color="var(--text-muted)" />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardBody>
@@ -709,11 +814,14 @@ export const CalendarPage: React.FC = () => {
                       {mEvents.length === 0 ? (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No events scheduled</div>
                       ) : (
-                        mEvents.slice(0, 3).map((me) => (
-                          <div key={me.id} style={{ fontSize: '0.725rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            📅 {me.date.split('-')[2]}: {me.title}
-                          </div>
-                        ))
+                        mEvents.slice(0, 3).map((me) => {
+                          const fest = me.type === 'FESTIVAL' ? getFestivalVisual(me.title) : null;
+                          return (
+                            <div key={me.id} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                              📅 {me.date.split('-')[2]}: {fest ? fest.emoji : ''} {me.title}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -788,46 +896,53 @@ export const CalendarPage: React.FC = () => {
       >
         {selectedEvent && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              {selectedEvent.type === 'BIRTHDAY' ? (
-                <Avatar name={selectedEvent.employeeName || selectedEvent.title} src={selectedEvent.profilePhoto} size="xl" />
-              ) : (
-                <div
-                  style={{
-                    width: '52px',
-                    height: '52px',
-                    borderRadius: 'var(--radius-lg)',
-                    backgroundColor: selectedEvent.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: selectedEvent.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                  }}
-                >
-                  {selectedEvent.type === 'FESTIVAL' ? <PartyPopper size={26} /> : <CalendarIcon size={26} />}
+            {(() => {
+              const fest = selectedEvent.type === 'FESTIVAL' ? getFestivalVisual(selectedEvent.title) : null;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {selectedEvent.type === 'BIRTHDAY' ? (
+                    <Avatar name={selectedEvent.employeeName || selectedEvent.title} src={selectedEvent.profilePhoto} size="xl" />
+                  ) : (
+                    <div
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: 'var(--radius-lg)',
+                        background: fest ? fest.gradient : 'rgba(59, 130, 246, 0.2)',
+                        border: fest ? `1px solid ${fest.borderColor}` : '1px solid rgba(59, 130, 246, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: fest ? '1.8rem' : '1.4rem',
+                        color: selectedEvent.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                      }}
+                    >
+                      {fest ? fest.emoji : <CalendarIcon size={26} />}
+                    </div>
+                  )}
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                      {selectedEvent.title}
+                    </h3>
+                    <Badge
+                      variant={
+                        selectedEvent.type === 'BIRTHDAY'
+                          ? 'info'
+                          : selectedEvent.type === 'FESTIVAL'
+                          ? 'success'
+                          : selectedEvent.type === 'LEAVE'
+                          ? 'warning'
+                          : 'neutral'
+                      }
+                      style={{ marginTop: '0.35rem' }}
+                    >
+                      {selectedEvent.type}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                  {selectedEvent.title}
-                </h3>
-                <Badge
-                  variant={
-                    selectedEvent.type === 'BIRTHDAY'
-                      ? 'info'
-                      : selectedEvent.type === 'FESTIVAL'
-                      ? 'success'
-                      : selectedEvent.type === 'LEAVE'
-                      ? 'warning'
-                      : 'neutral'
-                  }
-                  style={{ marginTop: '0.35rem' }}
-                >
-                  {selectedEvent.type}
-                </Badge>
-              </div>
-            </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem', backgroundColor: 'var(--bg-surface-hover)', padding: '1.15rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
               <div>
@@ -840,7 +955,7 @@ export const CalendarPage: React.FC = () => {
                 </div>
               )}
               {selectedEvent.description && (
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.35rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.35rem', color: 'var(--text-secondary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
                   {selectedEvent.description}
                 </div>
               )}
