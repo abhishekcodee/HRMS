@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 
 export interface AlertProps {
-  variant?: 'success' | 'warning' | 'error' | 'info';
+  variant?: 'success' | 'warning' | 'error' | 'info' | 'danger';
   title?: string;
   children: React.ReactNode;
   onClose?: () => void;
@@ -16,8 +16,10 @@ export const Alert: React.FC<AlertProps> = ({
   onClose,
   className = ''
 }) => {
+  const actualVariant = variant === 'danger' ? 'error' : variant;
+
   const getIcon = () => {
-    switch (variant) {
+    switch (actualVariant) {
       case 'success':
         return <CheckCircle2 size={18} color="var(--success-text)" />;
       case 'warning':
@@ -30,9 +32,9 @@ export const Alert: React.FC<AlertProps> = ({
     }
   };
 
-  const bg = `var(--${variant}-bg)`;
-  const border = `var(--${variant}-border)`;
-  const text = `var(--${variant}-text)`;
+  const bg = `var(--${actualVariant}-bg)`;
+  const border = `var(--${actualVariant}-border)`;
+  const text = `var(--${actualVariant}-text)`;
 
   return (
     <div
