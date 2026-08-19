@@ -717,3 +717,196 @@ export async function retryNotification(req: AuthRequest, res: Response): Promis
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to retry email notification.' } });
   }
 }
+
+/**
+ * 11. Get Employee Specific Leave Balances & Allocation for Profile
+ */
+export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { userId } = req.params;
+    const year = parseInt((req.query.year as string) || '2026', 10);
+
+    if (!userId) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'User ID is required.' } });
+      return;
+    }
+
+    const defaultTypes = [
+      { name: 'Casual Leave', code: 'CL', defaultAlloc: 12 },
+      { name: 'Sick Leave', code: 'SL', defaultAlloc: 10 },
+      { name: 'Earned Leave', code: 'EL', defaultAlloc: 15 },
+      { name: 'Privilege Leave', code: 'PL', defaultAlloc: 5 },
+      { name: 'Paid Leave', code: 'PAID', defaultAlloc: 10 },
+      { name: 'Unpaid Leave (LWP)', code: 'LWP', defaultAlloc: 0 },
+    ];
+
+    // 1. Fetch allocated days from leave_balances
+    const [balanceRows]: any = await pool.query(
+      `SELECT leave_type as leaveType, allocated_days as allocatedDays
+       FROM leave_balances
+       WHERE user_id = ? AND leave_year = ?`,
+      [userId, year]
+    );
+
+    const allocMap: Record<string, number> = {};
+    balanceRows.forEach((r: any) => {
+      allocMap[r.leaveType] = parseFloat(r.allocatedDays);
+    });
+
+    // 2. Fetch approved used days from leave_requests
+    const [usedRows]: any = await pool.query(
+      `SELECT leave_type as leaveType, COALESCE(SUM(days_count), 0) as totalUsed
+       FROM leave_requests
+       WHERE user_id = ? AND status = 'APPROVED' AND YEAR(created_at) = ?
+       GROUP BY leave_type`,
+      [userId, year]
+    );
+
+    const usedMap: Record<string, number> = {};
+    usedRows.forEach((r: any) => {
+      usedMap[r.leaveType] = parseFloat(r.totalUsed);
+    });
+
+    // 3. Fetch pending days from leave_requests
+    const [pendingRows]: any = await pool.query(
+      `SELECT leave_type as leaveType, COALESCE(SUM(days_count), 0) as totalPending
+       FROM leave_requests
+       WHERE user_id = ? AND status = 'PENDING' AND YEAR(created_at) = ?
+       GROUP BY leave_type`,
+      [userId, year]
+    );
+
+    const pendingMap: Record<string, number> = {};
+    pendingRows.forEach((r: any) => {
+      pendingMap[r.leaveType] = parseFloat(r.totalPending);
+    });
+
+    // 4. Construct complete result
+    let totalAllocated = 0;
+    let totalUsed = 0;
+    let totalPending = 0;
+    let totalRemaining = 0;
+
+    const leaveTypes = defaultTypes.map(t => {
+      const allocated = allocMap[t.name] !== undefined ? allocMap[t.name] : t.defaultAlloc;
+      const used = usedMap[t.name] || 0;
+      const pending = pendingMap[t.name] || 0;
+      const remaining = Math.max(0, allocated - used);
+
+      totalAllocated += allocated;
+      totalUsed += used;
+      totalPending += pending;
+      totalRemaining += remaining;
+
+      return {
+        leaveType: t.name,
+        code: t.code,
+        allocated,
+        used,
+        pending,
+        remaining,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        userId,
+        year,
+        summary: {
+          totalAllocated,
+          totalUsed,
+          totalPending,
+          totalRemaining,
+        },
+        leaveTypes,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get Employee Leave Balances Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch employee leave balances.' } });
+  }
+}
+
+/**
+ * 12. Allocate / Update Leave Days Individually Per Employee & Year
+ */
+export async function allocateEmployeeLeave(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { userId, year, allocations } = req.body;
+
+    if (!userId || !year || !Array.isArray(allocations)) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'User ID, Leave Year, and Allocations array are required.' } });
+      return;
+    }
+
+    const leaveYear = parseInt(year, 10);
+
+    for (const item of allocations) {
+      const { leaveType, allocatedDays } = item;
+      const alloc = Math.max(0, parseFloat(allocatedDays) || 0);
+
+      await pool.query(
+        `INSERT INTO leave_balances (id, user_id, leave_type, leave_year, allocated_days)
+         VALUES (UUID(), ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE allocated_days = VALUES(allocated_days)`,
+        [userId, leaveType, leaveYear, alloc]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Leave allocations updated successfully for year ${leaveYear}.`,
+    });
+  } catch (error: any) {
+    logger.error('Allocate Employee Leave Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to save leave allocation.' } });
+  }
+}
+
+/**
+ * 13. Get Employee Specific Leave Request History with Filters
+ */
+export async function getEmployeeLeaveHistory(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { userId } = req.params;
+    const { leaveType, status, year } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'User ID is required.' } });
+      return;
+    }
+
+    let query = `
+      SELECT id, leave_type as leaveType, start_date as startDate, end_date as endDate,
+             days_count as daysCount, reason, status, employer_status as employerStatus,
+             admin_status as adminStatus, created_at as createdAt
+      FROM leave_requests
+      WHERE user_id = ?
+    `;
+    const params: any[] = [userId];
+
+    if (leaveType && leaveType !== 'ALL') {
+      query += ` AND leave_type = ?`;
+      params.push(leaveType);
+    }
+
+    if (status && status !== 'ALL') {
+      query += ` AND status = ?`;
+      params.push(status);
+    }
+
+    if (year) {
+      query += ` AND YEAR(created_at) = ?`;
+      params.push(parseInt(year as string, 10));
+    }
+
+    query += ` ORDER BY created_at DESC`;
+
+    const [rows]: any = await pool.query(query, params);
+    res.json({ success: true, data: rows });
+  } catch (error: any) {
+    logger.error('Get Employee Leave History Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch employee leave history.' } });
+  }
+}

@@ -11,12 +11,18 @@ import {
   getLeaveAuditTrail,
   getEmailLogs,
   retryNotification,
+  getEmployeeLeaveBalances,
+  allocateEmployeeLeave,
+  getEmployeeLeaveHistory,
 } from './leaveController.js';
 
 const router = Router();
 router.use(authenticateToken);
 
 router.get('/balances', getLeaveBalances);
+router.get('/employee-balances/:userId', getEmployeeLeaveBalances);
+router.post('/allocate-leave', requireRole(['admin', 'employer']), allocateEmployeeLeave);
+router.get('/employee-history/:userId', getEmployeeLeaveHistory);
 router.post('/', applyLeave);
 router.get('/', listLeaveRequests);
 router.patch('/:id/employer-action', requireRole(['admin', 'employer']), employerActionOnLeave);

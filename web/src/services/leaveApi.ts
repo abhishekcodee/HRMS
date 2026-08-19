@@ -231,3 +231,83 @@ export async function retryEmailNotificationInDb(id: string): Promise<{ success:
     return { success: false, error: err.message || 'Network error retrying email.' };
   }
 }
+
+export interface EmployeeLeaveSummary {
+  userId: string;
+  year: number;
+  summary: {
+    totalAllocated: number;
+    totalUsed: number;
+    totalPending: number;
+    totalRemaining: number;
+  };
+  leaveTypes: Array<{
+    leaveType: string;
+    code: string;
+    allocated: number;
+    used: number;
+    pending: number;
+    remaining: number;
+  }>;
+}
+
+export async function fetchEmployeeLeaveBalances(userId: string, year: number = 2026): Promise<EmployeeLeaveSummary | null> {
+  try {
+    const res = await fetch(`/api/v1/leave/employee-balances/${userId}?year=${year}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      return json.data;
+    }
+    return null;
+  } catch (err) {
+    console.error('Fetch employee leave balances error:', err);
+    return null;
+  }
+}
+
+export async function allocateEmployeeLeaveInDb(data: {
+  userId: string;
+  year: number;
+  allocations: Array<{ leaveType: string; allocatedDays: number }>;
+}): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch('/api/v1/leave/allocate-leave', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error?.message || 'Failed to save leave allocation.' };
+    }
+    return { success: true, message: json.message };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error saving leave allocation.' };
+  }
+}
+
+export async function fetchEmployeeLeaveHistory(
+  userId: string,
+  filters?: { leaveType?: string; status?: string; year?: number }
+): Promise<LeaveRecord[]> {
+  try {
+    const query = new URLSearchParams();
+    if (filters?.leaveType) query.append('leaveType', filters.leaveType);
+    if (filters?.status) query.append('status', filters.status);
+    if (filters?.year) query.append('year', filters.year.toString());
+
+    const res = await fetch(`/api/v1/leave/employee-history/${userId}?${query.toString()}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data)) {
+      return json.data;
+    }
+    return [];
+  } catch (err) {
+    console.error('Fetch employee leave history error:', err);
+    return [];
+  }
+}
