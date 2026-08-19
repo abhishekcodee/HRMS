@@ -338,7 +338,7 @@ export const CalendarPage: React.FC = () => {
 
       {/* Main View Container */}
       {viewMode === 'GRID' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem' }}>
           {/* Calendar Month Grid */}
           <Card style={{ padding: '1.25rem' }}>
             {loading ? (
@@ -535,10 +535,10 @@ export const CalendarPage: React.FC = () => {
                         )}
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35, wordBreak: 'break-word' }}>
                             {evt.title}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.3 }}>
                             📅 {evt.date} {evt.location ? `• 📍 ${evt.location}` : ''}
                           </div>
                         </div>
