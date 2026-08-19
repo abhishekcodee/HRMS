@@ -1,7 +1,7 @@
 const API_BASE_URL = '/api/v1/master';
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('hrms_token') || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

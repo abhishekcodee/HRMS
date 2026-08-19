@@ -284,6 +284,7 @@ export const LoginPage: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
+                marginTop: '1.25rem',
               }}
             >
               Sign In to HRMS <ArrowRight size={18} />

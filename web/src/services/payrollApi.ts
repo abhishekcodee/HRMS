@@ -51,7 +51,7 @@ export interface SalarySlipLogRecord {
 }
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('hrms_token');
+  const token = localStorage.getItem('hrms_token') || localStorage.getItem('token');
   return {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
