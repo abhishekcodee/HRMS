@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 export interface AvatarProps {
   name: string;
   src?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   status?: 'online' | 'offline' | 'busy' | 'away';
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -13,7 +14,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   src,
   size = 'md',
   status,
-  className = ''
+  className = '',
+  style,
 }) => {
   const [imageError, setImageError] = useState(false);
 
@@ -25,8 +27,8 @@ export const Avatar: React.FC<AvatarProps> = ({
     return n.slice(0, 2).toUpperCase();
   };
 
-  const sizePx = size === 'sm' ? 32 : size === 'lg' ? 48 : size === 'xl' ? 64 : 40;
-  const fontSize = size === 'sm' ? '0.75rem' : size === 'lg' ? '1.1rem' : size === 'xl' ? '1.4rem' : '0.9rem';
+  const sizePx = size === 'xs' ? 22 : size === 'sm' ? 32 : size === 'lg' ? 48 : size === 'xl' ? 64 : 40;
+  const fontSize = size === 'xs' ? '0.65rem' : size === 'sm' ? '0.75rem' : size === 'lg' ? '1.1rem' : size === 'xl' ? '1.4rem' : '0.9rem';
 
   return (
     <div
@@ -43,7 +45,8 @@ export const Avatar: React.FC<AvatarProps> = ({
         fontWeight: 600,
         fontSize,
         flexShrink: 0,
-        boxShadow: 'var(--shadow-sm)'
+        boxShadow: 'var(--shadow-sm)',
+        ...style,
       }}
       className={className}
     >
