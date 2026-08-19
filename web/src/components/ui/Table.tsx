@@ -5,8 +5,8 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
   className?: string;
 }
 
-export const TableContainer: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`table-container ${className}`}>{children}</div>
+export const TableContainer: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
+  <div style={style} className={`table-container ${className}`}>{children}</div>
 );
 
 export const Table: React.FC<TableProps> = ({ children, className = '', ...props }) => (
