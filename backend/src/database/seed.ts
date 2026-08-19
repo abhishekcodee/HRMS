@@ -204,6 +204,8 @@ export async function seedDatabase() {
         uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS company_events (
         id VARCHAR(36) PRIMARY KEY,

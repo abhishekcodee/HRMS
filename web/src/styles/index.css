@@ -1046,3 +1046,114 @@ html, body {
   to { transform: translateY(0); }
 }
 
+/* Calendar Ultra-Modern Animations & Glassmorphism */
+@keyframes calendarCellFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pulseGlowToday {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6), 0 0 15px rgba(99, 102, 241, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0), 0 0 25px rgba(99, 102, 241, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0), 0 0 15px rgba(99, 102, 241, 0.4);
+  }
+}
+
+@keyframes birthdayBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.05); }
+}
+
+.calendar-cell-card {
+  animation: calendarCellFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  background: var(--bg-surface);
+}
+
+.calendar-cell-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  z-index: 10;
+  box-shadow: 0 14px 30px -8px rgba(0, 0, 0, 0.4), 0 0 15px rgba(99, 102, 241, 0.25);
+  border-color: var(--primary-400) !important;
+}
+
+.calendar-today-glow {
+  animation: pulseGlowToday 2.5s infinite;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%) !important;
+  border: 2px solid var(--primary-500) !important;
+}
+
+.event-pill-birthday {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(236, 72, 153, 0.25) 100%);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  color: #f472b6;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.2);
+  transition: all 0.2s ease;
+}
+
+.event-pill-birthday:hover {
+  animation: birthdayBounce 0.5s ease infinite;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);
+  filter: brightness(1.2);
+}
+
+.event-pill-festival {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.25) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+  transition: all 0.2s ease;
+}
+
+.event-pill-festival:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+  filter: brightness(1.2);
+}
+
+.event-pill-leave {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.25) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  transition: all 0.2s ease;
+}
+
+.event-pill-leave:hover {
+  transform: scale(1.04);
+  filter: brightness(1.2);
+}
+
+.event-pill-company {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(99, 102, 241, 0.25) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  color: #818cf8;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  transition: all 0.2s ease;
+}
+
+.event-pill-company:hover {
+  transform: scale(1.04);
+  filter: brightness(1.2);
+}
+
+.calendar-hero-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 50%, rgba(236, 72, 153, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem 1.75rem;
+}
+
