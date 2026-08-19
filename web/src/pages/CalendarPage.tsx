@@ -107,7 +107,7 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
-  // Rich Festival Visual & Image Icon Helper
+  // Rich Festival Visual & Generated Image Artwork Helper
   const getFestivalVisual = (title: string) => {
     const t = title.toLowerCase();
     if (t.includes('independence') || t.includes('republic')) {
@@ -117,6 +117,7 @@ export const CalendarPage: React.FC = () => {
         borderColor: 'rgba(255, 153, 51, 0.6)',
         color: '#ffaa44',
         tagLabel: 'National Holiday 🇮🇳',
+        imageUrl: '/assets/festival_independence_day.jpg',
       };
     }
     if (t.includes('diwali') || t.includes('deepavali')) {
@@ -126,6 +127,7 @@ export const CalendarPage: React.FC = () => {
         borderColor: 'rgba(245, 158, 11, 0.6)',
         color: '#fbbf24',
         tagLabel: 'Festival of Lights 🪔',
+        imageUrl: '/assets/festival_diwali.jpg',
       };
     }
     if (t.includes('holi')) {
@@ -602,6 +604,20 @@ export const CalendarPage: React.FC = () => {
                         >
                           {evt.type === 'BIRTHDAY' ? (
                             <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
+                          ) : festVisual?.imageUrl ? (
+                            <img
+                              src={festVisual.imageUrl}
+                              alt={evt.title}
+                              style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: 'var(--radius-md)',
+                                objectFit: 'cover',
+                                border: `1px solid ${festVisual.borderColor}`,
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                flexShrink: 0,
+                              }}
+                            />
                           ) : (
                             <div
                               style={{
@@ -704,6 +720,20 @@ export const CalendarPage: React.FC = () => {
                       {/* Festival Image / Icon Avatar */}
                       {evt.type === 'BIRTHDAY' ? (
                         <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="lg" />
+                      ) : festVisual?.imageUrl ? (
+                        <img
+                          src={festVisual.imageUrl}
+                          alt={evt.title}
+                          style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: 'var(--radius-lg)',
+                            objectFit: 'cover',
+                            border: `1px solid ${festVisual.borderColor}`,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                            flexShrink: 0,
+                          }}
+                        />
                       ) : (
                         <div
                           style={{
@@ -892,53 +922,71 @@ export const CalendarPage: React.FC = () => {
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
         title={selectedEvent?.title || 'Event Details'}
-        maxWidth="480px"
+        maxWidth="520px"
       >
         {selectedEvent && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {(() => {
               const fest = selectedEvent.type === 'FESTIVAL' ? getFestivalVisual(selectedEvent.title) : null;
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {selectedEvent.type === 'BIRTHDAY' ? (
-                    <Avatar name={selectedEvent.employeeName || selectedEvent.title} src={selectedEvent.profilePhoto} size="xl" />
-                  ) : (
-                    <div
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Generated Festival Artwork Image Banner */}
+                  {fest?.imageUrl && (
+                    <img
+                      src={fest.imageUrl}
+                      alt={selectedEvent.title}
                       style={{
-                        width: '56px',
-                        height: '56px',
+                        width: '100%',
+                        height: '180px',
+                        objectFit: 'cover',
                         borderRadius: 'var(--radius-lg)',
-                        background: fest ? fest.gradient : 'rgba(59, 130, 246, 0.2)',
-                        border: fest ? `1px solid ${fest.borderColor}` : '1px solid rgba(59, 130, 246, 0.4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: fest ? '1.8rem' : '1.4rem',
-                        color: selectedEvent.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                        border: `1px solid ${fest.borderColor}`,
+                        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
                       }}
-                    >
-                      {fest ? fest.emoji : <CalendarIcon size={26} />}
-                    </div>
+                    />
                   )}
-                  <div>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                      {selectedEvent.title}
-                    </h3>
-                    <Badge
-                      variant={
-                        selectedEvent.type === 'BIRTHDAY'
-                          ? 'info'
-                          : selectedEvent.type === 'FESTIVAL'
-                          ? 'success'
-                          : selectedEvent.type === 'LEAVE'
-                          ? 'warning'
-                          : 'neutral'
-                      }
-                      style={{ marginTop: '0.35rem' }}
-                    >
-                      {selectedEvent.type}
-                    </Badge>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {selectedEvent.type === 'BIRTHDAY' ? (
+                      <Avatar name={selectedEvent.employeeName || selectedEvent.title} src={selectedEvent.profilePhoto} size="xl" />
+                    ) : (
+                      <div
+                        style={{
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: 'var(--radius-lg)',
+                          background: fest ? fest.gradient : 'rgba(59, 130, 246, 0.2)',
+                          border: fest ? `1px solid ${fest.borderColor}` : '1px solid rgba(59, 130, 246, 0.4)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: fest ? '1.8rem' : '1.4rem',
+                          color: selectedEvent.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                        }}
+                      >
+                        {fest ? fest.emoji : <CalendarIcon size={26} />}
+                      </div>
+                    )}
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        {selectedEvent.title}
+                      </h3>
+                      <Badge
+                        variant={
+                          selectedEvent.type === 'BIRTHDAY'
+                            ? 'info'
+                            : selectedEvent.type === 'FESTIVAL'
+                            ? 'success'
+                            : selectedEvent.type === 'LEAVE'
+                            ? 'warning'
+                            : 'neutral'
+                        }
+                        style={{ marginTop: '0.35rem' }}
+                      >
+                        {selectedEvent.type}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               );
