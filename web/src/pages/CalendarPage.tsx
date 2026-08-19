@@ -7,7 +7,23 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '@hrms/shared';
 import { Button, Card, CardHeader, CardTitle, CardBody, Badge, Modal, Input, Select, Alert, Avatar } from '../components/ui';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, PartyPopper, Palmtree, Cake, Sparkles, MapPin, Clock, ArrowUpRight } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  PartyPopper,
+  Palmtree,
+  Cake,
+  Sparkles,
+  MapPin,
+  Clock,
+  LayoutGrid,
+  List,
+  CalendarDays,
+  Search,
+  ArrowRight,
+} from 'lucide-react';
 
 export const CalendarPage: React.FC = () => {
   const { activeRoleView } = useAuth();
@@ -15,6 +31,8 @@ export const CalendarPage: React.FC = () => {
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<'GRID' | 'LIST' | 'YEAR'>('GRID');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Add Event Modal
   const [addEventOpen, setAddEventOpen] = useState(false);
@@ -89,10 +107,22 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
-  // Filter events
-  const filteredEvents = events.filter((e) => {
+  // Filter events by Category
+  const categoryFilteredEvents = events.filter((e) => {
     if (filterType === 'ALL') return true;
     return e.type === filterType;
+  });
+
+  // Filter events by Search Query
+  const filteredEvents = categoryFilteredEvents.filter((e) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      e.title.toLowerCase().includes(q) ||
+      (e.employeeName && e.employeeName.toLowerCase().includes(q)) ||
+      (e.description && e.description.toLowerCase().includes(q)) ||
+      (e.location && e.location.toLowerCase().includes(q))
+    );
   });
 
   // Get events for a specific day formatted as YYYY-MM-DD
@@ -115,9 +145,9 @@ export const CalendarPage: React.FC = () => {
   });
 
   // Monthly stats
-  const birthdayCount = upcomingMonthEvents.filter(e => e.type === 'BIRTHDAY').length;
-  const festivalCount = upcomingMonthEvents.filter(e => e.type === 'FESTIVAL').length;
-  const leaveCount = upcomingMonthEvents.filter(e => e.type === 'LEAVE').length;
+  const birthdayCount = upcomingMonthEvents.filter((e) => e.type === 'BIRTHDAY').length;
+  const festivalCount = upcomingMonthEvents.filter((e) => e.type === 'FESTIVAL').length;
+  const leaveCount = upcomingMonthEvents.filter((e) => e.type === 'LEAVE').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -166,265 +196,456 @@ export const CalendarPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Calendar Controls & Filter Pills */}
+      {/* Toolbar: Navigation, Layout View Mode Switcher & Category Filters */}
       <Card padding="1rem">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Button variant="outline" size="sm" icon={<ChevronLeft size={16} />} onClick={handlePrevMonth} title="Previous Month" />
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, minWidth: '200px', textAlign: 'center', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              {monthNames[month]} {year}
-            </h2>
-            <Button variant="outline" size="sm" icon={<ChevronRight size={16} />} onClick={handleNextMonth} title="Next Month" />
-            <Button variant="secondary" size="sm" onClick={handleToday} style={{ marginLeft: '0.5rem', fontWeight: 700 }}>
-              Today
-            </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Row 1: Month Nav & Layout Switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Button variant="outline" size="sm" icon={<ChevronLeft size={16} />} onClick={handlePrevMonth} title="Previous Month" />
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, minWidth: '200px', textAlign: 'center', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                {monthNames[month]} {year}
+              </h2>
+              <Button variant="outline" size="sm" icon={<ChevronRight size={16} />} onClick={handleNextMonth} title="Next Month" />
+              <Button variant="secondary" size="sm" onClick={handleToday} style={{ marginLeft: '0.5rem', fontWeight: 700 }}>
+                Today
+              </Button>
+            </div>
+
+            {/* Layout Alternate Style View Switcher */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'var(--bg-surface-hover)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+              <button
+                onClick={() => setViewMode('GRID')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  backgroundColor: viewMode === 'GRID' ? 'var(--primary-500)' : 'transparent',
+                  color: viewMode === 'GRID' ? '#fff' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <LayoutGrid size={15} /> Month Grid
+              </button>
+
+              <button
+                onClick={() => setViewMode('LIST')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  backgroundColor: viewMode === 'LIST' ? 'var(--primary-500)' : 'transparent',
+                  color: viewMode === 'LIST' ? '#fff' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <List size={15} /> Timeline Agenda
+              </button>
+
+              <button
+                onClick={() => setViewMode('YEAR')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  backgroundColor: viewMode === 'YEAR' ? 'var(--primary-500)' : 'transparent',
+                  color: viewMode === 'YEAR' ? '#fff' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <CalendarDays size={15} /> 12-Month Year View
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button
-              variant={filterType === 'ALL' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setFilterType('ALL')}
-            >
-              ✨ All ({upcomingMonthEvents.length})
-            </Button>
-            <Button
-              variant={filterType === 'BIRTHDAY' ? 'primary' : 'outline'}
-              size="sm"
-              icon={<Cake size={14} />}
-              onClick={() => setFilterType('BIRTHDAY')}
-            >
-              🎂 Birthdays
-            </Button>
-            <Button
-              variant={filterType === 'FESTIVAL' ? 'primary' : 'outline'}
-              size="sm"
-              icon={<PartyPopper size={14} />}
-              onClick={() => setFilterType('FESTIVAL')}
-            >
-              🌴 Festivals & Holidays
-            </Button>
-            <Button
-              variant={filterType === 'LEAVE' ? 'primary' : 'outline'}
-              size="sm"
-              icon={<Palmtree size={14} />}
-              onClick={() => setFilterType('LEAVE')}
-            >
-              🏖️ Approved Leaves
-            </Button>
-            <Button
-              variant={filterType === 'EVENT' ? 'primary' : 'outline'}
-              size="sm"
-              icon={<CalendarIcon size={14} />}
-              onClick={() => setFilterType('EVENT')}
-            >
-              📌 Company Events
-            </Button>
+          {/* Row 2: Category Filter Buttons & Live Search Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <Button
+                variant={filterType === 'ALL' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => setFilterType('ALL')}
+              >
+                ✨ All ({events.length})
+              </Button>
+              <Button
+                variant={filterType === 'BIRTHDAY' ? 'primary' : 'outline'}
+                size="sm"
+                icon={<Cake size={14} />}
+                onClick={() => setFilterType('BIRTHDAY')}
+              >
+                🎂 Birthdays
+              </Button>
+              <Button
+                variant={filterType === 'FESTIVAL' ? 'primary' : 'outline'}
+                size="sm"
+                icon={<PartyPopper size={14} />}
+                onClick={() => setFilterType('FESTIVAL')}
+              >
+                🌴 Festivals & Holidays
+              </Button>
+              <Button
+                variant={filterType === 'LEAVE' ? 'primary' : 'outline'}
+                size="sm"
+                icon={<Palmtree size={14} />}
+                onClick={() => setFilterType('LEAVE')}
+              >
+                🏖️ Approved Leaves
+              </Button>
+              <Button
+                variant={filterType === 'EVENT' ? 'primary' : 'outline'}
+                size="sm"
+                icon={<CalendarIcon size={14} />}
+                onClick={() => setFilterType('EVENT')}
+              >
+                📌 Company Events
+              </Button>
+            </div>
+
+            {/* Event Live Search Input */}
+            <div style={{ minWidth: '240px', position: 'relative' }}>
+              <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Search event, holiday, or employee..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input"
+                style={{ paddingLeft: '32px', fontSize: '0.825rem' }}
+              />
+            </div>
           </div>
         </div>
       </Card>
 
-      {/* Main Calendar Grid & Right Sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
-        {/* Calendar Grid Container */}
-        <Card style={{ padding: '1.25rem' }}>
-          {loading ? (
-            <div style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <Sparkles size={32} style={{ animation: 'birthdayBounce 1s infinite', marginBottom: '1rem', color: 'var(--primary-400)' }} />
-              <div>Fetching live database events, birthdays & leaves...</div>
-            </div>
-          ) : (
-            <div>
-              {/* Styled Weekday Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
-                {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d, index) => (
-                  <div
-                    key={d}
-                    style={{
-                      padding: '0.5rem 0',
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--bg-surface-hover)',
-                      fontSize: '0.775rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      color: index === 0 || index === 6 ? 'var(--warning-text)' : 'var(--text-secondary)',
-                      borderBottom: '2px solid var(--border-color)',
-                    }}
-                  >
-                    {d}
-                  </div>
-                ))}
+      {/* Main View Container */}
+      {viewMode === 'GRID' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
+          {/* Calendar Month Grid */}
+          <Card style={{ padding: '1.25rem' }}>
+            {loading ? (
+              <div style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <Sparkles size={32} style={{ animation: 'birthdayBounce 1s infinite', marginBottom: '1rem', color: 'var(--primary-400)' }} />
+                <div>Fetching live database events, birthdays & leaves...</div>
               </div>
-
-              {/* Day Cells Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
-                {/* Empty Padding Cells */}
-                {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                  <div key={`empty-${i}`} style={{ minHeight: '110px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
-                ))}
-
-                {/* Days of Current Month */}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const dayNum = i + 1;
-                  const dayEvents = getEventsForDay(dayNum);
-                  const isToday = year === 2026 && month === 7 && dayNum === 19; // 2026-08-19 system time
-
-                  return (
+            ) : (
+              <div>
+                {/* Weekday Header */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
+                  {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d, index) => (
                     <div
-                      key={`day-${dayNum}`}
-                      className={`calendar-cell-card ${isToday ? 'calendar-today-glow' : ''}`}
+                      key={d}
                       style={{
-                        minHeight: '115px',
-                        padding: '0.5rem',
-                        borderRadius: 'var(--radius-lg)',
-                        border: isToday ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.35rem',
-                        animationDelay: `${i * 0.015}s`,
+                        padding: '0.5rem 0',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-surface-hover)',
+                        fontSize: '0.775rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        color: index === 0 || index === 6 ? 'var(--warning-text)' : 'var(--text-secondary)',
+                        borderBottom: '2px solid var(--border-color)',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span
-                          style={{
-                            fontWeight: isToday ? 900 : 700,
-                            fontSize: '0.875rem',
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: isToday ? 'var(--primary-500)' : 'transparent',
-                            color: isToday ? '#fff' : 'var(--text-primary)',
-                            boxShadow: isToday ? '0 0 10px rgba(99, 102, 241, 0.6)' : 'none',
-                          }}
-                        >
-                          {dayNum}
-                        </span>
+                      {d}
+                    </div>
+                  ))}
+                </div>
 
-                        {dayEvents.length > 0 && (
-                          <span style={{ fontSize: '0.675rem', fontWeight: 800, padding: '1px 6px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)' }}>
-                            {dayEvents.length} event(s)
+                {/* Day Cells Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+                  {/* Empty Start Padding */}
+                  {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ minHeight: '115px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
+                  ))}
+
+                  {/* Month Days */}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const dayEvents = getEventsForDay(dayNum);
+                    const dayOfWeek = (firstDayOfWeek + i) % 7;
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    const isToday = year === 2026 && month === 7 && dayNum === 19;
+
+                    return (
+                      <div
+                        key={`day-${dayNum}`}
+                        className={`calendar-cell-card ${isToday ? 'calendar-today-glow' : ''} ${isWeekend ? 'weekend-cell-highlight' : ''}`}
+                        style={{
+                          minHeight: '115px',
+                          padding: '0.5rem',
+                          borderRadius: 'var(--radius-lg)',
+                          border: isToday ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.35rem',
+                          animationDelay: `${i * 0.015}s`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span
+                            style={{
+                              fontWeight: isToday ? 900 : 700,
+                              fontSize: '0.875rem',
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: isToday ? 'var(--primary-500)' : 'transparent',
+                              color: isToday ? '#fff' : 'var(--text-primary)',
+                              boxShadow: isToday ? '0 0 10px rgba(99, 102, 241, 0.6)' : 'none',
+                            }}
+                          >
+                            {dayNum}
                           </span>
-                        )}
+
+                          {dayEvents.length > 0 && (
+                            <span style={{ fontSize: '0.675rem', fontWeight: 800, padding: '1px 6px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)' }}>
+                              {dayEvents.length} event(s)
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Event Badges inside Cell */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', maxHeight: '80px', paddingRight: '2px' }}>
+                          {dayEvents.map((evt) => {
+                            const pillClass =
+                              evt.type === 'BIRTHDAY'
+                                ? 'event-pill-birthday'
+                                : evt.type === 'FESTIVAL'
+                                ? 'event-pill-festival'
+                                : evt.type === 'LEAVE'
+                                ? 'event-pill-leave'
+                                : 'event-pill-company';
+
+                            return (
+                              <div
+                                key={evt.id}
+                                className={pillClass}
+                                onClick={() => setSelectedEvent(evt)}
+                                style={{
+                                  padding: '3px 7px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title={evt.title}
+                              >
+                                {evt.type === 'BIRTHDAY' && evt.employeeName && (
+                                  <Avatar name={evt.employeeName} src={evt.profilePhoto} size="xs" />
+                                )}
+                                <span>{evt.title}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
 
-                      {/* Event Badges inside Cell */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', maxHeight: '80px', paddingRight: '2px' }}>
-                        {dayEvents.map((evt) => {
-                          const pillClass =
+          {/* Right Sidebar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <Card>
+              <CardHeader style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+                <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={18} color="var(--primary-400)" />
+                  Upcoming in {monthNames[month]} ({upcomingMonthEvents.length})
+                </CardTitle>
+              </CardHeader>
+              <CardBody style={{ paddingTop: '1rem' }}>
+                {upcomingMonthEvents.length === 0 ? (
+                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <Sparkles size={24} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
+                    <p style={{ fontSize: '0.85rem', margin: 0 }}>No events found for {monthNames[month]}.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '580px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {upcomingMonthEvents.map((evt) => (
+                      <div
+                        key={evt.id}
+                        onClick={() => setSelectedEvent(evt)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.85rem',
+                          padding: '0.85rem',
+                          borderRadius: 'var(--radius-lg)',
+                          backgroundColor: 'var(--bg-surface-hover)',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
+                          e.currentTarget.style.borderColor = 'var(--primary-400)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                          e.currentTarget.style.borderColor = 'var(--border-color)';
+                        }}
+                      >
+                        {evt.type === 'BIRTHDAY' ? (
+                          <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
+                        ) : (
+                          <div
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: 'var(--radius-md)',
+                              backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.18)' : 'rgba(59, 130, 246, 0.18)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                            }}
+                          >
+                            {evt.type === 'FESTIVAL' ? <PartyPopper size={20} /> : <CalendarIcon size={20} />}
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {evt.title}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            📅 {evt.date} {evt.location ? `• 📍 ${evt.location}` : ''}
+                          </div>
+                        </div>
+
+                        <Badge
+                          variant={
                             evt.type === 'BIRTHDAY'
-                              ? 'event-pill-birthday'
+                              ? 'info'
                               : evt.type === 'FESTIVAL'
-                              ? 'event-pill-festival'
+                              ? 'success'
                               : evt.type === 'LEAVE'
-                              ? 'event-pill-leave'
-                              : 'event-pill-company';
+                              ? 'warning'
+                              : 'neutral'
+                          }
+                        >
+                          {evt.type}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+      )}
 
-                          return (
-                            <div
-                              key={evt.id}
-                              className={pillClass}
-                              onClick={() => setSelectedEvent(evt)}
-                              style={{
-                                padding: '3px 7px',
-                                borderRadius: '6px',
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                              title={evt.title}
-                            >
-                              <span>{evt.title}</span>
-                            </div>
-                          );
-                        })}
+      {/* Alternate View Mode 2: Timeline Agenda View */}
+      {viewMode === 'LIST' && (
+        <Card style={{ padding: '1.5rem' }}>
+          <CardHeader>
+            <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <List size={20} color="var(--primary-400)" />
+              Timeline Agenda Schedule — {monthNames[month]} {year} ({filteredEvents.length} total events)
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            {filteredEvents.length === 0 ? (
+              <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No events or holidays matching search criteria.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {filteredEvents.map((evt) => (
+                  <div
+                    key={evt.id}
+                    className="calendar-timeline-item"
+                    onClick={() => setSelectedEvent(evt)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {/* Date Block */}
+                    <div
+                      style={{
+                        padding: '0.65rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        textAlign: 'center',
+                        minWidth: '100px',
+                      }}
+                    >
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-400)', textTransform: 'uppercase' }}>
+                        {evt.date}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {evt.endDate ? `to ${evt.endDate}` : 'Single Day'}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </Card>
 
-        {/* Right Sidebar: Upcoming Events Card */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <Card>
-            <CardHeader style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
-              <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={18} color="var(--primary-400)" />
-                Upcoming in {monthNames[month]} ({upcomingMonthEvents.length})
-              </CardTitle>
-            </CardHeader>
-            <CardBody style={{ paddingTop: '1rem' }}>
-              {upcomingMonthEvents.length === 0 ? (
-                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <Sparkles size={24} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
-                  <p style={{ fontSize: '0.85rem', margin: 0 }}>No events scheduled for {monthNames[month]}.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '580px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {upcomingMonthEvents.map((evt) => (
-                    <div
-                      key={evt.id}
-                      onClick={() => setSelectedEvent(evt)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.85rem',
-                        padding: '0.85rem',
-                        borderRadius: 'var(--radius-lg)',
-                        backgroundColor: 'var(--bg-surface-hover)',
-                        border: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
-                        e.currentTarget.style.borderColor = 'var(--primary-400)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                        e.currentTarget.style.borderColor = 'var(--border-color)';
-                      }}
-                    >
-                      {evt.type === 'BIRTHDAY' ? (
-                        <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
-                      ) : (
-                        <div
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: 'var(--radius-md)',
-                            backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.18)' : 'rgba(59, 130, 246, 0.18)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                          }}
-                        >
-                          {evt.type === 'FESTIVAL' ? <PartyPopper size={20} /> : <CalendarIcon size={20} />}
+                    {/* Icon / Avatar */}
+                    {evt.type === 'BIRTHDAY' ? (
+                      <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="lg" />
+                    ) : (
+                      <div
+                        style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: 'var(--radius-lg)',
+                          backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.18)' : 'rgba(59, 130, 246, 0.18)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: evt.type === 'FESTIVAL' ? '#4ade80' : '#818cf8',
+                        }}
+                      >
+                        {evt.type === 'FESTIVAL' ? <PartyPopper size={24} /> : <CalendarIcon size={24} />}
+                      </div>
+                    )}
+
+                    {/* Event Content Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        {evt.title}
+                      </h3>
+                      {evt.description && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                          {evt.description}
+                        </p>
+                      )}
+                      {evt.location && (
+                        <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                          📍 Location: {evt.location}
                         </div>
                       )}
+                    </div>
 
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {evt.title}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          📅 {evt.date} {evt.location ? `• 📍 ${evt.location}` : ''}
-                        </div>
-                      </div>
-
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <Badge
                         variant={
                           evt.type === 'BIRTHDAY'
@@ -438,14 +659,70 @@ export const CalendarPage: React.FC = () => {
                       >
                         {evt.type}
                       </Badge>
+                      <ArrowRight size={18} color="var(--text-muted)" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardBody>
-          </Card>
-        </div>
-      </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Alternate View Mode 3: 12-Month Year View */}
+      {viewMode === 'YEAR' && (
+        <Card style={{ padding: '1.5rem' }}>
+          <CardHeader>
+            <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CalendarDays size={20} color="var(--primary-400)" />
+              {year} Full Year Overview (Click any month to jump)
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              {monthNames.map((mName, mIdx) => {
+                const mEvents = events.filter((e) => {
+                  if (!e.date) return false;
+                  const parts = e.date.split('-');
+                  return parts.length >= 2 && parseInt(parts[1], 10) === mIdx + 1;
+                });
+
+                return (
+                  <div
+                    key={mName}
+                    className="mini-month-card"
+                    onClick={() => {
+                      setCurrentDate(new Date(year, mIdx, 1));
+                      setViewMode('GRID');
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        {mName}
+                      </h4>
+                      <Badge variant={mEvents.length > 0 ? 'info' : 'neutral'}>
+                        {mEvents.length} Event(s)
+                      </Badge>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '100px', overflowY: 'auto' }}>
+                      {mEvents.length === 0 ? (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No events scheduled</div>
+                      ) : (
+                        mEvents.slice(0, 3).map((me) => (
+                          <div key={me.id} style={{ fontSize: '0.725rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            📅 {me.date.split('-')[2]}: {me.title}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Add Event Modal */}
       <Modal isOpen={addEventOpen} onClose={() => setAddEventOpen(false)} title="Add Holiday / Company Event">

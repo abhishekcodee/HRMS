@@ -1157,3 +1157,40 @@ html, body {
   padding: 1.5rem 1.75rem;
 }
 
+/* Alternate Calendar Layouts & Timeline List View */
+.calendar-timeline-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.calendar-timeline-item:hover {
+  transform: translateX(4px) translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 15px rgba(99, 102, 241, 0.2);
+  border-color: var(--primary-400);
+}
+
+.mini-month-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.mini-month-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-400);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.weekend-cell-highlight {
+  background-color: rgba(99, 102, 241, 0.04) !important;
+}
+
