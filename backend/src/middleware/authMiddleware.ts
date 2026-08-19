@@ -12,6 +12,7 @@ export interface AuthRequest extends Request {
     role: 'admin' | 'employer' | 'employee';
     status: 'active' | 'inactive' | 'suspended';
     mustChangePassword: boolean;
+    profilePhoto?: string;
   };
 }
 
@@ -34,7 +35,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     const decoded = jwt.verify(token, env.JWT_SECRET) as any;
 
     const [rows]: any = await pool.query(
-      'SELECT id, employee_id, full_name, email, role, status, must_change_password FROM users WHERE id = ?',
+      'SELECT id, employee_id, full_name, email, role, status, profile_photo, must_change_password FROM users WHERE id = ?',
       [decoded.id]
     );
 
@@ -69,6 +70,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       email: user.email,
       role: user.role,
       status: user.status,
+      profilePhoto: user.profile_photo || undefined,
       mustChangePassword: user.must_change_password === 1 || user.must_change_password === true,
     };
 

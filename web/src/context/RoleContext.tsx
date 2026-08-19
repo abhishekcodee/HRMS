@@ -51,11 +51,32 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamName: 'Core Operations',
         joiningDate: '2024-01-01',
         status: 'ACTIVE',
-        avatar: user.profilePhoto || fallbackMock.avatar,
+        avatar: user.profilePhoto || undefined,
         emergencyContact: 'Emergency Contact',
         emergencyPhone: '+91 98765 00001',
       }
-    : fallbackMock;
+    : {
+        id: 'guest',
+        employeeId: 'EMP000',
+        firstName: 'Guest',
+        lastName: 'User',
+        email: 'guest@hrms.com',
+        phone: '',
+        gender: 'Male',
+        dob: '1990-01-01',
+        address: '',
+        role: activeRoleView,
+        designation: 'User',
+        departmentId: 'dept-1',
+        departmentName: 'General',
+        teamId: 'team-1',
+        teamName: 'General',
+        joiningDate: '2024-01-01',
+        status: 'ACTIVE',
+        avatar: undefined,
+        emergencyContact: '',
+        emergencyPhone: '',
+      };
 
   return (
     <RoleContext.Provider

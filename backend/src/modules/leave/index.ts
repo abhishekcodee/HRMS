@@ -3,6 +3,9 @@ import { authenticateToken, requireRole } from '../../middleware/authMiddleware.
 import {
   applyLeave,
   listLeaveRequests,
+  getLeaveBalances,
+  employerActionOnLeave,
+  adminActionOnLeave,
   approveLeave,
   rejectLeave,
   getLeaveAuditTrail,
@@ -13,8 +16,11 @@ import {
 const router = Router();
 router.use(authenticateToken);
 
+router.get('/balances', getLeaveBalances);
 router.post('/', applyLeave);
 router.get('/', listLeaveRequests);
+router.patch('/:id/employer-action', requireRole(['admin', 'employer']), employerActionOnLeave);
+router.patch('/:id/admin-action', requireRole(['admin']), adminActionOnLeave);
 router.patch('/:id/approve', requireRole(['admin', 'employer']), approveLeave);
 router.patch('/:id/reject', requireRole(['admin', 'employer']), rejectLeave);
 router.get('/audit-trail', requireRole(['admin', 'employer']), getLeaveAuditTrail);
@@ -23,11 +29,10 @@ router.post('/email-logs/:id/retry', requireRole(['admin', 'employer']), retryNo
 
 /**
  * Leave Module Boundary
- * Responsibilities: Leave applications, balances, HR approval/rejection workflows, and email notifications.
+ * Responsibilities: Dual-approval leave applications, balances, employer & admin review workflows, and audit notifications.
  */
 export const leaveModule = {
   name: 'leave',
   version: '1.0.0',
   router,
 };
-

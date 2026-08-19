@@ -27,7 +27,7 @@ export async function seedDatabase() {
         status VARCHAR(20) NOT NULL DEFAULT 'active',
         must_change_password TINYINT(1) NOT NULL DEFAULT 1,
         password_changed_at DATETIME,
-        profile_photo TEXT,
+        profile_photo LONGTEXT,
         last_login_at DATETIME,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -161,8 +161,34 @@ export async function seedDatabase() {
         end_date VARCHAR(20) NOT NULL,
         days_count INT NOT NULL,
         reason TEXT,
+        attachment TEXT,
+        employer_id VARCHAR(36),
+        employer_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        employer_action_by VARCHAR(255),
+        employer_action_at DATETIME,
+        employer_rejection_reason TEXT,
+        admin_id VARCHAR(36),
+        admin_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        admin_action_by VARCHAR(255),
+        admin_action_at DATETIME,
+        admin_rejection_reason TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS leave_balances (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        leave_type VARCHAR(50) NOT NULL,
+        allocated_days DECIMAL(5,2) NOT NULL DEFAULT 12.00,
+        used_days DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_user_leave (user_id, leave_type),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
@@ -285,6 +311,21 @@ export async function seedDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS master_teams (
+        id VARCHAR(36) PRIMARY KEY,
+        department_id VARCHAR(36) NOT NULL,
+        department_name VARCHAR(100),
+        name VARCHAR(100) NOT NULL,
+        leader_name VARCHAR(100),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    try {
+      await conn.query(`ALTER TABLE master_departments ADD COLUMN head_name VARCHAR(100);`);
+    } catch (_) {}
+
     // Seed default eSSL / ZKTeco device if table empty
     const [bioDevs]: any = await conn.query('SELECT COUNT(*) as count FROM biometric_devices');
     if (bioDevs[0].count === 0) {
@@ -309,18 +350,66 @@ export async function seedDatabase() {
     try {
       await conn.query(`ALTER TABLE leave_requests ADD COLUMN reviewed_at DATETIME;`);
     } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN attachment TEXT;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN employer_id VARCHAR(36);`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN employer_status VARCHAR(20) NOT NULL DEFAULT 'PENDING';`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN employer_action_by VARCHAR(255);`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN employer_action_at DATETIME;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN employer_rejection_reason TEXT;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN admin_id VARCHAR(36);`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN admin_status VARCHAR(20) NOT NULL DEFAULT 'PENDING';`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN admin_action_by VARCHAR(255);`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN admin_action_at DATETIME;`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE leave_requests ADD COLUMN admin_rejection_reason TEXT;`);
+    } catch (_) {}
 
     logger.info('✅ MySQL Tables created/verified.');
 
-    // 1b. Seed Master Tables if empty
     const [depts]: any = await conn.query('SELECT COUNT(*) as count FROM master_departments');
     if (depts[0].count === 0) {
-      await conn.query(`INSERT INTO master_departments (id, name, code, description) VALUES
-        (UUID(), 'Information Technology', 'IT', 'Core software development, infrastructure, QA and IT support'),
-        (UUID(), 'Human Resources', 'HR', 'Talent acquisition, employee relations, and HR policies'),
-        (UUID(), 'Finance & Accounts', 'FIN', 'Corporate accounting, tax compliance, and auditing'),
-        (UUID(), 'Sales & Business', 'SLS', 'Enterprise business development and client relations'),
-        (UUID(), 'Operations & Logistics', 'OPS', 'Facilities management and operational planning');`);
+      await conn.query(`INSERT INTO master_departments (id, name, code, head_name, description) VALUES
+        (UUID(), 'Information Technology', 'IT', 'Aman Upadhyay', 'Core software development, infrastructure, QA and IT support'),
+        (UUID(), 'Human Resources', 'HR', 'Priya Sharma', 'Talent acquisition, employee relations, and HR policies'),
+        (UUID(), 'Finance & Accounts', 'FIN', 'Rajesh Kumar', 'Corporate accounting, tax compliance, and auditing'),
+        (UUID(), 'Sales & Business', 'SLS', 'Ananya Iyer', 'Enterprise business development and client relations'),
+        (UUID(), 'Operations & Logistics', 'OPS', 'Vikram Singh', 'Facilities management and operational planning');`);
+    }
+
+    const [teamsCount]: any = await conn.query('SELECT COUNT(*) as count FROM master_teams');
+    if (teamsCount[0].count === 0) {
+      const [itDepts]: any = await conn.query('SELECT id FROM master_departments WHERE code = "IT"');
+      const [hrDepts]: any = await conn.query('SELECT id FROM master_departments WHERE code = "HR"');
+      const [finDepts]: any = await conn.query('SELECT id FROM master_departments WHERE code = "FIN"');
+      const itId = itDepts.length > 0 ? itDepts[0].id : 'dept-it';
+      const hrId = hrDepts.length > 0 ? hrDepts[0].id : 'dept-hr';
+      const finId = finDepts.length > 0 ? finDepts[0].id : 'dept-fin';
+
+      await conn.query(`INSERT INTO master_teams (id, department_id, department_name, name, leader_name) VALUES
+        (UUID(), ?, 'Information Technology', 'Core Engineering & Architecture', 'Aman Upadhyay'),
+        (UUID(), ?, 'Information Technology', 'QA & Test Automation', 'Anand Verma'),
+        (UUID(), ?, 'Human Resources', 'Talent Acquisition & Onboarding', 'Priya Sharma'),
+        (UUID(), ?, 'Finance & Accounts', 'Payroll & Auditing', 'Rajesh Kumar');`, [itId, itId, hrId, finId]);
     }
 
     const [desigs]: any = await conn.query('SELECT COUNT(*) as count FROM master_designations');
@@ -510,12 +599,25 @@ export async function seedDatabase() {
           );
         }
 
+        // Leave balances initialization
+        const [existingBal]: any = await conn.query('SELECT id FROM leave_balances WHERE user_id = ?', [userId]);
+        if (existingBal.length === 0) {
+          await conn.query(
+            `INSERT INTO leave_balances (id, user_id, leave_type, allocated_days, used_days) VALUES
+             (UUID(), ?, 'Casual Leave', 12.00, 0.00),
+             (UUID(), ?, 'Sick Leave', 10.00, 0.00),
+             (UUID(), ?, 'Earned Leave', 15.00, 0.00)`,
+            [userId, userId, userId]
+          );
+        }
+
         // Leave records
         const [existingLeave]: any = await conn.query('SELECT id FROM leave_requests WHERE user_id = ?', [userId]);
         if (existingLeave.length === 0) {
+          const initStatus = acc.employeeId === 'EMP001' ? 'APPROVED' : 'PENDING';
           await conn.query(
-            `INSERT INTO leave_requests (id, user_id, leave_type, start_date, end_date, days_count, reason, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO leave_requests (id, user_id, leave_type, start_date, end_date, days_count, reason, status, employer_status, admin_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               uuidv4(),
               userId,
@@ -524,7 +626,9 @@ export async function seedDatabase() {
               '2026-08-21',
               2,
               `Personal leave request for ${acc.fullName}`,
-              acc.employeeId === 'EMP001' ? 'APPROVED' : 'PENDING',
+              initStatus,
+              initStatus,
+              initStatus,
             ]
           );
         }

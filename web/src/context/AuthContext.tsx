@@ -23,6 +23,7 @@ interface AuthContextType {
   changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchRoleView: (targetRole: UserRole) => Promise<{ success: boolean; error?: string }>;
+  updateUserProfileInState: (partial: Partial<UserAuthProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -199,6 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('hrms_token');
     localStorage.removeItem('hrms_user');
     localStorage.removeItem('hrms_active_role');
+    localStorage.clear();
+    sessionStorage.clear();
   };
 
   const switchRoleView = async (targetRole: UserRole): Promise<{ success: boolean; error?: string }> => {
@@ -238,6 +241,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfileInState = (partial: Partial<UserAuthProfile>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...partial };
+      localStorage.setItem('hrms_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -250,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         changePassword,
         logout,
         switchRoleView,
+        updateUserProfileInState,
       }}
     >
       {children}

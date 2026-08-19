@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { createUser, listUsers, updateUserStatus, adminResetUserPassword } from './userController.js';
+import { createUser, listUsers, updateUserStatus, adminResetUserPassword, getAuditLogs } from './userController.js';
 import { authenticateToken, requireRole } from '../../middleware/authMiddleware.js';
 
 const router = Router();
 
+router.get('/audit-logs', authenticateToken, requireRole(['admin']), getAuditLogs);
 router.get('/', authenticateToken, requireRole(['admin']), listUsers);
 router.post('/', authenticateToken, requireRole(['admin']), createUser);
 router.patch('/:userId/status', authenticateToken, requireRole(['admin']), updateUserStatus);

@@ -1,25 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Building2, CalendarDays, FileText } from 'lucide-react';
+import { Search, User, Building2 } from 'lucide-react';
 import { Modal, Input } from './ui';
-import { MOCK_EMPLOYEES, MOCK_DEPARTMENTS } from '@hrms/shared';
+import { fetchEmployeesFromDb, EmployeeDbRecord } from '../services/employeeApi';
+import { MOCK_DEPARTMENTS } from '@hrms/shared';
 
 export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
   onClose
 }) => {
   const [query, setQuery] = useState('');
+  const [employees, setEmployees] = useState<EmployeeDbRecord[]>([]);
   const navigate = useNavigate();
 
-  const filteredEmployees = query
-    ? MOCK_EMPLOYEES.filter(
-        e =>
-          e.firstName.toLowerCase().includes(query.toLowerCase()) ||
-          e.lastName.toLowerCase().includes(query.toLowerCase()) ||
-          e.employeeId.toLowerCase().includes(query.toLowerCase()) ||
-          e.departmentName.toLowerCase().includes(query.toLowerCase())
-      )
-    : [];
+  useEffect(() => {
+    if (!query.trim()) {
+      setEmployees([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const results = await fetchEmployeesFromDb({ search: query.trim() });
+      setEmployees(results);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const filteredDepts = query
     ? MOCK_DEPARTMENTS.filter(
@@ -33,7 +39,7 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
     <Modal isOpen={isOpen} onClose={onClose} title="Global HRMS Search" maxWidth="560px">
       <div>
         <Input
-          placeholder="Search employees, departments, attendance, documents..."
+          placeholder="Search real employees, departments..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           icon={<Search size={18} />}
@@ -42,13 +48,13 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
 
         {query && (
           <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {filteredEmployees.length > 0 && (
+            {employees.length > 0 && (
               <div>
                 <h5 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                  Employees ({filteredEmployees.length})
+                  Employees ({employees.length})
                 </h5>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {filteredEmployees.map(emp => (
+                  {employees.map(emp => (
                     <div
                       key={emp.id}
                       onClick={() => {
@@ -68,10 +74,10 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
                       <User size={16} color="var(--primary-500)" />
                       <div>
                         <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                          {emp.firstName} {emp.lastName} ({emp.employeeId})
+                          {emp.fullName} ({emp.employeeId})
                         </div>
                         <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-                          {emp.designation} • {emp.departmentName}
+                          {emp.designation || 'Employee'} • {emp.departmentName || 'General'}
                         </div>
                       </div>
                     </div>
@@ -118,7 +124,7 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
               </div>
             )}
 
-            {filteredEmployees.length === 0 && filteredDepts.length === 0 && (
+            {employees.length === 0 && filteredDepts.length === 0 && (
               <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                 No results found matching &quot;{query}&quot;
               </div>

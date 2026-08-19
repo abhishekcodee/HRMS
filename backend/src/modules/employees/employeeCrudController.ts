@@ -234,6 +234,7 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       fullName,
       email,
       phone,
+      profilePhoto,
       role,
       status,
       departmentName,
@@ -266,11 +267,20 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
        SET full_name = COALESCE(?, full_name),
            email = COALESCE(?, email),
            phone = COALESCE(?, phone),
+           profile_photo = COALESCE(?, profile_photo),
            role = COALESCE(?, role),
            status = COALESCE(?, status),
            updated_at = NOW()
        WHERE id = ?`,
-      [fullName ? fullName.trim() : null, email ? email.trim() : null, phone ? phone.trim() : null, role || null, status || null, id]
+      [
+        fullName ? fullName.trim() : null,
+        email ? email.trim() : null,
+        phone ? phone.trim() : null,
+        profilePhoto ? profilePhoto.trim() : null,
+        role || null,
+        status || null,
+        id,
+      ]
     );
 
     // Check if employee profile exists, else create

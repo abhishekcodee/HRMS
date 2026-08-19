@@ -113,7 +113,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const userMenuItems = [
     { id: 'profile', label: 'View Profile', icon: <User size={16} />, onClick: () => navigate('/my-profile') },
-    { id: 'settings', label: 'System Settings', icon: <Settings size={16} />, onClick: () => navigate('/settings') },
+    ...(role === UserRole.ADMIN ? [{ id: 'settings', label: 'System Settings', icon: <Settings size={16} />, onClick: () => navigate('/settings') }] : []),
     { id: 'logout', label: 'Sign Out', icon: <LogOut size={16} />, danger: true, onClick: handleLogout }
   ];
 
@@ -322,10 +322,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <Dropdown
               trigger={
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Avatar name={`${currentUser.firstName} ${currentUser.lastName}`} src={currentUser.avatar} size="sm" status="online" />
+                  <Avatar name={user?.fullName || 'User'} src={user?.profilePhoto || undefined} size="sm" status="online" />
                   <div style={{ textAlign: 'left', display: 'none', flexDirection: 'column' }} className="user-info-text">
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                      {currentUser.firstName} {currentUser.lastName}
+                      {user?.fullName || 'User'}
                     </span>
                     <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
                       {currentUser.designation}

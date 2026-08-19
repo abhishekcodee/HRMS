@@ -126,7 +126,7 @@ export const attendance = mysqlTable('attendance', {
 });
 
 /**
- * Leave Requests Table - User Isolated
+ * Leave Requests Table - Dual Approval Workflow
  */
 export const leaveRequests = mysqlTable('leave_requests', {
   id: varchar('id', { length: 36 }).primaryKey(),
@@ -136,11 +136,36 @@ export const leaveRequests = mysqlTable('leave_requests', {
   endDate: varchar('end_date', { length: 20 }).notNull(),
   daysCount: int('days_count').notNull(),
   reason: text('reason'),
-  status: varchar('status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'APPROVED' | 'REJECTED'
+  attachment: text('attachment'),
+  employerId: varchar('employer_id', { length: 36 }),
+  employerStatus: varchar('employer_status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'APPROVED' | 'REJECTED'
+  employerActionBy: varchar('employer_action_by', { length: 255 }),
+  employerActionAt: timestamp('employer_action_at'),
+  employerRejectionReason: text('employer_rejection_reason'),
+  adminId: varchar('admin_id', { length: 36 }),
+  adminStatus: varchar('admin_status', { length: 20 }).notNull().default('PENDING'), // 'PENDING' | 'APPROVED' | 'REJECTED'
+  adminActionBy: varchar('admin_action_by', { length: 255 }),
+  adminActionAt: timestamp('admin_action_at'),
+  adminRejectionReason: text('admin_rejection_reason'),
+  status: varchar('status', { length: 20 }).notNull().default('PENDING'), // Overall Status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
   rejectionRemarks: text('rejection_remarks'),
   reviewedBy: varchar('reviewed_by', { length: 36 }),
   reviewedAt: timestamp('reviewed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Employee Leave Balances Table
+ */
+export const leaveBalances = mysqlTable('leave_balances', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull(),
+  leaveType: varchar('leave_type', { length: 50 }).notNull(),
+  allocatedDays: decimal('allocated_days', { precision: 5, scale: 2 }).notNull().default('12.00'),
+  usedDays: decimal('used_days', { precision: 5, scale: 2 }).notNull().default('0.00'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });
 
 /**

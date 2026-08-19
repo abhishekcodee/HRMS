@@ -257,3 +257,18 @@ export async function adminResetUserPassword(req: AuthRequest, res: Response): P
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to reset user password.' } });
   }
 }
+
+export async function getAuditLogs(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const [rows]: any = await pool.query(
+      `SELECT id, user_id as userId, user_email as userEmail, role, action, details, ip_address as ipAddress, created_at as createdAt
+       FROM audit_logs
+       ORDER BY created_at DESC
+       LIMIT 100`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Get Audit Logs error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch audit logs.' } });
+  }
+}

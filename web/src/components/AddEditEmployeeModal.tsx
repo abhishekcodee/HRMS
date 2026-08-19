@@ -63,6 +63,20 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (!formData.fullName || !formData.fullName.trim()) {
+      setErrorMessage('Full Name is required.');
+      return;
+    }
+    if (!formData.email || !formData.email.trim()) {
+      setErrorMessage('Official Email is required.');
+      return;
+    }
+    if (!formData.employeeId || !formData.employeeId.trim()) {
+      setErrorMessage('Employee ID is required.');
+      return;
+    }
+
     setLoading(true);
     try {
       await onSave(formData);
@@ -227,6 +241,12 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
             />
           </div>
         </FormSection>
+
+        {errorMessage && (
+          <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-md)', color: '#ef4444', fontSize: '0.85rem' }}>
+            ⚠️ {errorMessage}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>

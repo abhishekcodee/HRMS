@@ -4,8 +4,20 @@ import { fetchLeaveAuditTrail, fetchEmailLogs, retryEmailNotificationInDb, Leave
 import { Card, CardHeader, CardTitle, CardBody, TableContainer, Table, Thead, Tbody, Tr, Th, Td, Badge, Button, Alert } from '../components/ui';
 import { RefreshCw } from 'lucide-react';
 
+interface SystemAuditLog {
+  id: string;
+  userId: string;
+  userEmail: string;
+  role: string;
+  action: string;
+  details: string;
+  ipAddress: string;
+  createdAt: string;
+}
+
 export const AuditLogsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'system' | 'leave' | 'email'>('system');
+  const [systemLogs, setSystemLogs] = useState<SystemAuditLog[]>([]);
   const [leaveAudits, setLeaveAudits] = useState<LeaveAuditRecord[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLogRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -14,7 +26,16 @@ export const AuditLogsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'leave') {
+      if (activeTab === 'system') {
+        const token = localStorage.getItem('hrms_token');
+        const res = await fetch('/api/v1/users/audit-logs', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setSystemLogs(json.data);
+        }
+      } else if (activeTab === 'leave') {
         const data = await fetchLeaveAuditTrail();
         setLeaveAudits(data);
       } else if (activeTab === 'email') {
@@ -82,36 +103,38 @@ export const AuditLogsPage: React.FC = () => {
 
       {activeTab === 'system' && (
         <Card>
-          <CardHeader><CardTitle>System Activity Logs ({MOCK_AUDIT_LOGS.length})</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Live System Security & Audit Logs ({systemLogs.length})</CardTitle></CardHeader>
           <CardBody>
-            <TableContainer>
-              <Table>
-                <Thead>
-                  <Tr>
-                    <Th>Timestamp (UTC)</Th>
-                    <Th>Actor Name</Th>
-                    <Th>Role</Th>
-                    <Th>Action Event</Th>
-                    <Th>Target Module</Th>
-                    <Th>Details</Th>
-                    <Th>IP Address</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {MOCK_AUDIT_LOGS.map(log => (
-                    <Tr key={log.id}>
-                      <Td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{log.timestamp}</Td>
-                      <Td style={{ fontWeight: 600 }}>{log.actorName}</Td>
-                      <Td><Badge variant="info">{log.actorRole}</Badge></Td>
-                      <Td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary-500)' }}>{log.action}</Td>
-                      <Td>{log.module}</Td>
-                      <Td>{log.details}</Td>
-                      <Td style={{ fontFamily: 'monospace' }}>{log.ipAddress}</Td>
+            {loading ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading system audit logs...</div>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <Thead>
+                    <Tr>
+                      <Th>Timestamp</Th>
+                      <Th>User Email</Th>
+                      <Th>Role</Th>
+                      <Th>Action Event</Th>
+                      <Th>Details</Th>
+                      <Th>IP Address</Th>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                  </Thead>
+                  <Tbody>
+                    {systemLogs.map(log => (
+                      <Tr key={log.id}>
+                        <Td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{new Date(log.createdAt).toLocaleString()}</Td>
+                        <Td style={{ fontWeight: 600 }}>{log.userEmail || 'System'}</Td>
+                        <Td><Badge variant="info">{log.role || 'system'}</Badge></Td>
+                        <Td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary-500)' }}>{log.action}</Td>
+                        <Td>{log.details}</Td>
+                        <Td style={{ fontFamily: 'monospace' }}>{log.ipAddress}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            )}
           </CardBody>
         </Card>
       )}

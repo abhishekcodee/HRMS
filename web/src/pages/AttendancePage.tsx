@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { useRole } from '../context/RoleContext';
-import { UserRole, MOCK_ATTENDANCE, MOCK_DEPARTMENTS, AttendanceMock } from '@hrms/shared';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '@hrms/shared';
+import {
+  fetchRawBiometricLogs,
+  BiometricPunchLogRecord,
+} from '../services/biometricApi';
 import {
   Button,
   Card,
@@ -17,28 +21,56 @@ import {
   Badge,
   Pagination,
   StatCard,
-  Alert
+  Alert,
 } from '../components/ui';
-import { CalendarDays, Clock, ShieldCheck, Download, Filter } from 'lucide-react';
+import { CalendarDays, Clock, Download, RefreshCw } from 'lucide-react';
 
 export const AttendancePage: React.FC = () => {
-  const { role, currentUser } = useRole();
-  const [selectedDate, setSelectedDate] = useState('2026-08-11');
+  const { user, activeRoleView } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
   const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [logs, setLogs] = useState<BiometricPunchLogRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredLogs = MOCK_ATTENDANCE.filter(att => {
-    if (role === UserRole.EMPLOYEE && att.employeeCode !== currentUser.employeeId) {
+  const loadLogs = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchRawBiometricLogs();
+      setLogs(data);
+    } catch (err) {
+      console.error('Failed to load biometric logs:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogs();
+  }, []);
+
+  // Filter logs dynamically from real DB
+  const filteredLogs = logs.filter((att) => {
+    if (
+      activeRoleView === UserRole.EMPLOYEE &&
+      user?.employeeId &&
+      att.employeeId !== user.employeeId
+    ) {
       return false;
     }
+
     const matchesSearch =
-      att.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-      att.employeeCode.toLowerCase().includes(search.toLowerCase());
-    const matchesDept = deptFilter ? att.departmentName === deptFilter : true;
-    const matchesStatus = statusFilter ? att.status === statusFilter : true;
-    return matchesSearch && matchesDept && matchesStatus;
+      !search ||
+      att.employeeId.toLowerCase().includes(search.toLowerCase()) ||
+      (att.employeeName && att.employeeName.toLowerCase().includes(search.toLowerCase())) ||
+      att.deviceSn.toLowerCase().includes(search.toLowerCase());
+
+    const matchesDate =
+      !selectedDate || att.punchTime.startsWith(selectedDate);
+
+    return matchesSearch && matchesDate;
   });
 
   return (
@@ -47,55 +79,79 @@ export const AttendancePage: React.FC = () => {
         <div>
           <h1 className="page-title">Biometric Attendance Logs</h1>
           <p className="page-subtitle">
-            {role === UserRole.EMPLOYEE ? 'My Daily Punch & Work Hours Log' : 'Automated eSSL Biometric Ingestion & Daily Work Duration Processing'}
+            {activeRoleView === UserRole.EMPLOYEE
+              ? 'My Daily Hardware Biometric Punch Logs'
+              : 'Real-Time eSSL Biometric Device Punch Log Ingestion (MySQL Data)'}
           </p>
         </div>
         <div className="page-actions">
-          <Button variant="outline" icon={<Download size={16} />} onClick={() => alert('Exporting attendance report (UI Placeholder).')}>
-            Export CSV
+          <Button
+            variant="outline"
+            icon={<RefreshCw size={16} />}
+            onClick={loadLogs}
+            isLoading={loading}
+          >
+            Refresh Feed
           </Button>
         </div>
       </div>
 
-      {role !== UserRole.EMPLOYEE && (
+      {activeRoleView !== UserRole.EMPLOYEE && (
         <>
           {/* eSSL Integration Note Banner */}
-          <Alert variant="info" title="eSSL Biometric Machine Automated Sync Enabled">
-            Attendance punches are automatically captured from your physical eSSL biometric hardware terminal. Manual employee check-in creation is prohibited as per compliance policy.
+          <Alert variant="info" title="Hardware eSSL Biometric Machine Real-Time Ingestion">
+            Attendance punches are captured directly from hardware eSSL ZK-Teco biometric devices and stored in MySQL database tables.
           </Alert>
 
           {/* Attendance Stats Cards */}
           <div className="stat-grid">
-            <StatCard title="Total Scheduled" value={MOCK_ATTENDANCE.length} icon={<CalendarDays size={20} />} subtext="Today's workforce shift" />
-            <StatCard title="Punched In" value={MOCK_ATTENDANCE.filter(a => a.checkIn !== '-').length} icon={<Clock size={20} />} change="92%" changeType="positive" />
-            <StatCard title="Late Arrivals" value={MOCK_ATTENDANCE.filter(a => a.status === 'LATE').length} icon={<Clock size={20} />} change="2 Employees" changeType="negative" />
-            <StatCard title="Missing Punch" value={MOCK_ATTENDANCE.filter(a => a.status === 'MISSING_PUNCH').length} icon={<Clock size={20} />} change="1 Exception" changeType="negative" />
+            <StatCard
+              title="Total Machine Punches"
+              value={logs.length}
+              icon={<CalendarDays size={20} />}
+              subtext="Hardware log entries in DB"
+            />
+            <StatCard
+              title="Punched In Today"
+              value={
+                logs.filter((l) => l.punchTime.startsWith(new Date().toISOString().split('T')[0])).length
+              }
+              icon={<Clock size={20} />}
+              subtext="Punches recorded today"
+            />
+            <StatCard
+              title="Active Devices"
+              value={
+                new Set(logs.map((l) => l.deviceSn)).size
+              }
+              icon={<Clock size={20} />}
+              subtext="Biometric hardware devices"
+            />
           </div>
         </>
       )}
 
       {/* Filter Toolbar */}
       <Card padding="1rem">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'center' }}>
-          <DatePicker value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-          <SearchInput placeholder="Search employee or ID..." value={search} onChange={e => setSearch(e.target.value)} onClear={() => setSearch('')} />
-          <Select
-            placeholder="All Departments"
-            options={MOCK_DEPARTMENTS.map(d => ({ value: d.name, label: d.name }))}
-            value={deptFilter}
-            onChange={e => setDeptFilter(e.target.value)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+          <DatePicker
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+          <SearchInput
+            placeholder="Search employee ID or Device SN..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
           />
           <Select
-            placeholder="All Statuses"
+            placeholder="Filter by State"
             options={[
-              { value: 'PRESENT', label: 'Present' },
-              { value: 'LATE', label: 'Late' },
-              { value: 'HALF_DAY', label: 'Half Day' },
-              { value: 'ON_LEAVE', label: 'On Leave' },
-              { value: 'MISSING_PUNCH', label: 'Missing Punch' }
+              { value: 'CHECK_IN', label: 'Check In' },
+              { value: 'CHECK_OUT', label: 'Check Out' },
             ]}
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={(e) => setStatusFilter(e.target.value)}
           />
         </div>
       </Card>
@@ -105,58 +161,44 @@ export const AttendancePage: React.FC = () => {
         <Table>
           <Thead>
             <Tr>
-              <Th>Employee</Th>
-              <Th>ID</Th>
-              <Th>Department</Th>
-              <Th>Date</Th>
-              <Th>Check In</Th>
-              <Th>Check Out</Th>
-              <Th>Work Hours</Th>
-              <Th>Late / Early</Th>
-              <Th>Overtime</Th>
-              <Th>Status</Th>
+              <Th>Employee ID</Th>
+              <Th>Employee Name</Th>
+              <Th>Hardware Device SN</Th>
+              <Th>Punch Date & Time</Th>
+              <Th>Verification Method</Th>
+              <Th>Punch Type</Th>
             </Tr>
           </Thead>
           <Tbody>
-            {filteredLogs.map(att => (
-              <Tr key={att.id}>
-                <Td style={{ fontWeight: 600 }}>{att.employeeName}</Td>
-                <Td style={{ fontFamily: 'monospace' }}>{att.employeeCode}</Td>
-                <Td>{att.departmentName}</Td>
-                <Td>{att.date}</Td>
-                <Td style={{ fontWeight: 600, color: att.checkIn !== '-' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{att.checkIn}</Td>
-                <Td style={{ fontWeight: 600, color: att.checkOut !== '-' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{att.checkOut}</Td>
-                <Td>{att.workHours}</Td>
-                <Td>
-                  {att.lateMinutes > 0 ? (
-                    <span style={{ color: 'var(--warning-text)', fontWeight: 600 }}>+{att.lateMinutes}m Late</span>
-                  ) : att.earlyExitMinutes > 0 ? (
-                    <span style={{ color: 'var(--error-text)', fontWeight: 600 }}>-{att.earlyExitMinutes}m Early</span>
-                  ) : (
-                    'On Time'
-                  )}
-                </Td>
-                <Td>{att.overtimeHours}</Td>
-                <Td>
-                  <Badge
-                    variant={
-                      att.status === 'PRESENT'
-                        ? 'success'
-                        : att.status === 'LATE'
-                        ? 'warning'
-                        : att.status === 'MISSING_PUNCH'
-                        ? 'error'
-                        : 'neutral'
-                    }
-                  >
-                    {att.status}
-                  </Badge>
+            {filteredLogs.length === 0 ? (
+              <Tr>
+                <Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  No biometric punch logs found matching your filter criteria.
                 </Td>
               </Tr>
-            ))}
+            ) : (
+              filteredLogs.map((att) => (
+                <Tr key={att.id}>
+                  <Td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{att.employeeId}</Td>
+                  <Td style={{ fontWeight: 600 }}>{att.employeeName || user?.fullName || 'Employee'}</Td>
+                  <Td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{att.deviceSn}</Td>
+                  <Td style={{ fontWeight: 600 }}>{new Date(att.punchTime).toLocaleString()}</Td>
+                  <Td>{att.verifyType || 'Fingerprint / Face ID'}</Td>
+                  <Td>
+                    <Badge variant="success">IN PUNCH</Badge>
+                  </Td>
+                </Tr>
+              ))
+            )}
           </Tbody>
         </Table>
-        <Pagination currentPage={1} totalPages={1} totalItems={filteredLogs.length} itemsPerPage={10} onPageChange={() => {}} />
+        <Pagination
+          currentPage={1}
+          totalPages={1}
+          totalItems={filteredLogs.length}
+          itemsPerPage={10}
+          onPageChange={() => {}}
+        />
       </TableContainer>
     </div>
   );
