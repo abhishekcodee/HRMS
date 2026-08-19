@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, Building2 } from 'lucide-react';
 import { Modal, Input } from './ui';
-import { fetchEmployeesFromDb, EmployeeDbRecord } from '../services/employeeApi';
-import { MOCK_DEPARTMENTS } from '@hrms/shared';
+import { fetchDepartmentsFromDb, DepartmentRecord } from '../services/departmentApi';
 
 export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -11,29 +10,32 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
 }) => {
   const [query, setQuery] = useState('');
   const [employees, setEmployees] = useState<EmployeeDbRecord[]>([]);
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!query.trim()) {
       setEmployees([]);
+      setDepartments([]);
       return;
     }
 
     const timer = setTimeout(async () => {
-      const results = await fetchEmployeesFromDb({ search: query.trim() });
-      setEmployees(results);
+      const [empResults, deptResults] = await Promise.all([
+        fetchEmployeesFromDb({ search: query.trim() }),
+        fetchDepartmentsFromDb(),
+      ]);
+      setEmployees(empResults);
+      const filtered = deptResults.filter(
+        d =>
+          d.name.toLowerCase().includes(query.toLowerCase()) ||
+          d.code.toLowerCase().includes(query.toLowerCase())
+      );
+      setDepartments(filtered);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [query]);
-
-  const filteredDepts = query
-    ? MOCK_DEPARTMENTS.filter(
-        d =>
-          d.name.toLowerCase().includes(query.toLowerCase()) ||
-          d.code.toLowerCase().includes(query.toLowerCase())
-      )
-    : [];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Global HRMS Search" maxWidth="560px">
@@ -86,13 +88,13 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
               </div>
             )}
 
-            {filteredDepts.length > 0 && (
+            {departments.length > 0 && (
               <div>
                 <h5 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                  Departments ({filteredDepts.length})
+                  Departments ({departments.length})
                 </h5>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {filteredDepts.map(dept => (
+                  {departments.map(dept => (
                     <div
                       key={dept.id}
                       onClick={() => {
@@ -115,7 +117,7 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
                           {dept.name} ({dept.code})
                         </div>
                         <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-                          Head: {dept.headName} • {dept.employeeCount} Members
+                          Head: {dept.headName || 'N/A'} • {dept.employeeCount || 0} Members
                         </div>
                       </div>
                     </div>
@@ -124,7 +126,7 @@ export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void 
               </div>
             )}
 
-            {employees.length === 0 && filteredDepts.length === 0 && (
+            {employees.length === 0 && departments.length === 0 && (
               <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                 No results found matching &quot;{query}&quot;
               </div>

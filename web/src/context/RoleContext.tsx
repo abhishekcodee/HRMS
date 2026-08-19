@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole, MOCK_EMPLOYEES, EmployeeMock } from '@hrms/shared';
+import { UserRole, EmployeeMock } from '@hrms/shared';
 import { useAuth } from './AuthContext';
 
 interface RoleContextType {
@@ -30,8 +30,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result.success;
   };
 
-  // Determine current display employee profile from auth state or fallback mock
-  const fallbackMock = MOCK_EMPLOYEES.find(e => e.role === activeRoleView) || MOCK_EMPLOYEES[0];
+  // Determine current display employee profile from auth state
   const currentUser: EmployeeMock = user
     ? {
         id: user.id,

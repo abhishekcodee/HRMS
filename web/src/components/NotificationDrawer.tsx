@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Drawer, Badge, Button } from './ui';
-import { MOCK_NOTIFICATIONS, NotificationMock } from '@hrms/shared';
+import { NotificationMock } from '@hrms/shared';
 import { Bell, CheckCheck, Clock } from 'lucide-react';
 
 export const NotificationDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
   onClose
 }) => {
-  const [notifications, setNotifications] = useState<NotificationMock[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationMock[]>([]);
 
   const markAllRead = () => {
     setNotifications([]);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserRole, MOCK_DOCUMENTS } from '@hrms/shared';
+import { UserRole } from '@hrms/shared';
 import {
   fetchEmployeeByIdFromDb,
   updateEmployeeInDb,
@@ -368,16 +368,11 @@ export const EmployeeDetailPage: React.FC = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {MOCK_DOCUMENTS.map((doc) => (
-                <Tr key={doc.id}>
-                  <Td style={{ fontWeight: 600 }}>{doc.title}</Td>
-                  <Td>{doc.category}</Td>
-                  <Td>{doc.uploadedAt}</Td>
-                  <Td>
-                    <Badge variant="success">{doc.status}</Badge>
-                  </Td>
-                </Tr>
-              ))}
+              <Tr>
+                <Td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  No uploaded compliance documents found in database for this employee.
+                </Td>
+              </Tr>
             </Tbody>
           </Table>
         </TableContainer>
