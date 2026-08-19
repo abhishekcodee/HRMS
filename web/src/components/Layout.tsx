@@ -30,7 +30,8 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Calendar
 } from 'lucide-react';
 
 interface NavItemConfig {
@@ -74,6 +75,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/salary-slips', label: 'Salary Slips (Bulk Mail)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/documents', label: 'Documents', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
@@ -82,6 +84,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/my-profile', label: 'My Profile', icon: <User size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-attendance', label: 'My Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-leave', label: 'My Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.EMPLOYEE] },
+    { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-documents', label: 'My Documents', icon: <FileText size={20} />, roles: [UserRole.EMPLOYEE] },
 
     // Admin Only System Controls

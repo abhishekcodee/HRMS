@@ -204,6 +204,16 @@ export async function seedDatabase() {
         uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS company_events (
+        id VARCHAR(36) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        event_date VARCHAR(20) NOT NULL,
+        description TEXT,
+        location VARCHAR(255),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
     await conn.query(`
@@ -438,6 +448,28 @@ export async function seedDatabase() {
         (UUID(), 'General Day Shift', '09:00 AM', '06:00 PM'),
         (UUID(), 'Morning Shift', '07:00 AM', '04:00 PM'),
         (UUID(), 'Evening Support Shift', '02:00 PM', '11:00 PM');`);
+    }
+
+    const [eventsCount]: any = await conn.query('SELECT COUNT(*) as count FROM company_events');
+    if (eventsCount[0].count === 0) {
+      await conn.query(`INSERT INTO company_events (id, title, event_type, event_date, description, location) VALUES
+        (UUID(), 'New Year\\'s Day', 'FESTIVAL', '2026-01-01', 'Official Public Holiday for New Year 2026', 'All Branches'),
+        (UUID(), 'Republic Day', 'FESTIVAL', '2026-01-26', 'National Holiday celebrating Constitution Day of India', 'All Branches'),
+        (UUID(), 'Maha Shivratri', 'FESTIVAL', '2026-02-15', 'Festive Holiday', 'All Branches'),
+        (UUID(), 'Holi - Festival of Colors', 'FESTIVAL', '2026-03-04', 'Spring Festival & Holiday', 'All Branches'),
+        (UUID(), 'Good Friday', 'FESTIVAL', '2026-04-03', 'Public Holiday', 'All Branches'),
+        (UUID(), 'Dr. Ambedkar Jayanti', 'FESTIVAL', '2026-04-14', 'Public Holiday', 'All Branches'),
+        (UUID(), 'May Day / Labor Day', 'FESTIVAL', '2026-05-01', 'International Workers Day', 'All Branches'),
+        (UUID(), 'Independence Day', 'FESTIVAL', '2026-08-15', 'National Holiday celebrating Indian Independence', 'All Branches'),
+        (UUID(), 'Ganesh Chaturthi', 'FESTIVAL', '2026-09-14', 'Festive Holiday', 'All Branches'),
+        (UUID(), 'Mahatma Gandhi Jayanti', 'FESTIVAL', '2026-10-02', 'National Holiday celebrating Gandhi Jayanti', 'All Branches'),
+        (UUID(), 'Dussehra / Vijayadashami', 'FESTIVAL', '2026-10-20', 'Festive Holiday', 'All Branches'),
+        (UUID(), 'Diwali / Deepavali', 'FESTIVAL', '2026-11-08', 'Festival of Lights - Main Holiday', 'All Branches'),
+        (UUID(), 'Christmas Day', 'FESTIVAL', '2026-12-25', 'Public Holiday celebrating Christmas', 'All Branches'),
+        (UUID(), 'Q1 Town Hall & Strategy Session', 'EVENT', '2026-01-15', 'All-hands Quarterly Company Briefing', 'Main Auditorium & Zoom'),
+        (UUID(), 'Annual Tech Hackathon 2026', 'EVENT', '2026-04-20', '24-hour Enterprise Product Hackathon & Demos', 'Tech Lab HQ'),
+        (UUID(), 'Independence Day Cultural Gala', 'EVENT', '2026-08-14', 'Employee Performance & Evening Celebration', 'Cafeteria & Amphitheatre'),
+        (UUID(), 'Diwali Celebration Party & Dinner', 'EVENT', '2026-11-06', 'Traditional Wear, Festivities & Dinner', 'Grand Ballroom');`);
     }
 
     const [empTypes]: any = await conn.query('SELECT COUNT(*) as count FROM master_employment_types');

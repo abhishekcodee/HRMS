@@ -23,6 +23,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 
 import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
 import BiometricDevicesPage from './pages/BiometricDevicesPage';
+import CalendarPage from './pages/CalendarPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
@@ -99,8 +100,9 @@ export function App() {
                           <Route path="/leave" element={<LeavePage />} />
                           <Route path="/my-leave" element={<LeavePage />} />
 
-                          {/* Salary Slip Bulk Mail Module */}
-                          <Route path="/salary-slips" element={<ProtectedRoute adminOnly><SalarySlipBulkPage /></ProtectedRoute>} />
+                          {/* Calendar & Company Events */}
+                          <Route path="/calendar" element={<CalendarPage />} />
+                          <Route path="/my-calendar" element={<CalendarPage />} />
                           
                           {/* Documents & Vault */}
                           <Route path="/documents" element={<DocumentsPage />} />

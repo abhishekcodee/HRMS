@@ -19,6 +19,10 @@ import {
   BiometricPunchLogRecord,
 } from '../services/biometricApi';
 import {
+  fetchCalendarEventsFromDb,
+  CalendarEventRecord,
+} from '../services/calendarApi';
+import {
   StatCard,
   Card,
   CardHeader,
@@ -35,6 +39,7 @@ import {
   Th,
   Td,
   Alert,
+  Avatar,
 } from '../components/ui';
 import {
   Users,
@@ -48,6 +53,9 @@ import {
   FileCheck2,
   ArrowRight,
   ShieldCheck,
+  Cake,
+  PartyPopper,
+  Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -64,6 +72,7 @@ export const Dashboard: React.FC = () => {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceRecord[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRecord[]>([]);
   const [punchLogs, setPunchLogs] = useState<BiometricPunchLogRecord[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([]);
 
   // Apply Leave Form State
   const [leaveType, setLeaveType] = useState('Casual Leave');
@@ -76,17 +85,19 @@ export const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const viewMode = activeRoleView ? activeRoleView.toLowerCase() : 'admin';
-      const [empData, balData, reqData, punchData] = await Promise.all([
+      const [empData, balData, reqData, punchData, calData] = await Promise.all([
         fetchEmployeesFromDb(),
         fetchLeaveBalances(),
         fetchLeaveRequests({ view: viewMode }),
         fetchRawBiometricLogs(),
+        fetchCalendarEventsFromDb(2026),
       ]);
 
       setEmployees(empData);
       setLeaveBalances(balData);
       setLeaveRequests(reqData);
       setPunchLogs(punchData);
+      setCalendarEvents(calData);
     } catch (err) {
       console.error('Failed to load real dashboard metrics:', err);
     } finally {
@@ -393,6 +404,69 @@ export const Dashboard: React.FC = () => {
               </TableContainer>
             </CardBody>
           </Card>
+
+          {/* Upcoming Birthdays & Festival Holidays Widget */}
+          <Card>
+            <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <CardTitle>🎂 Upcoming Birthdays & Festival Holidays</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/my-calendar')}>
+                View Calendar <ArrowRight size={14} />
+              </Button>
+            </CardHeader>
+            <CardBody>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                {calendarEvents
+                  .filter((e) => e.type === 'BIRTHDAY' || e.type === 'FESTIVAL' || e.type === 'EVENT')
+                  .slice(0, 4)
+                  .map((evt) => (
+                    <div
+                      key={evt.id}
+                      onClick={() => navigate('/my-calendar')}
+                      style={{
+                        padding: '0.85rem',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-surface-hover)',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.85rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {evt.type === 'BIRTHDAY' ? (
+                        <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
+                      ) : (
+                        <div
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: 'var(--radius-md)',
+                            backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: evt.type === 'FESTIVAL' ? 'var(--success-text)' : 'var(--info-text)',
+                          }}
+                        >
+                          {evt.type === 'FESTIVAL' ? <PartyPopper size={20} /> : <Calendar size={20} />}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {evt.title}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          📅 {evt.date} {evt.location ? `• ${evt.location}` : ''}
+                        </div>
+                      </div>
+                      <Badge variant={evt.type === 'BIRTHDAY' ? 'info' : evt.type === 'FESTIVAL' ? 'success' : 'neutral'}>
+                        {evt.type}
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            </CardBody>
+          </Card>
         </div>
 
         {/* Apply Leave Modal */}
@@ -687,6 +761,68 @@ export const Dashboard: React.FC = () => {
                 </Tbody>
               </Table>
             </TableContainer>
+          </CardBody>
+        </Card>
+        {/* Upcoming Birthdays & Festival Holidays Card */}
+        <Card>
+          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <CardTitle>🎂 Upcoming Birthdays & Festival Holidays</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
+              View Calendar <ArrowRight size={14} />
+            </Button>
+          </CardHeader>
+          <CardBody>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {calendarEvents
+                .filter((e) => e.type === 'BIRTHDAY' || e.type === 'FESTIVAL' || e.type === 'EVENT')
+                .slice(0, 5)
+                .map((evt) => (
+                  <div
+                    key={evt.id}
+                    onClick={() => navigate('/calendar')}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-surface-hover)',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {evt.type === 'BIRTHDAY' ? (
+                      <Avatar name={evt.employeeName || evt.title} src={evt.profilePhoto} size="md" />
+                    ) : (
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: evt.type === 'FESTIVAL' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: evt.type === 'FESTIVAL' ? 'var(--success-text)' : 'var(--info-text)',
+                        }}
+                      >
+                        {evt.type === 'FESTIVAL' ? <PartyPopper size={18} /> : <Calendar size={18} />}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {evt.title}
+                      </div>
+                      <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+                        📅 {evt.date} {evt.location ? `• ${evt.location}` : ''}
+                      </div>
+                    </div>
+                    <Badge variant={evt.type === 'BIRTHDAY' ? 'info' : evt.type === 'FESTIVAL' ? 'success' : 'neutral'}>
+                      {evt.type}
+                    </Badge>
+                  </div>
+                ))}
+            </div>
           </CardBody>
         </Card>
       </div>
