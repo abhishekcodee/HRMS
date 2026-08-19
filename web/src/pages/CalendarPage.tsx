@@ -27,8 +27,8 @@ import {
 
 export const CalendarPage: React.FC = () => {
   const { activeRoleView } = useAuth();
-  // Default to Year 2028 as requested!
-  const [currentDate, setCurrentDate] = useState(new Date(2028, 0, 1));
+  // Default to real current date today!
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -40,7 +40,7 @@ export const CalendarPage: React.FC = () => {
   const [addForm, setAddForm] = useState({
     title: '',
     type: 'FESTIVAL' as 'FESTIVAL' | 'EVENT',
-    date: '2028-08-25',
+    date: '2026-08-25',
     description: '',
     location: '',
   });
@@ -92,7 +92,7 @@ export const CalendarPage: React.FC = () => {
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date(2028, 0, 1)); // Default 2028
+    setCurrentDate(new Date()); // Jump directly to real Today!
   };
 
   const handleYearChange = (newYear: number) => {
@@ -307,7 +307,7 @@ export const CalendarPage: React.FC = () => {
               </select>
 
               <Button variant="secondary" size="sm" onClick={handleToday} style={{ fontWeight: 700 }}>
-                Reset 2028
+                📍 Jump to Today
               </Button>
             </div>
 
@@ -481,7 +481,11 @@ export const CalendarPage: React.FC = () => {
                     const dayEvents = getEventsForDay(dayNum);
                     const dayOfWeek = (firstDayOfWeek + i) % 7;
                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                    const isToday = year === 2028 && month === 0 && dayNum === 1;
+                    const realToday = new Date();
+                    const isToday =
+                      realToday.getFullYear() === year &&
+                      realToday.getMonth() === month &&
+                      realToday.getDate() === dayNum;
 
                     return (
                       <div
