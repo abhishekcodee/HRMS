@@ -4,6 +4,7 @@ import {
   registerBiometricDevice,
   fetchRawBiometricLogs,
   simulateBiometricPunch,
+  testBiometricDeviceConnection,
   BiometricDeviceRecord,
   BiometricPunchLogRecord,
 } from '../services/biometricApi';
@@ -26,7 +27,7 @@ import {
   Input,
   Alert
 } from '../components/ui';
-import { Cpu, Fingerprint, Plus, RefreshCw, Activity, HelpCircle, CheckCircle2, Wifi, ShieldAlert } from 'lucide-react';
+import { Cpu, Fingerprint, Plus, RefreshCw, Activity, HelpCircle, Wifi, ShieldAlert, Zap } from 'lucide-react';
 
 export const BiometricDevicesPage: React.FC = () => {
   const [devices, setDevices] = useState<BiometricDeviceRecord[]>([]);
@@ -39,6 +40,7 @@ export const BiometricDevicesPage: React.FC = () => {
   const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [testingDeviceId, setTestingDeviceId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -110,6 +112,28 @@ export const BiometricDevicesPage: React.FC = () => {
       setTimeout(() => setToastMsg(null), 4000);
     } else {
       setErrorMsg(res.error || 'Failed to simulate punch.');
+    }
+  };
+
+  const handleTestSocket = async (device: BiometricDeviceRecord) => {
+    setTestingDeviceId(device.id);
+    setErrorMsg(null);
+    setToastMsg(null);
+
+    const res = await testBiometricDeviceConnection({
+      ipAddress: device.ipAddress || '192.168.1.200',
+      port: device.port || 4370,
+      deviceSn: device.deviceSn,
+    });
+
+    setTestingDeviceId(null);
+
+    if (res.success) {
+      setToastMsg(`✅ ${res.message}`);
+      await loadData();
+      setTimeout(() => setToastMsg(null), 5000);
+    } else {
+      setErrorMsg(`❌ ${res.message}`);
     }
   };
 
@@ -220,6 +244,7 @@ export const BiometricDevicesPage: React.FC = () => {
                       <Th>Location / Branch</Th>
                       <Th>Connection Status</Th>
                       <Th>Last Heartbeat Ping</Th>
+                      <Th style={{ textAlign: 'right' }}>Hardware Socket Test</Th>
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -236,6 +261,17 @@ export const BiometricDevicesPage: React.FC = () => {
                         </Td>
                         <Td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                           {dev.lastPingAt ? new Date(dev.lastPingAt).toLocaleString() : 'Just Now'}
+                        </Td>
+                        <Td style={{ textAlign: 'right' }}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            icon={<Zap size={14} />}
+                            isLoading={testingDeviceId === dev.id}
+                            onClick={() => handleTestSocket(dev)}
+                          >
+                            Test TCP Ping (4370)
+                          </Button>
                         </Td>
                       </Tr>
                     ))}
@@ -395,8 +431,8 @@ export const BiometricDevicesPage: React.FC = () => {
               <div>• Enable Cloud Server / ADMS: <strong>ON</strong></div>
               <div>• Server Mode: <strong>ADMS / HTTP</strong></div>
               <div>• Server Address: <strong>{window.location.hostname || 'YOUR_SERVER_IP'}</strong></div>
-              <div>• Server Port: <strong>5000</strong> (or 3000)</div>
-              <div>• Push URL: <strong>/iclock/cdata.php</strong></div>
+              <div>• Server Port: <strong>4000</strong> (HRMS Backend Port)</div>
+              <div>• Push URL / Path: <strong>/iclock/cdata.php</strong> (or <strong>/iclock/cdata.aspx</strong>)</div>
             </div>
           </div>
 

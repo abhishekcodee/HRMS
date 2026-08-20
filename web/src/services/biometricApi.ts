@@ -104,3 +104,30 @@ export async function simulateBiometricPunch(data: {
     return { success: false, error: err.message || 'Network error simulating punch.' };
   }
 }
+
+export async function testBiometricDeviceConnection(data: {
+  ipAddress: string;
+  port?: number;
+  deviceSn?: string;
+}): Promise<{ success: boolean; status: 'ONLINE' | 'OFFLINE'; latencyMs?: number; message?: string }> {
+  try {
+    const res = await fetch('/api/v1/zkteco/test-connection', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    return {
+      success: !!json.success,
+      status: json.status || 'OFFLINE',
+      latencyMs: json.latencyMs,
+      message: json.message || (json.success ? 'Device online.' : 'Device offline.'),
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      status: 'OFFLINE',
+      message: err.message || 'Network error testing device connection.',
+    };
+  }
+}

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import net from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { logger } from '../../utils/logger.js';
@@ -293,4 +294,84 @@ export async function simulateBiometricPunch(req: Request, res: Response): Promi
   } catch (err: any) {
     res.status(500).json({ success: false, error: { message: err.message } });
   }
+}
+
+/**
+ * Real TCP Socket Hardware Connection Test (Port 4370)
+ * Attempts direct TCP socket connection to physical eSSL / ZKTeco machine IP
+ */
+export async function testDeviceConnection(req: Request, res: Response): Promise<void> {
+  const { ipAddress, port = 4370, deviceSn } = req.body;
+
+  if (!ipAddress) {
+    res.status(400).json({ success: false, error: { message: 'Device IP Address is required for socket testing.' } });
+    return;
+  }
+
+  const targetPort = parseInt(String(port), 10) || 4370;
+  const startTime = Date.now();
+
+  const socket = new net.Socket();
+  let handled = false;
+
+  const timer = setTimeout(async () => {
+    if (!handled) {
+      handled = true;
+      socket.destroy();
+
+      if (deviceSn) {
+        try {
+          await pool.query("UPDATE biometric_devices SET status = 'OFFLINE' WHERE device_sn = ?", [deviceSn]);
+        } catch (_) {}
+      }
+
+      res.json({
+        success: false,
+        status: 'OFFLINE',
+        message: `Connection timed out to physical device at ${ipAddress}:${targetPort}. Verify machine power, network cable/WiFi, and local subnet routing.`,
+      });
+    }
+  }, 3000);
+
+  socket.connect(targetPort, ipAddress, async () => {
+    if (!handled) {
+      handled = true;
+      clearTimeout(timer);
+      const latencyMs = Date.now() - startTime;
+      socket.end();
+
+      if (deviceSn) {
+        try {
+          await pool.query("UPDATE biometric_devices SET status = 'ONLINE', last_ping_at = NOW() WHERE device_sn = ?", [deviceSn]);
+        } catch (_) {}
+      }
+
+      res.json({
+        success: true,
+        status: 'ONLINE',
+        latencyMs,
+        message: `Physical eSSL / ZKTeco machine at ${ipAddress}:${targetPort} responded successfully via TCP port 4370 (${latencyMs}ms latency)!`,
+      });
+    }
+  });
+
+  socket.on('error', async (err) => {
+    if (!handled) {
+      handled = true;
+      clearTimeout(timer);
+      socket.destroy();
+
+      if (deviceSn) {
+        try {
+          await pool.query("UPDATE biometric_devices SET status = 'OFFLINE' WHERE device_sn = ?", [deviceSn]);
+        } catch (_) {}
+      }
+
+      res.json({
+        success: false,
+        status: 'OFFLINE',
+        message: `Could not connect to physical device at ${ipAddress}:${targetPort} (${err.message}). Ensure port 4370 is open on machine and firewall.`,
+      });
+    }
+  });
 }
