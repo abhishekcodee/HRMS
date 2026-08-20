@@ -5,6 +5,7 @@ import {
   cdataPOST,
   getBiometricDevices,
   registerBiometricDevice,
+  deleteBiometricDevice,
   testDeviceConnection,
   getRawBiometricLogs,
   simulateBiometricPunch,
@@ -29,6 +30,7 @@ zktecoRouter.post('/push', cdataPOST);
 // Protected Admin / Employer Management Endpoints
 zktecoRouter.get('/devices', authenticateToken, requireRole(['admin', 'employer']), getBiometricDevices);
 zktecoRouter.post('/devices', authenticateToken, requireRole(['admin', 'employer']), registerBiometricDevice);
+zktecoRouter.delete('/devices/:id', authenticateToken, requireRole(['admin', 'employer']), deleteBiometricDevice);
 zktecoRouter.post('/test-connection', authenticateToken, requireRole(['admin', 'employer']), testDeviceConnection);
 zktecoRouter.get('/raw-logs', authenticateToken, requireRole(['admin', 'employer']), getRawBiometricLogs);
 zktecoRouter.post('/simulate-punch', authenticateToken, requireRole(['admin', 'employer']), simulateBiometricPunch);

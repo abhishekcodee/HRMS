@@ -5,6 +5,7 @@ import {
   fetchRawBiometricLogs,
   simulateBiometricPunch,
   testBiometricDeviceConnection,
+  deleteBiometricDevice,
   BiometricDeviceRecord,
   BiometricPunchLogRecord,
 } from '../services/biometricApi';
@@ -27,7 +28,7 @@ import {
   Input,
   Alert
 } from '../components/ui';
-import { Cpu, Fingerprint, Plus, RefreshCw, Activity, HelpCircle, Wifi, ShieldAlert, Zap } from 'lucide-react';
+import { Cpu, Fingerprint, Plus, RefreshCw, Activity, HelpCircle, Wifi, ShieldAlert, Zap, Trash2 } from 'lucide-react';
 
 export const BiometricDevicesPage: React.FC = () => {
   const [devices, setDevices] = useState<BiometricDeviceRecord[]>([]);
@@ -134,6 +135,20 @@ export const BiometricDevicesPage: React.FC = () => {
       setTimeout(() => setToastMsg(null), 5000);
     } else {
       setErrorMsg(`❌ ${res.message}`);
+    }
+  };
+
+  const handleDeleteDevice = async (id: string) => {
+    if (!window.confirm('Are you sure you want to remove this biometric machine terminal?')) return;
+    setLoading(true);
+    const res = await deleteBiometricDevice(id);
+    if (res.success) {
+      setToastMsg('Biometric machine removed successfully.');
+      await loadData();
+      setTimeout(() => setToastMsg(null), 3000);
+    } else {
+      setErrorMsg(res.error || 'Failed to remove device.');
+      setLoading(false);
     }
   };
 
@@ -244,7 +259,7 @@ export const BiometricDevicesPage: React.FC = () => {
                       <Th>Location / Branch</Th>
                       <Th>Connection Status</Th>
                       <Th>Last Heartbeat Ping</Th>
-                      <Th style={{ textAlign: 'right' }}>Hardware Socket Test</Th>
+                      <Th style={{ textAlign: 'right' }}>Actions & Hardware Test</Th>
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -260,18 +275,27 @@ export const BiometricDevicesPage: React.FC = () => {
                           </Badge>
                         </Td>
                         <Td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                          {dev.lastPingAt ? new Date(dev.lastPingAt).toLocaleString() : 'Just Now'}
+                          {dev.lastPingAt ? new Date(dev.lastPingAt).toLocaleString() : 'No Ping Yet'}
                         </Td>
                         <Td style={{ textAlign: 'right' }}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            icon={<Zap size={14} />}
-                            isLoading={testingDeviceId === dev.id}
-                            onClick={() => handleTestSocket(dev)}
-                          >
-                            Test TCP Ping (4370)
-                          </Button>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              icon={<Zap size={14} />}
+                              isLoading={testingDeviceId === dev.id}
+                              onClick={() => handleTestSocket(dev)}
+                            >
+                              Test TCP Ping (4370)
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => handleDeleteDevice(dev.id)}
+                              title="Remove Machine"
+                            />
+                          </div>
                         </Td>
                       </Tr>
                     ))}

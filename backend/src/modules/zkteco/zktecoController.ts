@@ -183,16 +183,28 @@ async function processAutoAttendance(conn: any, employeeId: string, punchDate: D
 
 /**
  * GET /api/v1/zkteco/devices
- * List all configured eSSL Biometric Machines
+ * List all configured eSSL Biometric Machines with real dynamic heartbeat status
  */
 export async function getBiometricDevices(req: Request, res: Response): Promise<void> {
   try {
     const conn = await pool.getConnection();
     try {
       const [rows]: any = await conn.query(
-        'SELECT id, device_sn as deviceSn, device_name as deviceName, ip_address as ipAddress, port, location, status, last_ping_at as lastPingAt, created_at as createdAt FROM biometric_devices ORDER BY created_at DESC'
+        `SELECT id, device_sn as deviceSn, device_name as deviceName, ip_address as ipAddress, port, location, 
+                last_ping_at as lastPingAt, created_at as createdAt,
+                CASE 
+                  WHEN last_ping_at IS NOT NULL AND TIMESTAMPDIFF(SECOND, last_ping_at, NOW()) <= 180 THEN 'ONLINE'
+                  ELSE 'OFFLINE'
+                END as dynamicStatus
+         FROM biometric_devices ORDER BY created_at DESC`
       );
-      res.json({ success: true, data: rows });
+
+      const formatted = rows.map((row: any) => ({
+        ...row,
+        status: row.dynamicStatus,
+      }));
+
+      res.json({ success: true, data: formatted });
     } finally {
       conn.release();
     }
@@ -219,11 +231,31 @@ export async function registerBiometricDevice(req: Request, res: Response): Prom
       const id = uuidv4();
       await conn.query(
         `INSERT INTO biometric_devices (id, device_sn, device_name, ip_address, port, location, status, last_ping_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'ONLINE', NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, 'OFFLINE', NULL)`,
         [id, deviceSn, deviceName, ipAddress || '192.168.1.100', port || 4370, location || 'Office Gate']
       );
 
-      res.json({ success: true, message: 'eSSL Biometric Device registered successfully.', data: { id, deviceSn, deviceName } });
+      res.json({ success: true, message: 'eSSL Biometric Device registered. Status will show ONLINE as soon as machine pings server.', data: { id, deviceSn, deviceName } });
+    } finally {
+      conn.release();
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: { message: err.message } });
+  }
+}
+
+/**
+ * DELETE /api/v1/zkteco/devices/:id
+ * Remove a registered biometric device
+ */
+export async function deleteBiometricDevice(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('DELETE FROM biometric_devices WHERE id = ?', [id]);
+      res.json({ success: true, message: 'Biometric device removed successfully.' });
     } finally {
       conn.release();
     }

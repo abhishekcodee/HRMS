@@ -131,3 +131,19 @@ export async function testBiometricDeviceConnection(data: {
     };
   }
 }
+
+export async function deleteBiometricDevice(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`/api/v1/zkteco/devices/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error?.message || 'Failed to remove biometric device.' };
+    }
+    return { success: true, message: json.message };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error removing biometric device.' };
+  }
+}
