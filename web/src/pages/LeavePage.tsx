@@ -4,11 +4,14 @@ import { UserRole } from '@hrms/shared';
 import {
   fetchLeaveRequests,
   fetchLeaveBalances,
+  fetchLeaveLedger,
   applyLeaveInDb,
   employerActionInDb,
   adminActionInDb,
+  calculateCLPLDuration,
   LeaveRecord,
   LeaveBalanceRecord,
+  LeaveLedgerRecord,
 } from '../services/leaveApi';
 import {
   Button,
@@ -42,14 +45,18 @@ import {
   Paperclip,
   AlertTriangle,
   ArrowRight,
+  BookOpen,
+  ListFilter,
 } from 'lucide-react';
 
 export const LeavePage: React.FC = () => {
   const { user, activeRoleView } = useAuth();
   const [requests, setRequests] = useState<LeaveRecord[]>([]);
   const [balances, setBalances] = useState<LeaveBalanceRecord[]>([]);
+  const [ledger, setLedger] = useState<LeaveLedgerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [mainViewMode, setMainViewMode] = useState<'DIRECTORY' | 'LEDGER'>('DIRECTORY');
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [targetActionRole, setTargetActionRole] = useState<'EMPLOYER' | 'ADMIN'>('EMPLOYER');
@@ -60,44 +67,64 @@ export const LeavePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
-    leaveType: 'Casual Leave',
+    leaveType: 'CL',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
     reason: '',
     attachment: '',
   });
 
-  // Calculate days count dynamically
+  // Calculate days count dynamically using CL & PL half-day/full-day business rule
   const calculatedDays = useMemo(() => {
     if (!form.startDate || !form.endDate) return 1;
     const start = new Date(form.startDate);
     const end = new Date(form.endDate);
     if (start > end) return 0;
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  }, [form.startDate, form.endDate]);
+    const raw = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return calculateCLPLDuration(raw, form.leaveType);
+  }, [form.startDate, form.endDate, form.leaveType]);
 
-  // Find available balance for selected leave type
+  // Compute Dynamic Server-side CL Summary (Strict Integer Values)
+  const clSummary = useMemo(() => {
+    const item = balances.find((b) => b.leaveType === 'CL' || b.leaveType.includes('Casual'));
+    const allocated = calculateCLPLDuration(parseFloat(String(item?.allocatedDays || '10')));
+    const used = calculateCLPLDuration(parseFloat(String(item?.usedDays || '0')));
+    const pending = calculateCLPLDuration(parseFloat(String(item?.pendingDays || '0')));
+    const remaining = item?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
+    return { allocated, used, pending, remaining: Math.max(0, remaining) };
+  }, [balances]);
+
+  // Compute Dynamic Server-side PL Summary (Strict Integer Values)
+  const plSummary = useMemo(() => {
+    const item = balances.find((b) => b.leaveType === 'PL' || b.leaveType.includes('Privilege') || b.leaveType.includes('Earned'));
+    const allocated = calculateCLPLDuration(parseFloat(String(item?.allocatedDays || '18')));
+    const used = calculateCLPLDuration(parseFloat(String(item?.usedDays || '0')));
+    const pending = calculateCLPLDuration(parseFloat(String(item?.pendingDays || '0')));
+    const remaining = item?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
+    return { allocated, used, pending, remaining: Math.max(0, remaining) };
+  }, [balances]);
+
+  // Available remaining balance for selected type in modal
   const currentAvailableBalance = useMemo(() => {
-    const balObj = balances.find((b) => b.leaveType === form.leaveType);
-    if (!balObj) return 12;
-    const allocated = parseFloat(String(balObj.allocatedDays));
-    const used = parseFloat(String(balObj.usedDays));
-    return Math.max(0, allocated - used);
-  }, [balances, form.leaveType]);
+    const norm = form.leaveType.toUpperCase();
+    return norm.includes('PL') || norm.includes('PRIVILEGE') ? plSummary.remaining : clSummary.remaining;
+  }, [form.leaveType, clSummary, plSummary]);
 
   const loadLeaveData = async () => {
     setLoading(true);
     try {
-      const [reqData, balData] = await Promise.all([
+      const [reqData, balData, ledgerData] = await Promise.all([
         fetchLeaveRequests({
           status: activeTab !== 'ALL' ? activeTab : undefined,
           view: activeRoleView ? activeRoleView.toLowerCase() : undefined,
         }),
         fetchLeaveBalances(),
+        fetchLeaveLedger(),
       ]);
       setRequests(reqData);
       setBalances(balData);
+      setLedger(ledgerData);
     } catch (err) {
       console.error('Failed to load leave records:', err);
     } finally {
@@ -120,7 +147,7 @@ export const LeavePage: React.FC = () => {
     if (calculatedDays > currentAvailableBalance) {
       setToastMessage({
         type: 'error',
-        text: `Insufficient balance for ${form.leaveType}. Requested: ${calculatedDays} day(s), Available: ${currentAvailableBalance} day(s).`,
+        text: `Insufficient balance for ${form.leaveType}. Requested: ${calculatedDays} day(s), Available Remaining: ${currentAvailableBalance} day(s).`,
       });
       setTimeout(() => setToastMessage(null), 5000);
       return;
@@ -140,11 +167,11 @@ export const LeavePage: React.FC = () => {
     if (res.success) {
       setToastMessage({
         type: 'success',
-        text: 'Leave request submitted successfully! Notification routed to Employer and Admin for Dual Approval.',
+        text: 'Leave request submitted successfully! Routed for Dual Approval.',
       });
       setApplyModalOpen(false);
       setForm({
-        leaveType: 'Casual Leave',
+        leaveType: 'CL',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
         reason: '',
@@ -245,7 +272,7 @@ export const LeavePage: React.FC = () => {
           <h1 className="page-title">Leave Management</h1>
           <p className="page-subtitle">
             {activeRoleView === UserRole.EMPLOYEE
-              ? 'Apply & Track Personal Leave Applications with Dual Approval'
+              ? 'Dynamic CL & PL Entitlement & Leave Ledger'
               : activeRoleView === UserRole.EMPLOYER
               ? 'Employer & Manager Leave Review Dashboard'
               : 'Admin System-Wide Leave Governance & Final Approval'}
@@ -264,120 +291,189 @@ export const LeavePage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Leave Summary & Balance Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-        <StatCard
-          title="Pending Requests"
-          value={`${pendingCount}`}
-          icon={<Clock size={20} />}
-          subtext={activeRoleView === UserRole.EMPLOYEE ? 'My Pending Applications' : 'Awaiting Approval'}
-        />
-        <StatCard
-          title="Approved Leaves"
-          value={`${approvedCount}`}
-          icon={<CheckCircle2 size={20} />}
-          subtext={activeRoleView === UserRole.EMPLOYEE ? 'My Approved Leaves' : 'Confirmed & Active'}
-        />
-        <StatCard
-          title="Rejected Requests"
-          value={`${rejectedCount}`}
-          icon={<XCircle size={20} />}
-          subtext={activeRoleView === UserRole.EMPLOYEE ? 'My Rejected Applications' : 'Declined Applications'}
-        />
+      {/* CL & PL Dynamic Balance Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+        {/* Casual Leave (CL) Card */}
+        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Casual Leave (CL)
+              </h3>
+            </div>
+            <Badge variant={clSummary.remaining > 0 ? 'success' : 'error'}>{clSummary.remaining} Days Remaining</Badge>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Allocated</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.2rem' }}>{clSummary.allocated}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Used</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ef4444', marginTop: '0.2rem' }}>{clSummary.used}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Pending</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f59e0b', marginTop: '0.2rem' }}>{clSummary.pending}</div>
+            </div>
+            <div style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase' }}>Remaining</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', marginTop: '0.2rem' }}>{clSummary.remaining}</div>
+            </div>
+          </div>
+        </Card>
 
-        {activeRoleView === UserRole.EMPLOYEE ? (
-          /* Live Employee Personal Leave Balances Cards */
-          balances.map((bal) => {
-            const alloc = parseFloat(String(bal.allocatedDays));
-            const used = parseFloat(String(bal.usedDays));
-            const avail = Math.max(0, alloc - used);
-            return (
-              <Card key={bal.id} style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                    {bal.leaveType} Balance
-                  </span>
-                  <Badge variant={avail > 0 ? 'success' : 'error'}>{avail} Available</Badge>
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0', color: 'var(--text-primary)' }}>
-                  {avail} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400 }}>/ {alloc} days</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Used: {used} day(s)</div>
-              </Card>
-            );
-          })
-        ) : (
-          <StatCard
-            title="Total Applications"
-            value={`${requests.length}`}
-            icon={<UserCheck size={20} />}
-            subtext="Active Leave Records"
-          />
+        {/* Privilege Leave (PL) Card */}
+        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Privilege Leave (PL)
+              </h3>
+            </div>
+            <Badge variant={plSummary.remaining > 0 ? 'success' : 'error'}>{plSummary.remaining} Days Remaining</Badge>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Allocated</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.2rem' }}>{plSummary.allocated}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Used</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ef4444', marginTop: '0.2rem' }}>{plSummary.used}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Pending</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f59e0b', marginTop: '0.2rem' }}>{plSummary.pending}</div>
+            </div>
+            <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase' }}>Remaining</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981', marginTop: '0.2rem' }}>{plSummary.remaining}</div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Main View Mode Navigation Bar (Requests Directory vs Leave Ledger) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            className={`btn ${mainViewMode === 'DIRECTORY' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            onClick={() => setMainViewMode('DIRECTORY')}
+          >
+            <ListFilter size={16} /> Leave Applications Directory ({requests.length})
+          </button>
+          <button
+            className={`btn ${mainViewMode === 'LEDGER' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            onClick={() => setMainViewMode('LEDGER')}
+          >
+            <BookOpen size={16} /> Leave Ledger (Audit Trail)
+          </button>
+        </div>
+
+        {mainViewMode === 'DIRECTORY' && (
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              className={`btn ${activeTab === 'ALL' ? 'btn-outline' : 'btn-ghost'} btn-sm`}
+              onClick={() => setActiveTab('ALL')}
+            >
+              All ({requests.length})
+            </button>
+            <button
+              className={`btn ${activeTab === 'PENDING' ? 'btn-outline' : 'btn-ghost'} btn-sm`}
+              onClick={() => setActiveTab('PENDING')}
+            >
+              Pending ({pendingCount})
+            </button>
+            <button
+              className={`btn ${activeTab === 'APPROVED' ? 'btn-outline' : 'btn-ghost'} btn-sm`}
+              onClick={() => setActiveTab('APPROVED')}
+            >
+              Approved ({approvedCount})
+            </button>
+            <button
+              className={`btn ${activeTab === 'REJECTED' ? 'btn-outline' : 'btn-ghost'} btn-sm`}
+              onClick={() => setActiveTab('REJECTED')}
+            >
+              Rejected ({rejectedCount})
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Workflow Rule Notice Banner */}
-      <div
-        style={{
-          background: 'rgba(59, 130, 246, 0.08)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
-          borderRadius: '10px',
-          padding: '0.85rem 1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.85rem',
-          fontSize: '0.875rem',
-          color: 'var(--text-primary)',
-        }}
-      >
-        <ShieldCheck size={22} color="#3b82f6" style={{ flexShrink: 0 }} />
-        <div>
-          <strong>Leave Approval Rule:</strong> Approval from <strong>EITHER</strong> Employer/Manager <strong>OR</strong> Admin immediately approves the leave application.
-          Leave balance is deducted upon approval.
-        </div>
-      </div>
-
-      {/* Status Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-        <button
-          className={`btn ${activeTab === 'ALL' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-          onClick={() => setActiveTab('ALL')}
-        >
-          All Requests ({requests.length})
-        </button>
-        <button
-          className={`btn ${activeTab === 'PENDING' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-          onClick={() => setActiveTab('PENDING')}
-        >
-          Pending ({pendingCount})
-        </button>
-        <button
-          className={`btn ${activeTab === 'APPROVED' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-          onClick={() => setActiveTab('APPROVED')}
-        >
-          Approved ({approvedCount})
-        </button>
-        <button
-          className={`btn ${activeTab === 'REJECTED' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-          onClick={() => setActiveTab('REJECTED')}
-        >
-          Rejected ({rejectedCount})
-        </button>
-      </div>
-
-      {/* Main Leave Requests Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {activeRoleView === UserRole.EMPLOYEE
-              ? 'My Leave Requests (Dual Approval Tracker)'
-              : activeRoleView === UserRole.EMPLOYER
-              ? 'Employer / Manager Review Queue'
-              : 'Admin Leave Applications Directory'} ({requests.length})
-          </CardTitle>
-        </CardHeader>
-        <CardBody>
-          {loading ? (
+      {mainViewMode === 'LEDGER' ? (
+        /* Leave Ledger Table View */
+        <Card>
+          <CardHeader>
+            <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BookOpen size={18} color="#3b82f6" /> Complete Leave Transaction Ledger
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            <TableContainer>
+              <Table>
+                <Thead>
+                  <Tr>
+                    <Th>Transaction Date</Th>
+                    <Th>Leave Type</Th>
+                    <Th>Transaction Type</Th>
+                    <Th style={{ textAlign: 'right' }}>Credit (+)</Th>
+                    <Th style={{ textAlign: 'right' }}>Debit (-)</Th>
+                    <Th style={{ textAlign: 'right' }}>Balance</Th>
+                    <Th>Remarks</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {ledger.length === 0 ? (
+                    <Tr>
+                      <Td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No transactions recorded in leave ledger yet.
+                      </Td>
+                    </Tr>
+                  ) : (
+                    ledger.map((item) => (
+                      <Tr key={item.id}>
+                        <Td style={{ fontWeight: 600 }}>{item.transactionDate || item.createdAt.split('T')[0]}</Td>
+                        <Td>
+                          <Badge variant={item.leaveType === 'CL' ? 'info' : 'success'}>
+                            {item.leaveType}
+                          </Badge>
+                        </Td>
+                        <Td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.transactionType}</Td>
+                        <Td style={{ textAlign: 'right', color: '#10b981', fontWeight: 700 }}>
+                          {parseFloat(String(item.credit)) > 0 ? `+${item.credit}` : '-'}
+                        </Td>
+                        <Td style={{ textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>
+                          {parseFloat(String(item.debit)) > 0 ? `-${item.debit}` : '-'}
+                        </Td>
+                        <Td style={{ textAlign: 'right', fontWeight: 700 }}>{item.balance}</Td>
+                        <Td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.remarks || '-'}</Td>
+                      </Tr>
+                    ))
+                  )}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          </CardBody>
+        </Card>
+      ) : (
+        /* Main Leave Requests Table */
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {activeRoleView === UserRole.EMPLOYEE
+                ? 'My Leave Applications'
+                : activeRoleView === UserRole.EMPLOYER
+                ? 'Employer / Manager Review Queue'
+                : 'Admin Leave Applications Directory'} ({requests.length})
+            </CardTitle>
+          </CardHeader>
+          <CardBody>
+            {loading ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading leave records from database...</div>
           ) : requests.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No leave applications found for selected filter.</div>
@@ -506,6 +602,7 @@ export const LeavePage: React.FC = () => {
           )}
         </CardBody>
       </Card>
+      )}
 
       {/* Apply Leave Modal */}
       <Modal isOpen={applyModalOpen} onClose={() => setApplyModalOpen(false)} title="Apply for Leave">
@@ -514,10 +611,8 @@ export const LeavePage: React.FC = () => {
             label="Leave Type *"
             required
             options={[
-              { value: 'Casual Leave', label: 'Casual Leave (CL)' },
-              { value: 'Sick Leave', label: 'Sick Leave (SL)' },
-              { value: 'Earned Leave', label: 'Earned Leave (EL)' },
-              { value: 'Maternity Leave', label: 'Maternity / Paternity Leave' },
+              { value: 'CL', label: 'CL – Casual Leave' },
+              { value: 'PL', label: 'PL – Privilege Leave' },
             ]}
             value={form.leaveType}
             onChange={(e) => setForm({ ...form, leaveType: e.target.value })}

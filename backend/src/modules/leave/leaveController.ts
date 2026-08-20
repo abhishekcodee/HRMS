@@ -8,10 +8,11 @@ import {
   sendLeaveRejectionEmail,
   retryFailedNotification,
 } from '../../services/emailService.js';
+import { calculateEmployeeLeaveSummary, calculateCL, calculateCLPLDuration } from './leaveCalculationService.js';
 import { logger } from '../../utils/logger.js';
 
 /**
- * 1. Get Employee Annual Leave Balances
+ * 1. Get Employee Annual Leave Balances (Dynamic CL & PL)
  */
 export async function getLeaveBalances(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -21,36 +22,32 @@ export async function getLeaveBalances(req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const [rows]: any = await pool.query(
-      `SELECT id, user_id as userId, leave_type as leaveType,
-              allocated_days as allocatedDays, used_days as usedDays
-       FROM leave_balances
-       WHERE user_id = ?`,
-      [userId]
-    );
+    const summary = await calculateEmployeeLeaveSummary(userId);
 
-    if (rows.length === 0) {
-      // Auto-initialize default balances for user
-      await pool.query(
-        `INSERT INTO leave_balances (id, user_id, leave_type, allocated_days, used_days) VALUES
-         (UUID(), ?, 'Casual Leave', 12.00, 0.00),
-         (UUID(), ?, 'Sick Leave', 10.00, 0.00),
-         (UUID(), ?, 'Earned Leave', 15.00, 0.00)`,
-        [userId, userId, userId]
-      );
-
-      const [newRows]: any = await pool.query(
-        `SELECT id, user_id as userId, leave_type as leaveType,
-                allocated_days as allocatedDays, used_days as usedDays
-         FROM leave_balances
-         WHERE user_id = ?`,
-        [userId]
-      );
-      res.json({ success: true, data: newRows });
-      return;
-    }
-
-    res.json({ success: true, data: rows });
+    res.json({
+      success: true,
+      summary,
+      data: [
+        {
+          id: `${userId}-cl`,
+          userId,
+          leaveType: 'CL',
+          allocatedDays: summary.cl.allocated,
+          usedDays: summary.cl.used,
+          pendingDays: summary.cl.pending,
+          remainingDays: summary.cl.remaining,
+        },
+        {
+          id: `${userId}-pl`,
+          userId,
+          leaveType: 'PL',
+          allocatedDays: summary.pl.allocated,
+          usedDays: summary.pl.used,
+          pendingDays: summary.pl.pending,
+          remainingDays: summary.pl.remaining,
+        },
+      ],
+    });
   } catch (error: any) {
     logger.error('Get Leave Balances Error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch leave balances.' } });
@@ -58,7 +55,7 @@ export async function getLeaveBalances(req: AuthRequest, res: Response): Promise
 }
 
 /**
- * 2. Apply Leave Request - Save DB -> Check Overlaps & Balances -> Audit Log -> Dual Approval Queue -> Email Notification
+ * 2. Apply Leave Request - Dynamic CL/PL Validation & Day Calculation
  */
 export async function applyLeave(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -68,26 +65,30 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const { leaveType, startDate, endDate, daysCount, reason, attachment } = req.body;
+    const { leaveType, startDate, endDate, reason, attachment } = req.body;
 
-    if (!leaveType || !startDate || !endDate || !daysCount) {
+    if (!leaveType || !startDate || !endDate) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Leave Type, Start Date, End Date, and Days Count are required.' },
+        error: { code: 'VALIDATION_ERROR', message: 'Leave Type, Start Date, and End Date are required.' },
       });
       return;
     }
 
-    const count = parseInt(String(daysCount), 10) || 1;
-    if (count <= 0) {
+    let normType = String(leaveType).trim().toUpperCase();
+    if (normType.includes('CASUAL') || normType === 'CL') normType = 'CL';
+    else if (normType.includes('PRIVILEGE') || normType.includes('EARNED') || normType === 'PL') normType = 'PL';
+    else {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Number of days must be greater than 0.' },
+        error: { code: 'INVALID_LEAVE_TYPE', message: 'Only CL (Casual Leave) and PL (Privilege Leave) are allowed.' },
       });
       return;
     }
 
-    if (new Date(startDate) > new Date(endDate)) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'From Date cannot be after To Date.' },
@@ -95,11 +96,18 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    let rawDays = req.body.daysCount !== undefined ? parseFloat(req.body.daysCount) : (req.body.duration !== undefined ? parseFloat(req.body.duration) : NaN);
+    if (isNaN(rawDays) || rawDays < 0) {
+      rawDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    const count = calculateCLPLDuration(rawDays, normType);
+
     // A. Prevent Overlapping Leave Applications for the same employee
     const [overlapRows]: any = await pool.query(
       `SELECT id FROM leave_requests
        WHERE user_id = ?
-         AND status NOT IN ('REJECTED', 'CANCELLED')
+         AND status NOT IN ('REJECTED', 'CANCELLED', 'WITHDRAWN')
          AND (
            (start_date <= ? AND end_date >= ?) OR
            (start_date <= ? AND end_date >= ?) OR
@@ -116,25 +124,19 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // B. Available Leave Balance Validation
-    const [balRows]: any = await pool.query(
-      `SELECT (allocated_days - used_days) as availableDays FROM leave_balances
-       WHERE user_id = ? AND leave_type = ?`,
-      [userId, leaveType.trim()]
-    );
+    // B. Server-side Dynamic Available Remaining Balance Validation
+    const summary = await calculateEmployeeLeaveSummary(userId);
+    const targetBal = normType === 'CL' ? summary.cl : summary.pl;
 
-    if (balRows.length > 0) {
-      const available = parseFloat(balRows[0].availableDays || '0');
-      if (count > available) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'INSUFFICIENT_BALANCE',
-            message: `Insufficient ${leaveType} balance. Requested: ${count} day(s), Available: ${available} day(s).`,
-          },
-        });
-        return;
-      }
+    if (count > targetBal.remaining) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_BALANCE',
+          message: `Insufficient ${normType} balance. Requested: ${count} day(s), Available Remaining: ${targetBal.remaining} day(s).`,
+        },
+      });
+      return;
     }
 
     // Retrieve user, employee profile & manager/admin IDs from MySQL
@@ -176,7 +178,7 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       [
         leaveId,
         userId,
-        leaveType.trim(),
+        normType,
         startDate.trim(),
         endDate.trim(),
         count,
@@ -908,5 +910,59 @@ export async function getEmployeeLeaveHistory(req: AuthRequest, res: Response): 
   } catch (error: any) {
     logger.error('Get Employee Leave History Error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch employee leave history.' } });
+  }
+}
+
+/**
+ * 14. Get Leave Ledger Transaction History for Active User
+ */
+export async function getLeaveLedger(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User authentication required.' } });
+      return;
+    }
+
+    // Ensure summary & initial ledger entries are computed
+    await calculateEmployeeLeaveSummary(userId);
+
+    const [rows]: any = await pool.query(
+      `SELECT id, user_id as userId, leave_type as leaveType, transaction_date as transactionDate,
+              transaction_type as transactionType, credit, debit, balance, remarks, created_at as createdAt
+       FROM leave_ledger
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (error: any) {
+    logger.error('Get Leave Ledger Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch leave ledger.' } });
+  }
+}
+
+/**
+ * 15. Get Detailed CL Calculation Formula Breakdown
+ */
+export async function getCLCalculationDetails(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const targetUserId = (req.params.userId && req.params.userId !== 'me') ? req.params.userId : req.user?.id;
+    if (!targetUserId) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User authentication required.' } });
+      return;
+    }
+
+    const clResult = await calculateCL(targetUserId);
+
+    res.json({
+      success: true,
+      formula: 'CL Entitlement = (Annual CL / 12) * (12 - Joining Financial Year Month)',
+      data: clResult,
+    });
+  } catch (error: any) {
+    logger.error('Get CL Calculation Details Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message || 'Failed to calculate CL.' } });
   }
 }

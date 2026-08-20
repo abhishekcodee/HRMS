@@ -11,6 +11,7 @@ import {
   applyLeaveInDb,
   employerActionInDb,
   adminActionInDb,
+  calculateCLPLDuration,
   LeaveBalanceRecord,
   LeaveRecord,
 } from '../services/leaveApi';
@@ -75,7 +76,7 @@ export const Dashboard: React.FC = () => {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([]);
 
   // Apply Leave Form State
-  const [leaveType, setLeaveType] = useState('Casual Leave');
+  const [leaveType, setLeaveType] = useState('CL');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
@@ -109,26 +110,21 @@ export const Dashboard: React.FC = () => {
     loadDashboardData();
   }, [activeRoleView]);
 
-  // Derived Metrics from Real DB Data
+  // Derived Metrics from Real DB Data (CL & PL Only - Integers Only)
   const casualBal = useMemo(() => {
-    const b = leaveBalances.find((item) => item.leaveType === 'Casual Leave');
-    const allocated = b ? parseFloat(String(b.allocatedDays)) : 12;
-    const used = b ? parseFloat(String(b.usedDays)) : 0;
-    return { allocated, used, remaining: Math.max(0, allocated - used) };
+    const b = leaveBalances.find((item) => item.leaveType === 'CL' || item.leaveType.includes('Casual'));
+    const allocated = b ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 10;
+    const used = b ? calculateCLPLDuration(parseFloat(String(b.usedDays))) : 0;
+    const remaining = b?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(b.remainingDays))) : Math.max(0, allocated - used);
+    return { allocated, used, remaining };
   }, [leaveBalances]);
 
-  const earnedBal = useMemo(() => {
-    const b = leaveBalances.find((item) => item.leaveType === 'Earned Leave');
-    const allocated = b ? parseFloat(String(b.allocatedDays)) : 15;
-    const used = b ? parseFloat(String(b.usedDays)) : 0;
-    return { allocated, used, remaining: Math.max(0, allocated - used) };
-  }, [leaveBalances]);
-
-  const sickBal = useMemo(() => {
-    const b = leaveBalances.find((item) => item.leaveType === 'Sick Leave');
-    const allocated = b ? parseFloat(String(b.allocatedDays)) : 10;
-    const used = b ? parseFloat(String(b.usedDays)) : 0;
-    return { allocated, used, remaining: Math.max(0, allocated - used) };
+  const privilegeBal = useMemo(() => {
+    const b = leaveBalances.find((item) => item.leaveType === 'PL' || item.leaveType.includes('Privilege') || item.leaveType.includes('Earned'));
+    const allocated = b ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 18;
+    const used = b ? calculateCLPLDuration(parseFloat(String(b.usedDays))) : 0;
+    const remaining = b?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(b.remainingDays))) : Math.max(0, allocated - used);
+    return { allocated, used, remaining };
   }, [leaveBalances]);
 
   // Pending Leave Requests Count from DB
@@ -165,14 +161,15 @@ export const Dashboard: React.FC = () => {
     }));
   }, [employees]);
 
-  // Calculate Duration Days
+  // Calculate Duration Days using CL & PL business rule
   const calculatedDays = useMemo(() => {
     if (!startDate || !endDate) return 1;
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
-    return diff > 0 ? diff : 0;
-  }, [startDate, endDate]);
+    const raw = diff > 0 ? diff : 0;
+    return calculateCLPLDuration(raw, leaveType);
+  }, [startDate, endDate, leaveType]);
 
   // Apply Leave Handler
   const handleApplyLeaveSubmit = async (e: React.FormEvent) => {
@@ -271,8 +268,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Real Stats Grid */}
-        <div className="stat-grid">
+        {/* Real Stats Grid (CL & PL Only) */}
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           <StatCard
             title="Today's Biometric Log"
             value="09:02 AM"
@@ -282,22 +279,18 @@ export const Dashboard: React.FC = () => {
             changeType="positive"
           />
           <StatCard
-            title="Casual Leave Balance"
+            title="Casual Leave Balance (CL)"
             value={`${casualBal.remaining} / ${casualBal.allocated}`}
             icon={<CalendarDays size={20} />}
             subtext={`${casualBal.used} day(s) used this year`}
+            onClick={() => navigate('/my-leave')}
           />
           <StatCard
-            title="Earned Leave Balance"
-            value={`${earnedBal.remaining} / ${earnedBal.allocated}`}
+            title="Privilege Leave Balance (PL)"
+            value={`${privilegeBal.remaining} / ${privilegeBal.allocated}`}
             icon={<FileCheck2 size={20} />}
-            subtext={`${earnedBal.used} day(s) used this year`}
-          />
-          <StatCard
-            title="Sick Leave Balance"
-            value={`${sickBal.remaining} / ${sickBal.allocated}`}
-            icon={<TrendingUp size={20} />}
-            subtext={`${sickBal.used} day(s) used this year`}
+            subtext={`${privilegeBal.used} day(s) used this year`}
+            onClick={() => navigate('/my-leave')}
           />
         </div>
 
@@ -479,9 +472,8 @@ export const Dashboard: React.FC = () => {
                 value={leaveType}
                 onChange={(e) => setLeaveType(e.target.value)}
               >
-                <option value="Casual Leave">Casual Leave ({casualBal.remaining} days available)</option>
-                <option value="Sick Leave">Sick Leave ({sickBal.remaining} days available)</option>
-                <option value="Earned Leave">Earned Leave ({earnedBal.remaining} days available)</option>
+                <option value="CL">Casual Leave (CL) ({casualBal.remaining} days available)</option>
+                <option value="PL">Privilege Leave (PL) ({privilegeBal.remaining} days available)</option>
               </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

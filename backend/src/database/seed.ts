@@ -202,6 +202,22 @@ export async function seedDatabase() {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS leave_ledger (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        leave_type VARCHAR(20) NOT NULL,
+        transaction_date VARCHAR(20) NOT NULL,
+        transaction_type VARCHAR(50) NOT NULL,
+        credit DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+        debit DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+        balance DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+        remarks TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS employee_documents (
         id VARCHAR(36) PRIMARY KEY,
         user_id VARCHAR(36) NOT NULL,
@@ -716,10 +732,9 @@ export async function seedDatabase() {
         if (existingBal.length === 0) {
           await conn.query(
             `INSERT INTO leave_balances (id, user_id, leave_type, allocated_days, used_days) VALUES
-             (UUID(), ?, 'Casual Leave', 12.00, 0.00),
-             (UUID(), ?, 'Sick Leave', 10.00, 0.00),
-             (UUID(), ?, 'Earned Leave', 15.00, 0.00)`,
-            [userId, userId, userId]
+             (UUID(), ?, 'CL', 12.00, 0.00),
+             (UUID(), ?, 'PL', 18.00, 0.00)`,
+            [userId, userId]
           );
         }
 
@@ -733,7 +748,7 @@ export async function seedDatabase() {
             [
               uuidv4(),
               userId,
-              'Casual Leave',
+              'CL',
               '2026-08-20',
               '2026-08-21',
               2,

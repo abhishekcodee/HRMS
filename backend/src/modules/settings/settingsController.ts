@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
   gracePeriod: '15',
   fullDayHours: '8',
   halfDayHours: '4',
-  casualLeave: '12',
+  casualLeave: '10',
   sickLeave: '7',
   earnedLeave: '15',
   pfRate: '12',

@@ -168,7 +168,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
 
         <nav className="sidebar-nav">
-          {!collapsed && <div className="nav-section-title">Navigation ({role})</div>}
+          {!collapsed && <div className="nav-section-title">Navigation</div>}
           {visibleNav.map(item => {
             const isActive = location.pathname === item.path;
             const linkContent = (
@@ -363,7 +363,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </header>
 
         {/* Content Body */}
-        <main className="hrms-content">{children}</main>
+        <main className={`hrms-content ${location.pathname === '/chat' ? 'chat-page-content' : ''}`}>{children}</main>
 
         {/* Senior Design System: Floating Glassmorphic Mobile Bottom Navigation Bar */}
         <nav className="mobile-bottom-nav">

@@ -35,6 +35,21 @@ export interface LeaveBalanceRecord {
   leaveType: string;
   allocatedDays: number | string;
   usedDays: number | string;
+  pendingDays?: number | string;
+  remainingDays?: number | string;
+}
+
+export interface LeaveLedgerRecord {
+  id: string;
+  userId: string;
+  leaveType: string;
+  transactionDate: string;
+  transactionType: string;
+  credit: number | string;
+  debit: number | string;
+  balance: number | string;
+  remarks?: string;
+  createdAt: string;
 }
 
 export interface LeaveAuditRecord {
@@ -72,6 +87,42 @@ function getAuthHeaders() {
   };
 }
 
+/**
+ * CL & PL Leave Duration Calculation Rule (Always Integer Output):
+ * - Apply ONLY to CL (Casual Leave) and PL (Privilege Leave)
+ * - Decimal/fractional part <= 0.5 -> round DOWN to lower integer
+ * - Decimal/fractional part > 0.5  -> round UP to next integer
+ * Example:
+ *   0.5 -> 0
+ *   0.51 -> 1
+ *   1.5 -> 1
+ *   1.51 -> 2
+ *   2.5 -> 2
+ *   2.51 -> 3
+ */
+export function calculateCLPLDuration(rawDays: number, leaveType?: string): number {
+  const norm = leaveType ? String(leaveType).trim().toUpperCase() : '';
+  const isCLorPL = !leaveType || norm === 'CL' || norm === 'PL' || norm.includes('CASUAL') || norm.includes('PRIVILEGE') || norm.includes('EARNED');
+
+  const value = Number(rawDays);
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+
+  if (!isCLorPL) {
+    return Math.round(value);
+  }
+
+  const wholePart = Math.floor(value);
+  const decimalPart = Number((value - wholePart).toFixed(6));
+
+  if (decimalPart <= 0.5) {
+    return wholePart;
+  }
+
+  return wholePart + 1;
+}
+
 export async function fetchLeaveBalances(): Promise<LeaveBalanceRecord[]> {
   try {
     const res = await fetch('/api/v1/leave/balances', {
@@ -84,6 +135,22 @@ export async function fetchLeaveBalances(): Promise<LeaveBalanceRecord[]> {
     return [];
   } catch (err) {
     console.error('Fetch leave balances error:', err);
+    return [];
+  }
+}
+
+export async function fetchLeaveLedger(): Promise<LeaveLedgerRecord[]> {
+  try {
+    const res = await fetch('/api/v1/leave/ledger', {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data)) {
+      return json.data;
+    }
+    return [];
+  } catch (err) {
+    console.error('Fetch leave ledger error:', err);
     return [];
   }
 }
