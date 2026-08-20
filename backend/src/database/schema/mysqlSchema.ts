@@ -88,6 +88,7 @@ export const employeeProfiles = mysqlTable('employee_profiles', {
   shiftName: varchar('shift_name', { length: 100 }),
   employmentType: varchar('employment_type', { length: 50 }),
   joiningDate: varchar('joining_date', { length: 20 }),
+  experienceYears: decimal('experience_years', { precision: 5, scale: 2 }).default('0.00'),
   salary: decimal('salary', { precision: 12, scale: 2 }),
   gender: varchar('gender', { length: 20 }),
   dob: varchar('dob', { length: 20 }),

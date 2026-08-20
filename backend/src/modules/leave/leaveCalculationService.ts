@@ -211,26 +211,27 @@ export function calculatePLEntitlement(
   plEntitlement: number;
 } {
   const defaultAnnual = annualPL > 0 ? annualPL : 14.0;
+  // Exact 4-year experience probation condition: >= 4 -> 6 months, < 4 -> 8 months
+  const probationMonths = totalExperienceYears >= 4 ? 6 : 8;
 
   if (!joiningDateStr) {
-    const probationMonths = totalExperienceYears >= 4 ? 6 : 0;
     const joiningFinancialMonth = 1;
     const output1 = joiningFinancialMonth + probationMonths;
-    const output2 = Math.max(0, 12 - output1);
+    const output2 = 12 - output1;
+    const rawPl = (defaultAnnual / 12) * output2;
     return {
       joiningFinancialMonth,
       probationMonths,
       output1,
       output2,
       annualPL: defaultAnnual,
-      plEntitlement: roundLeave((defaultAnnual / 12) * output2),
+      plEntitlement: roundLeave(rawPl),
     };
   }
 
   const joinDate = new Date(joiningDateStr);
   const fyStart = new Date(fy.fyStartDate);
   const fyEnd = new Date(fy.fyEndDate);
-  const probationMonths = totalExperienceYears >= 4 ? 6 : 0;
 
   // Joined after current FY -> 0 entitlement in current FY
   if (joinDate > fyEnd) {
@@ -246,7 +247,7 @@ export function calculatePLEntitlement(
 
   const joiningFinancialMonth = joinDate <= fyStart ? 1 : getFinancialYearMonthNumber(joiningDateStr);
   const output1 = joiningFinancialMonth + probationMonths;
-  const output2 = Math.max(0, 12 - output1);
+  const output2 = 12 - output1;
   const rawPl = (defaultAnnual / 12) * output2;
 
   return {
@@ -267,7 +268,7 @@ export async function calculatePL(userId: string, targetFYDate?: Date) {
   try {
     const [userRows]: any = await conn.query(
       `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
-              ep.joining_date as joiningDate
+              ep.joining_date as joiningDate, ep.experience_years as experienceYears
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
        WHERE u.id = ? OR u.employee_id = ?`,
@@ -282,14 +283,8 @@ export async function calculatePL(userId: string, targetFYDate?: Date) {
     const joiningDate = emp.joiningDate || (emp.createdAt ? new Date(emp.createdAt).toISOString().split('T')[0] : '2026-04-01');
     const fy = getFinancialYear(targetFYDate);
 
-    // Compute experience in years
-    let totalExperienceYears = 0;
-    if (joiningDate) {
-      const jDate = new Date(joiningDate);
-      const now = targetFYDate || new Date();
-      const diffYears = Math.max(0, (now.getTime() - jDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-      totalExperienceYears = diffYears;
-    }
+    // Stored experience in years
+    const totalExperienceYears = parseFloat(emp.experienceYears) || 0.00;
 
     const [settingRows]: any = await conn.query(
       `SELECT setting_value FROM system_settings WHERE setting_key IN ('earnedLeave', 'privilegeLeave')`
@@ -372,10 +367,10 @@ export async function calculateCL(userId: string, targetFYDate?: Date) {
 export async function calculateEmployeeLeaveSummary(userId: string): Promise<EmployeeLeaveSummary> {
   const conn = await pool.getConnection();
   try {
-    // 1. Fetch Employee Record & Date of Joining
+    // 1. Fetch Employee Record & Date of Joining & Stored Experience
     const [userRows]: any = await conn.query(
       `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
-              ep.joining_date as joiningDate
+              ep.joining_date as joiningDate, ep.experience_years as experienceYears
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
        WHERE u.id = ?`,
@@ -388,6 +383,7 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
 
     const emp = userRows[0];
     const joiningDate = emp.joiningDate || (emp.createdAt ? new Date(emp.createdAt).toISOString().split('T')[0] : '2026-04-01');
+    const totalExperienceYears = parseFloat(emp.experienceYears) || 0.00;
     const fy = getFinancialYear();
 
     // 2. Fetch Annual Leave Policies from system_settings or default
@@ -404,15 +400,6 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
         if (s.setting_key === 'casualLeave') annualCL = parsed;
         if (s.setting_key === 'earnedLeave' || s.setting_key === 'privilegeLeave') annualPL = parsed;
       }
-    }
-
-    // Calculate total experience in years
-    let totalExperienceYears = 0;
-    if (joiningDate) {
-      const jDate = new Date(joiningDate);
-      const now = new Date();
-      const diffYears = Math.max(0, (now.getTime() - jDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-      totalExperienceYears = diffYears;
     }
 
     // 3. Compute Exact Prorated Allocations for CL & PL

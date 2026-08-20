@@ -17,6 +17,7 @@ export async function listEmployees(req: AuthRequest, res: Response): Promise<vo
              u.created_at as createdAt,
              ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
              ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
+             ep.experience_years as experienceYears,
              ep.salary, ep.gender, ep.dob, ep.address, ep.emergency_contact as emergencyContact,
              ep.emergency_phone as emergencyPhone, ep.manager_id as managerId, ep.manager_name as managerName
       FROM users u
@@ -74,6 +75,7 @@ export async function getEmployeeById(req: AuthRequest, res: Response): Promise<
               u.created_at as createdAt,
               ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
               ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
+              ep.experience_years as experienceYears,
               ep.salary, ep.gender, ep.dob, ep.address, ep.emergency_contact as emergencyContact,
               ep.emergency_phone as emergencyPhone, ep.manager_id as managerId, ep.manager_name as managerName
        FROM users u
@@ -195,13 +197,23 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
       [userId, trimmedEmpId, fullName.trim(), trimmedEmail, phone ? phone.trim() : null, passwordHash, userRole, userStatus]
     );
 
+    const expNum = parseFloat(req.body.experienceYears);
+    if (req.body.experienceYears !== undefined && req.body.experienceYears !== null && req.body.experienceYears !== '' && (isNaN(expNum) || expNum < 0)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Total Experience must be a valid non-negative number (e.g. 0, 3.5, 4, 5).' },
+      });
+      return;
+    }
+    const validExp = !isNaN(expNum) && expNum >= 0 ? expNum : 0.00;
+
     // Insert profile
     const profileId = uuidv4();
     await pool.query(
       `INSERT INTO employee_profiles (
         id, user_id, department_name, designation, branch_name, shift_name, employment_type,
-        joining_date, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        joining_date, experience_years, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         profileId,
         userId,
@@ -211,6 +223,7 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
         shiftName || 'General Day Shift',
         employmentType || 'Full-Time',
         joiningDate || new Date().toISOString().split('T')[0],
+        validExp,
         salary || 50000.00,
         gender || 'Other',
         dob || null,
@@ -316,18 +329,28 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       ]
     );
 
+    const expNum = parseFloat(req.body.experienceYears);
+    if (req.body.experienceYears !== undefined && req.body.experienceYears !== null && req.body.experienceYears !== '' && (isNaN(expNum) || expNum < 0)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Total Experience must be a valid non-negative number (e.g. 0, 3.5, 4, 5).' },
+      });
+      return;
+    }
+    const validExp = !isNaN(expNum) && expNum >= 0 ? expNum : null;
+
     // Check if employee profile exists, else create
     const [profiles]: any = await pool.query('SELECT id FROM employee_profiles WHERE user_id = ?', [id]);
     if (profiles.length === 0) {
       await pool.query(
         `INSERT INTO employee_profiles (
           id, user_id, department_name, designation, branch_name, shift_name, employment_type,
-          joining_date, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          joining_date, experience_years, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           uuidv4(), id, departmentName || null, designation || null, branchName || null, shiftName || null,
-          employmentType || null, joiningDate || null, salary || null, gender || null, dob || null,
-          address || null, emergencyContact || null, emergencyPhone || null, managerId || null, managerName || null,
+          employmentType || null, joiningDate || null, validExp ?? 0.00, salary || null, gender || null,
+          dob || null, address || null, emergencyContact || null, emergencyPhone || null, managerId || null, managerName || null,
         ]
       );
     } else {
@@ -339,6 +362,7 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
              shift_name = COALESCE(?, shift_name),
              employment_type = COALESCE(?, employment_type),
              joining_date = COALESCE(?, joining_date),
+             experience_years = COALESCE(?, experience_years),
              salary = COALESCE(?, salary),
              gender = COALESCE(?, gender),
              dob = COALESCE(?, dob),
@@ -350,8 +374,9 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
          WHERE user_id = ?`,
         [
           departmentName || null, designation || null, branchName || null, shiftName || null,
-          employmentType || null, joiningDate || null, salary || null, gender || null, dob || null,
-          address || null, emergencyContact || null, emergencyPhone || null, managerId || null, managerName || null, id,
+          employmentType || null, joiningDate || null, validExp, salary || null, gender || null,
+          dob || null, address || null, emergencyContact || null, emergencyPhone || null,
+          managerId || null, managerName || null, id,
         ]
       );
     }

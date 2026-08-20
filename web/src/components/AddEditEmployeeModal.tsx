@@ -37,6 +37,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     departmentName: employee?.departmentName || '',
     designation: employee?.designation || '',
     joiningDate: employee?.joiningDate || new Date().toISOString().split('T')[0],
+    experienceYears: employee?.experienceYears !== undefined && employee?.experienceYears !== null ? employee.experienceYears : 0,
     salary: employee?.salary || 65000,
     emergencyContact: employee?.emergencyContact || '',
     emergencyPhone: employee?.emergencyPhone || ''
@@ -65,6 +66,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         departmentName: employee.departmentName || '',
         designation: employee.designation || '',
         joiningDate: employee.joiningDate || new Date().toISOString().split('T')[0],
+        experienceYears: employee.experienceYears !== undefined && employee.experienceYears !== null ? employee.experienceYears : 0,
         salary: employee.salary || 65000,
         emergencyContact: employee.emergencyContact || '',
         emergencyPhone: employee.emergencyPhone || ''
@@ -104,6 +106,12 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     }
     if (!formData.employeeId || !formData.employeeId.trim()) {
       setErrorMessage('Employee ID is required.');
+      return;
+    }
+
+    const expVal = parseFloat(formData.experienceYears);
+    if (formData.experienceYears === undefined || formData.experienceYears === null || formData.experienceYears === '' || isNaN(expVal) || expVal < 0) {
+      setErrorMessage('Total Experience is required and must be a valid non-negative number (e.g. 0, 3.5, 4, 5).');
       return;
     }
 
@@ -251,14 +259,35 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
               value={formData.joiningDate}
               onChange={e => setFormData({ ...formData, joiningDate: e.target.value })}
             />
+            <div>
+              <Input
+                label="Total Experience (Years) *"
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="e.g. 0, 3.5, 4, 5"
+                required
+                value={formData.experienceYears}
+                onChange={e => setFormData({ ...formData, experienceYears: e.target.value })}
+              />
+              {(() => {
+                const exp = parseFloat(formData.experienceYears);
+                const probMonths = !isNaN(exp) && exp >= 4 ? 6 : 8;
+                return (
+                  <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: !isNaN(exp) && exp >= 4 ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Auto Probation:</span> {probMonths} Months ({!isNaN(exp) && exp >= 4 ? 'Experience ≥ 4 Yrs' : 'Experience < 4 Yrs'})
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <Input
               label="Monthly Compensation (Salary)"
               type="number"
               value={formData.salary}
               onChange={e => setFormData({ ...formData, salary: parseFloat(e.target.value) })}
             />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Select
               label="Account Role"
               options={[

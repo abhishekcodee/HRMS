@@ -25,6 +25,7 @@ export interface EmployeeDbRecord {
   shiftName?: string;
   employmentType?: string;
   joiningDate?: string;
+  experienceYears?: number;
   salary?: number;
   gender?: string;
   dob?: string;
