@@ -6,6 +6,7 @@ import {
   getLeaveBalances,
   getLeaveLedger,
   getCLCalculationDetails,
+  getPLCalculationDetails,
   employerActionOnLeave,
   adminActionOnLeave,
   approveLeave,
@@ -25,6 +26,8 @@ router.get('/balances', getLeaveBalances);
 router.get('/ledger', getLeaveLedger);
 router.get('/calculate-cl', getCLCalculationDetails);
 router.get('/calculate-cl/:userId', getCLCalculationDetails);
+router.get('/calculate-pl', getPLCalculationDetails);
+router.get('/calculate-pl/:userId', getPLCalculationDetails);
 router.get('/employee-balances/:userId', getEmployeeLeaveBalances);
 router.post('/allocate-leave', requireRole(['admin', 'employer']), allocateEmployeeLeave);
 router.get('/employee-history/:userId', getEmployeeLeaveHistory);

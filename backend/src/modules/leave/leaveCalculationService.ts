@@ -188,6 +188,136 @@ export function calculateCLEntitlement(joiningDateStr: string, fy: FinancialYear
 }
 
 /**
+ * Calculate PL (Privilege Leave) Entitlement using exact HRMS Business Rule:
+ * 1. Annual PL = 14 Days
+ * 2. Financial Year = April -> March (12 months)
+ * 3. Experience-based Probation: If experience >= 4 years -> probationMonths = 6, else 0
+ * 4. Financial-Year Joining Month: April=1 ... March=12
+ * 5. Output 1 = Financial-Year Joining Month + probationMonths
+ * 6. Output 2 = 12 - Output 1
+ * 7. PL = (14 / 12) * Output 2
+ */
+export function calculatePLEntitlement(
+  joiningDateStr: string,
+  totalExperienceYears: number = 0,
+  fy: FinancialYearInfo,
+  annualPL: number = 14.0
+): {
+  joiningFinancialMonth: number;
+  probationMonths: number;
+  output1: number;
+  output2: number;
+  annualPL: number;
+  plEntitlement: number;
+} {
+  const defaultAnnual = annualPL > 0 ? annualPL : 14.0;
+
+  if (!joiningDateStr) {
+    const probationMonths = totalExperienceYears >= 4 ? 6 : 0;
+    const joiningFinancialMonth = 1;
+    const output1 = joiningFinancialMonth + probationMonths;
+    const output2 = Math.max(0, 12 - output1);
+    return {
+      joiningFinancialMonth,
+      probationMonths,
+      output1,
+      output2,
+      annualPL: defaultAnnual,
+      plEntitlement: roundLeave((defaultAnnual / 12) * output2),
+    };
+  }
+
+  const joinDate = new Date(joiningDateStr);
+  const fyStart = new Date(fy.fyStartDate);
+  const fyEnd = new Date(fy.fyEndDate);
+  const probationMonths = totalExperienceYears >= 4 ? 6 : 0;
+
+  // Joined after current FY -> 0 entitlement in current FY
+  if (joinDate > fyEnd) {
+    return {
+      joiningFinancialMonth: 0,
+      probationMonths,
+      output1: 0,
+      output2: 0,
+      annualPL: defaultAnnual,
+      plEntitlement: 0,
+    };
+  }
+
+  const joiningFinancialMonth = joinDate <= fyStart ? 1 : getFinancialYearMonthNumber(joiningDateStr);
+  const output1 = joiningFinancialMonth + probationMonths;
+  const output2 = Math.max(0, 12 - output1);
+  const rawPl = (defaultAnnual / 12) * output2;
+
+  return {
+    joiningFinancialMonth,
+    probationMonths,
+    output1,
+    output2,
+    annualPL: defaultAnnual,
+    plEntitlement: roundLeave(rawPl),
+  };
+}
+
+/**
+ * Centralized Backend API Function: calculatePL(employeeId, financialYear)
+ */
+export async function calculatePL(userId: string, targetFYDate?: Date) {
+  const conn = await pool.getConnection();
+  try {
+    const [userRows]: any = await conn.query(
+      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
+              ep.joining_date as joiningDate
+       FROM users u
+       LEFT JOIN employee_profiles ep ON ep.user_id = u.id
+       WHERE u.id = ? OR u.employee_id = ?`,
+      [userId, userId]
+    );
+
+    if (userRows.length === 0) {
+      throw new Error(`Employee with ID or Employee Code ${userId} not found.`);
+    }
+
+    const emp = userRows[0];
+    const joiningDate = emp.joiningDate || (emp.createdAt ? new Date(emp.createdAt).toISOString().split('T')[0] : '2026-04-01');
+    const fy = getFinancialYear(targetFYDate);
+
+    // Compute experience in years
+    let totalExperienceYears = 0;
+    if (joiningDate) {
+      const jDate = new Date(joiningDate);
+      const now = targetFYDate || new Date();
+      const diffYears = Math.max(0, (now.getTime() - jDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      totalExperienceYears = diffYears;
+    }
+
+    const [settingRows]: any = await conn.query(
+      `SELECT setting_value FROM system_settings WHERE setting_key IN ('earnedLeave', 'privilegeLeave')`
+    );
+
+    let annualPL = 14.0;
+    if (settingRows.length > 0) {
+      const parsed = parseFloat(settingRows[0].setting_value);
+      if (!isNaN(parsed) && parsed > 0) annualPL = parsed;
+    }
+
+    const plResult = calculatePLEntitlement(joiningDate, totalExperienceYears, fy, annualPL);
+
+    return {
+      userId: emp.id,
+      employeeId: emp.employeeId,
+      fullName: emp.fullName,
+      joiningDate,
+      totalExperienceYears: Math.round(totalExperienceYears * 10) / 10,
+      financialYear: fy,
+      ...plResult,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+/**
  * Centralized Backend API Function: calculateCL(employeeId, financialYear)
  */
 export async function calculateCL(userId: string, targetFYDate?: Date) {
@@ -262,37 +392,35 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
 
     // 2. Fetch Annual Leave Policies from system_settings or default
     const [settingRows]: any = await conn.query(
-      `SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('casualLeave', 'earnedLeave')`
+      `SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('casualLeave', 'earnedLeave', 'privilegeLeave')`
     );
 
     let annualCL = 10.0; // Default 10 days for CL
-    let annualPL = 18.0; // Default 18 days for PL
+    let annualPL = 14.0; // Default 14 days for PL per financial year
 
     for (const s of settingRows) {
       const parsed = parseFloat(s.setting_value);
-      if (!isNaN(parsed)) {
+      if (!isNaN(parsed) && parsed > 0) {
         if (s.setting_key === 'casualLeave') annualCL = parsed;
-        if (s.setting_key === 'earnedLeave') annualPL = parsed;
+        if (s.setting_key === 'earnedLeave' || s.setting_key === 'privilegeLeave') annualPL = parsed;
       }
     }
 
-    // 3. Compute Exact Prorated Allocation for CL (Using Exact Business Rule Formula)
+    // Calculate total experience in years
+    let totalExperienceYears = 0;
+    if (joiningDate) {
+      const jDate = new Date(joiningDate);
+      const now = new Date();
+      const diffYears = Math.max(0, (now.getTime() - jDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      totalExperienceYears = diffYears;
+    }
+
+    // 3. Compute Exact Prorated Allocations for CL & PL
     const clCalc = calculateCLEntitlement(joiningDate, fy, annualCL);
     const clAllocated = clCalc.clEntitlement;
 
-    // Compute PL Allocation
-    const joinDateObj = new Date(joiningDate);
-    const fyStartObj = new Date(fy.fyStartDate);
-    const fyEndObj = new Date(fy.fyEndDate);
-
-    let plActiveMonths = 12;
-    if (joinDateObj > fyStartObj && joinDateObj <= fyEndObj) {
-      const jMonth = getFinancialYearMonthNumber(joiningDate);
-      plActiveMonths = 12 - jMonth + 1;
-    } else if (joinDateObj > fyEndObj) {
-      plActiveMonths = 0;
-    }
-    const plAllocated = roundLeave((annualPL / 12) * plActiveMonths);
+    const plCalc = calculatePLEntitlement(joiningDate, totalExperienceYears, fy, annualPL);
+    const plAllocated = plCalc.plEntitlement;
 
     // 4. Fetch Used & Pending Leave Requests for Current Financial Year
     const [reqRows]: any = await conn.query(

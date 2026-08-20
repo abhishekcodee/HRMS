@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS = {
   halfDayHours: '4',
   casualLeave: '10',
   sickLeave: '7',
-  earnedLeave: '15',
+  earnedLeave: '14',
   pfRate: '12',
   esiRate: '0.75',
   taxYearStart: 'April',

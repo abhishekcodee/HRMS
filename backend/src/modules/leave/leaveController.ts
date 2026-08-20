@@ -8,7 +8,7 @@ import {
   sendLeaveRejectionEmail,
   retryFailedNotification,
 } from '../../services/emailService.js';
-import { calculateEmployeeLeaveSummary, calculateCL, calculateCLPLDuration } from './leaveCalculationService.js';
+import { calculateEmployeeLeaveSummary, calculateCL, calculatePL, calculateCLPLDuration } from './leaveCalculationService.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -964,5 +964,29 @@ export async function getCLCalculationDetails(req: AuthRequest, res: Response): 
   } catch (error: any) {
     logger.error('Get CL Calculation Details Error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message || 'Failed to calculate CL.' } });
+  }
+}
+
+/**
+ * 16. Get Detailed PL Calculation Formula Breakdown
+ */
+export async function getPLCalculationDetails(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const targetUserId = (req.params.userId && req.params.userId !== 'me') ? req.params.userId : req.user?.id;
+    if (!targetUserId) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User authentication required.' } });
+      return;
+    }
+
+    const plResult = await calculatePL(targetUserId);
+
+    res.json({
+      success: true,
+      formula: 'Output 1 = Financial-Year Joining Month + (Experience >= 4 ? 6 : 0); Output 2 = 12 - Output 1; PL = (14 / 12) * Output 2',
+      data: plResult,
+    });
+  } catch (error: any) {
+    logger.error('Get PL Calculation Details Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message || 'Failed to calculate PL.' } });
   }
 }
