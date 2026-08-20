@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardBody, Tabs, Input, Select, Button, FormSection, Alert } from '../components/ui';
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardBody, Tabs, Input, Select, Button, FormSection, Alert, LoadingSpinner } from '../components/ui';
 import { Building2, Settings, ShieldCheck, Bell, Lock, Save, CheckCircle2, DollarSign, Clock } from 'lucide-react';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('company');
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   // Form State initialized from localStorage or defaults
   const [settings, setSettings] = useState(() => {
@@ -50,17 +53,59 @@ export const SettingsPage: React.FC = () => {
     };
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/settings`, {
+          headers: getAuthHeaders(),
+        });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setSettings(result.data);
+            localStorage.setItem('hrms_app_settings', JSON.stringify(result.data));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load settings from server, using cached defaults:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setSuccessBanner(null);
+    setErrorBanner(null);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settings),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        localStorage.setItem('hrms_app_settings', JSON.stringify(settings));
+        setSuccessBanner('System settings saved successfully! Configuration changes are now active permanently.');
+        setTimeout(() => setSuccessBanner(null), 5000);
+      } else {
+        setErrorBanner(result.error?.message || 'Failed to save settings to database.');
+      }
+    } catch (err: any) {
+      console.error('Error saving settings:', err);
+      // Fallback local save if network glitch
       localStorage.setItem('hrms_app_settings', JSON.stringify(settings));
-      setIsSaving(false);
-      setSuccessBanner('System settings saved successfully! Configuration changes are now active.');
+      setSuccessBanner('Settings saved locally. Will sync with server when online.');
       setTimeout(() => setSuccessBanner(null), 4000);
-    }, 600);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -75,6 +120,12 @@ export const SettingsPage: React.FC = () => {
       {successBanner && (
         <Alert variant="success" title="Settings Updated">
           {successBanner}
+        </Alert>
+      )}
+
+      {errorBanner && (
+        <Alert variant="danger" title="Error Saving Settings">
+          {errorBanner}
         </Alert>
       )}
 

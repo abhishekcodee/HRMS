@@ -31,8 +31,10 @@ import {
   X,
   LogOut,
   ChevronDown,
-  Calendar
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
+import { fetchTotalUnreadChatCount } from '../services/chatApi';
 
 interface NavItemConfig {
   path: string;
@@ -50,8 +52,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [roleSwitchError, setRoleSwitchError] = useState<string | null>(null);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Load chat unread count
+  useEffect(() => {
+    fetchTotalUnreadChatCount().then(setUnreadChatCount);
+    const interval = setInterval(() => {
+      fetchTotalUnreadChatCount().then(setUnreadChatCount);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Keyboard shortcut Ctrl+K for search
   useEffect(() => {
@@ -68,6 +80,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const navItems: NavItemConfig[] = [
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE] },
     
+    // Shared Internal Chat Module for All Roles
+    {
+      path: '/chat',
+      label: 'Chat',
+      icon: <MessageSquare size={20} />,
+      roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE],
+      badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined
+    },
+
     // Admin & Employer Shared Management
     { path: '/employees', label: 'Employees', icon: <Users size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/departments', label: 'Departments', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },

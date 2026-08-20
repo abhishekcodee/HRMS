@@ -18,6 +18,8 @@ import { calendarModule } from '../modules/calendar/index.js';
 import { masterRouter } from './master.routes.js';
 import { payrollRouter } from './payroll.routes.js';
 import { zktecoRouter } from './zkteco.routes.js';
+import { chatRouter } from '../modules/chat/index.js';
+import settingsRouter from '../modules/settings/index.js';
 
 export const v1Router = Router();
 
@@ -45,3 +47,5 @@ v1Router.use('/notifications', notificationsModule.router);
 v1Router.use('/reports', reportsModule.router);
 v1Router.use('/audit', auditModule.router);
 v1Router.use('/calendar', calendarModule.router);
+v1Router.use('/chat', chatRouter);
+v1Router.use('/settings', settingsRouter);

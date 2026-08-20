@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Input, Select, Button, FormSection } from './ui';
 import { fetchMasterDepartments, fetchMasterDesignations, MasterDepartment, MasterDesignation } from '../services/masterApi';
-import { EmployeeDbRecord } from '../services/employeeApi';
-import { Upload, FileText } from 'lucide-react';
+import { EmployeeDbRecord, fetchNextEmployeeId } from '../services/employeeApi';
+import { Upload, FileText, RefreshCw } from 'lucide-react';
 
 export interface AddEditEmployeeModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
 
   const [formData, setFormData] = useState<any>({
     fullName: employee?.fullName || '',
-    employeeId: employee?.employeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+    employeeId: employee?.employeeId || 'AMPL-00001',
     email: employee?.email || '',
     password: 'Employee@123',
     phone: employee?.phone || '',
@@ -42,7 +42,37 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     emergencyPhone: employee?.emergencyPhone || ''
   });
 
+  const handleGenerateId = async () => {
+    const nextId = await fetchNextEmployeeId();
+    setFormData((prev: any) => ({ ...prev, employeeId: nextId }));
+  };
+
   useEffect(() => {
+    if (!isOpen) return;
+
+    if (employee) {
+      setFormData({
+        fullName: employee.fullName || '',
+        employeeId: employee.employeeId || '',
+        email: employee.email || '',
+        password: 'Employee@123',
+        phone: employee.phone || '',
+        gender: employee.gender || 'Male',
+        dob: employee.dob || '1995-01-01',
+        address: employee.address || '',
+        role: employee.role || 'employee',
+        status: employee.status || 'active',
+        departmentName: employee.departmentName || '',
+        designation: employee.designation || '',
+        joiningDate: employee.joiningDate || new Date().toISOString().split('T')[0],
+        salary: employee.salary || 65000,
+        emergencyContact: employee.emergencyContact || '',
+        emergencyPhone: employee.emergencyPhone || ''
+      });
+    } else {
+      handleGenerateId();
+    }
+
     async function loadMasterData() {
       const depts = await fetchMasterDepartments();
       const desigs = await fetchMasterDesignations();
@@ -58,7 +88,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
       }
     }
     loadMasterData();
-  }, [employee]);
+  }, [isOpen, employee]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,13 +141,39 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
               value={formData.fullName}
               onChange={e => setFormData({ ...formData, fullName: e.target.value })}
             />
-            <Input
-              label="Employee ID (Unique Key)"
-              required
-              disabled={isEdit}
-              value={formData.employeeId}
-              onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
-            />
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Employee ID (Unique Key) *
+                </label>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateId}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--primary-500)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    <RefreshCw size={12} /> Auto-Generate
+                  </button>
+                )}
+              </div>
+              <Input
+                placeholder="e.g. AMPL-00001"
+                required
+                disabled={isEdit}
+                value={formData.employeeId}
+                onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
+              />
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Input

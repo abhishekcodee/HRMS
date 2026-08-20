@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole } from '@hrms/shared';
+import { API_BASE_URL } from '../config/api';
 
 export interface UserAuthProfile {
   id: string;
@@ -58,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const response = await fetch('/api/v1/auth/me', {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (identifier: string, password: string): Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }> => {
     try {
-      const response = await fetch('/api/v1/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier, password }),
@@ -151,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await fetch('/api/v1/auth/change-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await fetch('/api/v1/auth/switch-role', {
+      const response = await fetch(`${API_BASE_URL}/auth/switch-role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

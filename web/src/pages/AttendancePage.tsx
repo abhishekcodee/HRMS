@@ -81,7 +81,7 @@ export const AttendancePage: React.FC = () => {
           <p className="page-subtitle">
             {activeRoleView === UserRole.EMPLOYEE
               ? 'My Daily Hardware Biometric Punch Logs'
-              : 'Real-Time eSSL Biometric Device Punch Log Ingestion (MySQL Data)'}
+              : 'Real-Time eSSL Biometric Device Punch Log Ingestion'}
           </p>
         </div>
         <div className="page-actions">
@@ -100,7 +100,7 @@ export const AttendancePage: React.FC = () => {
         <>
           {/* eSSL Integration Note Banner */}
           <Alert variant="info" title="Hardware eSSL Biometric Machine Real-Time Ingestion">
-            Attendance punches are captured directly from hardware eSSL ZK-Teco biometric devices and stored in MySQL database tables.
+            Attendance punches are captured directly from hardware eSSL ZK-Teco biometric devices.
           </Alert>
 
           {/* Attendance Stats Cards */}

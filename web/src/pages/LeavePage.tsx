@@ -311,7 +311,7 @@ export const LeavePage: React.FC = () => {
             title="Total Applications"
             value={`${requests.length}`}
             icon={<UserCheck size={20} />}
-            subtext="Live MySQL Database Records"
+            subtext="Active Leave Records"
           />
         )}
       </div>
@@ -548,7 +548,7 @@ export const LeavePage: React.FC = () => {
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: '0.875rem',
             }}
@@ -828,7 +828,7 @@ export const LeavePage: React.FC = () => {
               <div
                 style={{
                   display: 'flex',
-                  justify: 'flex-end',
+                  justifyContent: 'flex-end',
                   gap: '0.75rem',
                   borderTop: '1px solid var(--border-color)',
                   paddingTop: '1rem',

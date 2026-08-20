@@ -246,7 +246,7 @@ export const DepartmentsTeamsPage: React.FC = () => {
 
       {loading ? (
         <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          Loading live organization data from MySQL database...
+          Loading live organization data...
         </div>
       ) : activeTab === 'departments' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
@@ -541,7 +541,7 @@ export const DepartmentsTeamsPage: React.FC = () => {
 
           {loadingMembers ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              Fetching team members from MySQL database...
+              Fetching team members...
             </div>
           ) : teamMembers.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>

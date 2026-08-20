@@ -333,7 +333,7 @@ export const BiometricDevicesPage: React.FC = () => {
       <Modal isOpen={simulateModalOpen} onClose={() => setSimulateModalOpen(false)} title="Simulate eSSL Biometric Fingerprint Scan">
         <form onSubmit={handleSimulatePunch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Simulate a live fingerprint punch scan from your eSSL machine to verify instant MySQL database attendance computation.
+            Simulate a live fingerprint punch scan from your eSSL machine to verify instant attendance computation.
           </p>
           <Input
             label="Employee ID (Database Employee) *"

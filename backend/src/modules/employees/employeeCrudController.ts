@@ -97,6 +97,39 @@ export async function getEmployeeById(req: AuthRequest, res: Response): Promise<
 }
 
 /**
+ * Get Next Auto-Generated Employee ID (AMPL-00001 format)
+ */
+export async function getNextEmployeeId(_req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const [rows]: any = await pool.query(
+      `SELECT employee_id as employeeId FROM users WHERE employee_id LIKE 'AMPL-%'`
+    );
+
+    let maxNum = 0;
+    for (const r of rows) {
+      const match = r.employeeId.match(/^AMPL-(\d+)$/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+
+    const nextNum = maxNum + 1;
+    const nextEmployeeId = `AMPL-${String(nextNum).padStart(5, '0')}`;
+
+    res.json({
+      success: true,
+      nextEmployeeId,
+    });
+  } catch (error) {
+    console.error('Error generating next employee ID:', error);
+    res.status(500).json({ success: false, error: { message: 'Failed to generate next employee ID.' } });
+  }
+}
+
+/**
  * Create Employee - Insert directly into MySQL Database
  */
 export async function createEmployee(req: AuthRequest, res: Response): Promise<void> {
@@ -396,3 +429,64 @@ export async function updateEmployeeStatus(req: AuthRequest, res: Response): Pro
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to update employee status.' } });
   }
 }
+
+/**
+ * Get Employee Attendance Records with Weekly & Monthly Filtering
+ */
+export async function getEmployeeAttendanceById(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const mode = String(req.query.mode || 'monthly').toLowerCase(); // 'weekly' or 'monthly'
+
+    const [users]: any = await pool.query('SELECT id, employee_id, full_name FROM users WHERE id = ? OR employee_id = ?', [id, id]);
+    if (users.length === 0) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found.' } });
+      return;
+    }
+    const userId = users[0].id;
+
+    let query = `
+      SELECT id, work_date as workDate, clock_in as clockIn, clock_out as clockOut,
+             work_hours as workHours, status, notes
+      FROM attendance
+      WHERE user_id = ?
+    `;
+
+    if (mode === 'weekly') {
+      query += ` AND work_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`;
+    } else {
+      query += ` AND work_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
+    }
+
+    query += ` ORDER BY work_date DESC`;
+
+    const [rows]: any = await pool.query(query, [userId]);
+
+    const totalDays = rows.length;
+    const presentDays = rows.filter((r: any) => r.status === 'PRESENT').length;
+    const lateDays = rows.filter((r: any) => r.status === 'LATE').length;
+    const absentDays = rows.filter((r: any) => r.status === 'ABSENT').length;
+    const totalWorkHours = rows.reduce((acc: number, r: any) => acc + (parseFloat(r.workHours) || 0), 0);
+    const avgWorkHours = totalDays > 0 ? (totalWorkHours / totalDays).toFixed(1) : '0.0';
+
+    res.json({
+      success: true,
+      data: {
+        mode,
+        summary: {
+          totalDays,
+          presentDays,
+          lateDays,
+          absentDays,
+          totalWorkHours: totalWorkHours.toFixed(1),
+          avgWorkHours,
+        },
+        logs: rows,
+      },
+    });
+  } catch (error) {
+    console.error('Get Employee Attendance Error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch attendance records.' } });
+  }
+}
+

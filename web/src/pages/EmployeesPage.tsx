@@ -100,13 +100,13 @@ export const EmployeesPage: React.FC = () => {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Employee Directory (Database First)</h1>
+          <h1 className="page-title">Employee Directory</h1>
           <p className="page-subtitle">
-            Real-time MySQL single source of truth • {employees.length} records dynamically fetched
+            Workforce Management Directory • {employees.length} active records
           </p>
         </div>
         <div className="page-actions">
-          <Button variant="ghost" size="sm" onClick={loadDatabaseData} title="Refresh Database Records">
+          <Button variant="ghost" size="sm" onClick={loadDatabaseData} title="Refresh Employee Directory">
             <RefreshCw size={16} className={loading ? 'spin' : ''} />
           </Button>
           <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '2px', backgroundColor: 'var(--bg-surface)' }}>
@@ -137,13 +137,13 @@ export const EmployeesPage: React.FC = () => {
       <Card padding="1rem">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'center' }}>
           <SearchInput
-            placeholder="Search database by name, ID, or email..."
+            placeholder="Search by name, ID, or email..."
             value={search}
             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
             onClear={() => setSearch('')}
           />
           <Select
-            placeholder="All Departments (Database Master)"
+            placeholder="All Departments"
             options={[
               { value: '', label: 'All Departments' },
               ...departments.map(d => ({ value: d.name, label: d.name }))
@@ -184,7 +184,7 @@ export const EmployeesPage: React.FC = () => {
               {paginatedEmployees.length === 0 ? (
                 <Tr>
                   <Td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    {loading ? 'Fetching employee records from database...' : 'No matching employee records found in MySQL database.'}
+                    {loading ? 'Loading employee records...' : 'No matching employee records found.'}
                   </Td>
                 </Tr>
               ) : (
@@ -242,7 +242,7 @@ export const EmployeesPage: React.FC = () => {
                         items={[
                           {
                             id: 'view',
-                            label: 'View Database Profile',
+                            label: 'View Employee Profile',
                             icon: <Eye size={14} />,
                             onClick: () => navigate(`/employees/${emp.id}`)
                           },
@@ -326,7 +326,7 @@ export const EmployeesPage: React.FC = () => {
         onClose={() => setDeactivatingEmployee(null)}
         onConfirm={handleDeactivateEmployee}
         title={deactivatingEmployee?.status === 'active' ? 'Deactivate Employee Account' : 'Reactivate Employee Account'}
-        message={`Are you sure you want to ${deactivatingEmployee?.status === 'active' ? 'deactivate' : 'reactivate'} ${deactivatingEmployee?.fullName} (${deactivatingEmployee?.employeeId})? Historical attendance and leave records in MySQL will be safely preserved.`}
+        message={`Are you sure you want to ${deactivatingEmployee?.status === 'active' ? 'deactivate' : 'reactivate'} ${deactivatingEmployee?.fullName} (${deactivatingEmployee?.employeeId})? Historical attendance and leave records will be safely preserved.`}
         confirmText={deactivatingEmployee?.status === 'active' ? 'Deactivate Account' : 'Reactivate Account'}
       />
     </div>

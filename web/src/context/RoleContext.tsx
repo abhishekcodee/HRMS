@@ -50,7 +50,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamName: 'Core Operations',
         joiningDate: '2024-01-01',
         status: 'ACTIVE',
-        avatar: user.profilePhoto || undefined,
+        avatar: user.profilePhoto || '',
         emergencyContact: 'Emergency Contact',
         emergencyPhone: '+91 98765 00001',
       }
@@ -72,7 +72,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamName: 'General',
         joiningDate: '2024-01-01',
         status: 'ACTIVE',
-        avatar: undefined,
+        avatar: '',
         emergencyContact: '',
         emergencyPhone: '',
       };

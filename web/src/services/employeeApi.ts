@@ -35,6 +35,19 @@ export interface EmployeeDbRecord {
   managerName?: string;
 }
 
+export async function fetchNextEmployeeId(): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/next-id`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.success && json.nextEmployeeId ? json.nextEmployeeId : 'AMPL-00001';
+  } catch (err) {
+    console.error('Failed to fetch next employee ID:', err);
+    return 'AMPL-00001';
+  }
+}
+
 export async function fetchEmployeesFromDb(params?: {
   search?: string;
   department?: string;
@@ -122,3 +135,42 @@ export async function updateEmployeeStatusInDb(id: string, status: 'active' | 'i
     return { success: false, error: 'Network error updating employee status.' };
   }
 }
+
+export interface EmployeeAttendanceLog {
+  id: string;
+  workDate: string;
+  clockIn?: string;
+  clockOut?: string;
+  workHours?: number;
+  status: 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE' | 'HALF_DAY';
+  notes?: string;
+}
+
+export interface EmployeeAttendanceSummary {
+  totalDays: number;
+  presentDays: number;
+  lateDays: number;
+  absentDays: number;
+  totalWorkHours: string;
+  avgWorkHours: string;
+}
+
+export interface EmployeeAttendanceData {
+  mode: 'weekly' | 'monthly';
+  summary: EmployeeAttendanceSummary;
+  logs: EmployeeAttendanceLog[];
+}
+
+export async function fetchEmployeeAttendanceById(id: string, mode: 'weekly' | 'monthly' = 'monthly'): Promise<EmployeeAttendanceData | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/${id}/attendance?mode=${mode}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch (err) {
+    console.error(`Failed to fetch attendance for employee ${id}:`, err);
+    return null;
+  }
+}
+

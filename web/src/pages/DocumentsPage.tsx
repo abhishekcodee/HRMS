@@ -133,9 +133,9 @@ export const DocumentsPage: React.FC = () => {
           </Thead>
           <Tbody>
             {loading ? (
-              <Tr><Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading documents from MySQL database...</Td></Tr>
+              <Tr><Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading compliance documents...</Td></Tr>
             ) : filteredDocs.length === 0 ? (
-              <Tr><Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No documents found in database.</Td></Tr>
+              <Tr><Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No documents found.</Td></Tr>
             ) : (
               filteredDocs.map(doc => (
                 <Tr key={doc.id}>

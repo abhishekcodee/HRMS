@@ -24,6 +24,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
 import BiometricDevicesPage from './pages/BiometricDevicesPage';
 import CalendarPage from './pages/CalendarPage';
+import ChatPage from './pages/ChatPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
@@ -82,6 +83,9 @@ export function App() {
                       <Layout>
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
+                          
+                          {/* HRMS Internal Communication Platform */}
+                          <Route path="/chat" element={<ChatPage />} />
                           
                           {/* Employee Management */}
                           <Route path="/employees" element={<EmployeesPage />} />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, User, Building2 } from 'lucide-react';
 import { Modal, Input } from './ui';
 import { fetchDepartmentsFromDb, DepartmentRecord } from '../services/departmentApi';
+import { fetchEmployeesFromDb, EmployeeDbRecord } from '../services/employeeApi';
 
 export const GlobalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import { env } from './config/env.js';
 import { v1Router } from './routes/index.js';
 import { zktecoRouter } from './routes/zkteco.routes.js';
@@ -14,7 +15,7 @@ export const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.CORS_ORIGIN.split(','),
+    origin: true, // Allow all origins in development
     credentials: true,
   })
 );
@@ -26,6 +27,11 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // eSSL / ZKTeco Biometric ADMS Hardware Direct Push Handler
 app.use('/iclock', zktecoRouter);
+
+// Static Uploads Directory Serving
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(path.resolve('uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'backend', 'uploads')));
 
 // API Versioned Routing
 app.use(env.API_PREFIX, v1Router);

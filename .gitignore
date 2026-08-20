@@ -34,6 +34,11 @@ yarn-error.log*
 .idea/
 .DS_Store
 
+# Uploads
+uploads/
+backend/uploads/
+scratch/
+
 # Testing coverage
 coverage/
 .nyc_output/

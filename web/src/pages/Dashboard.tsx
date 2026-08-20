@@ -258,7 +258,7 @@ export const Dashboard: React.FC = () => {
               Welcome back, {user?.fullName?.split(' ')[0] || 'Employee'}! 👋
             </h1>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Official HRMS ID: <strong>{user?.employeeId || 'EMP'}</strong> • Live MySQL Data Active
+              Official HRMS ID: <strong>{user?.employeeId || 'EMP'}</strong> • HRMS Enterprise Sync Active
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -326,7 +326,7 @@ export const Dashboard: React.FC = () => {
                     {leaveRequests.length === 0 ? (
                       <Tr>
                         <Td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem' }}>
-                          No leave applications found in database.
+                          No leave applications found.
                         </Td>
                       </Tr>
                     ) : (
@@ -525,7 +525,7 @@ export const Dashboard: React.FC = () => {
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={submittingLeave}>
-                Submit into Database
+                Submit Application
               </Button>
             </div>
           </form>
@@ -549,7 +549,7 @@ export const Dashboard: React.FC = () => {
         <div>
           <h1 className="page-title">HRMS Executive Operations Command</h1>
           <p className="page-subtitle">
-            Real-Time MySQL Database Sync • {activeRoleView} Command Center
+            Enterprise Operations • {activeRoleView} Command Center
           </p>
         </div>
         <div className="page-actions">
@@ -565,7 +565,7 @@ export const Dashboard: React.FC = () => {
           title="Total Workforce Headcount"
           value={employees.length}
           icon={<Users size={20} />}
-          subtext="Active records in MySQL database"
+          subtext="Active workforce records"
           onClick={() => navigate('/employees')}
         />
         <StatCard
@@ -633,7 +633,7 @@ export const Dashboard: React.FC = () => {
         {/* Dynamic Department Distribution from DB */}
         <Card>
           <CardHeader>
-            <CardTitle>Department Distribution (Database)</CardTitle>
+            <CardTitle>Department Distribution</CardTitle>
             <Badge variant="neutral">{departmentDistribution.length} Departments</Badge>
           </CardHeader>
           <CardBody>

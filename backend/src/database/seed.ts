@@ -87,6 +87,14 @@ export async function seedDatabase() {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS employee_profiles (
         id VARCHAR(36) PRIMARY KEY,
         user_id VARCHAR(36) NOT NULL,
@@ -331,6 +339,76 @@ export async function seedDatabase() {
         name VARCHAR(100) NOT NULL,
         leader_name VARCHAR(100),
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Chat Module Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id VARCHAR(36) PRIMARY KEY,
+        type VARCHAR(20) NOT NULL DEFAULT 'private',
+        name VARCHAR(255),
+        description TEXT,
+        department_name VARCHAR(100),
+        avatar_url LONGTEXT,
+        created_by VARCHAR(36) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_type (type),
+        INDEX idx_dept (department_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_participants (
+        id VARCHAR(36) PRIMARY KEY,
+        conversation_id VARCHAR(36) NOT NULL,
+        user_id VARCHAR(36) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'member',
+        joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_read_message_id VARCHAR(36),
+        last_read_at DATETIME,
+        UNIQUE KEY idx_conv_user (conversation_id, user_id),
+        INDEX idx_user (user_id),
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id VARCHAR(36) PRIMARY KEY,
+        conversation_id VARCHAR(36) NOT NULL,
+        sender_id VARCHAR(36) NOT NULL,
+        message TEXT,
+        message_type VARCHAR(20) NOT NULL DEFAULT 'text',
+        file_url TEXT,
+        file_name VARCHAR(255),
+        file_size VARCHAR(50),
+        file_type VARCHAR(100),
+        reply_to_message_id VARCHAR(36),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deleted_at DATETIME,
+        INDEX idx_conv_date (conversation_id, created_at),
+        INDEX idx_sender (sender_id),
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_message_status (
+        id VARCHAR(36) PRIMARY KEY,
+        message_id VARCHAR(36) NOT NULL,
+        user_id VARCHAR(36) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'SENT',
+        delivered_at DATETIME,
+        read_at DATETIME,
+        UNIQUE KEY idx_msg_user (message_id, user_id),
+        INDEX idx_user_status (user_id, status),
+        FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 

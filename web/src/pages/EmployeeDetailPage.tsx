@@ -5,7 +5,9 @@ import { UserRole } from '@hrms/shared';
 import {
   fetchEmployeeByIdFromDb,
   updateEmployeeInDb,
+  fetchEmployeeAttendanceById,
   EmployeeDbRecord,
+  EmployeeAttendanceData,
 } from '../services/employeeApi';
 import {
   fetchEmployeeLeaveBalances,
@@ -67,6 +69,11 @@ export const EmployeeDetailPage: React.FC = () => {
   const [historyTypeFilter, setHistoryTypeFilter] = useState('ALL');
   const [historyStatusFilter, setHistoryStatusFilter] = useState('ALL');
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Attendance State
+  const [attendanceMode, setAttendanceMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [attendanceData, setAttendanceData] = useState<EmployeeAttendanceData | null>(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -142,6 +149,14 @@ export const EmployeeDetailPage: React.FC = () => {
     }
   };
 
+  const loadAttendance = async () => {
+    if (!targetId) return;
+    setLoadingAttendance(true);
+    const data = await fetchEmployeeAttendanceById(targetId, attendanceMode);
+    setAttendanceData(data);
+    setLoadingAttendance(false);
+  };
+
   useEffect(() => {
     loadProfileFromDb();
   }, [targetId]);
@@ -150,6 +165,10 @@ export const EmployeeDetailPage: React.FC = () => {
     loadLeaveBalances();
     loadLeaveHistory();
   }, [targetId, selectedYear, historyTypeFilter, historyStatusFilter]);
+
+  useEffect(() => {
+    loadAttendance();
+  }, [targetId, attendanceMode]);
 
   // Handle Photo File Upload
   const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,7 +210,7 @@ export const EmployeeDetailPage: React.FC = () => {
         });
       }
       setEditModalOpen(false);
-      setSuccessToast('Profile details and profile picture updated successfully in MySQL!');
+      setSuccessToast('Profile details and profile picture updated successfully!');
       setTimeout(() => setSuccessToast(null), 4000);
       await loadProfileFromDb();
     } else {
@@ -232,7 +251,7 @@ export const EmployeeDetailPage: React.FC = () => {
   if (loading) {
     return (
       <Card style={{ padding: '2rem', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-muted)' }}>Loading profile details from MySQL database...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading profile details...</p>
       </Card>
     );
   }
@@ -241,7 +260,7 @@ export const EmployeeDetailPage: React.FC = () => {
     return (
       <Card style={{ padding: '2rem', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Employee Not Found</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No matching employee profile record was found in the database.</p>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No matching employee profile record was found.</p>
         <Button variant="primary" onClick={() => navigate('/employees')}>
           Back to Employee Directory
         </Button>
@@ -351,6 +370,7 @@ export const EmployeeDetailPage: React.FC = () => {
       <Tabs
         tabs={[
           { id: 'overview', label: 'Overview & Personal' },
+          { id: 'attendance', label: 'Attendance Logs' },
           { id: 'employment', label: 'Employment Details' },
           { id: 'documents', label: 'Documents' },
         ]}
@@ -365,7 +385,7 @@ export const EmployeeDetailPage: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             <Card>
               <CardHeader>
-                <CardTitle>Personal Details (Database)</CardTitle>
+                <CardTitle>Personal Details</CardTitle>
               </CardHeader>
               <CardBody>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
@@ -416,7 +436,7 @@ export const EmployeeDetailPage: React.FC = () => {
                   <div>
                     <CardTitle>Leave Balance — {selectedYear}</CardTitle>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                      Dynamic database metrics for {employee.fullName} ({employee.employeeId})
+                      Leave metrics for {employee.fullName} ({employee.employeeId})
                     </p>
                   </div>
                 </div>
@@ -496,7 +516,7 @@ export const EmployeeDetailPage: React.FC = () => {
                     {loadingBalances ? (
                       <Tr>
                         <Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                          Calculating leave balances from database...
+                          Calculating leave balances...
                         </Td>
                       </Tr>
                     ) : !leaveSummary || leaveSummary.leaveTypes.length === 0 ? (
@@ -610,7 +630,7 @@ export const EmployeeDetailPage: React.FC = () => {
                     {loadingHistory ? (
                       <Tr>
                         <Td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                          Fetching leave history from database...
+                          Fetching leave history...
                         </Td>
                       </Tr>
                     ) : leaveHistory.length === 0 ? (
@@ -643,6 +663,123 @@ export const EmployeeDetailPage: React.FC = () => {
                               }
                             >
                               {item.status}
+                            </Badge>
+                          </Td>
+                        </Tr>
+                      ))
+                    )}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'attendance' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <Card>
+            <CardHeader>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-500)' }}>
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <CardTitle>Attendance Records ({attendanceMode === 'weekly' ? 'Weekly View' : 'Monthly View'})</CardTitle>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                      Attendance metrics for {employee.fullName} ({employee.employeeId})
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ width: '220px' }}>
+                  <Select
+                    value={attendanceMode}
+                    options={[
+                      { value: 'weekly', label: 'Weekly (Last 7 Days)' },
+                      { value: 'monthly', label: 'Monthly (Last 30 Days)' },
+                    ]}
+                    onChange={(e) => setAttendanceMode(e.target.value as 'weekly' | 'monthly')}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--success-text)', textTransform: 'uppercase' }}>Present Days</span>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--success-text)', marginTop: '0.25rem' }}>
+                    {attendanceData?.summary.presentDays || 0} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {attendanceData?.summary.totalDays || 0} Days</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--warning-text)', textTransform: 'uppercase' }}>Late Days</span>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+                    {attendanceData?.summary.lateDays || 0} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>Days</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--error-text)', textTransform: 'uppercase' }}>Absent Days</span>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+                    {attendanceData?.summary.absentDays || 0} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>Days</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--info-text)', textTransform: 'uppercase' }}>Avg Work Hours</span>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+                    {attendanceData?.summary.avgWorkHours || '0.0'} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>Hrs/Day</span>
+                  </div>
+                </div>
+              </div>
+
+              <TableContainer>
+                <Table>
+                  <Thead>
+                    <Tr>
+                      <Th>Work Date</Th>
+                      <Th>Clock In</Th>
+                      <Th>Clock Out</Th>
+                      <Th style={{ textAlign: 'center' }}>Work Hours</Th>
+                      <Th style={{ textAlign: 'right' }}>Status</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {loadingAttendance ? (
+                      <Tr>
+                        <Td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                          Fetching attendance records...
+                        </Td>
+                      </Tr>
+                    ) : !attendanceData || attendanceData.logs.length === 0 ? (
+                      <Tr>
+                        <Td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                          No attendance logs recorded for this period.
+                        </Td>
+                      </Tr>
+                    ) : (
+                      attendanceData.logs.map((log) => (
+                        <Tr key={log.id}>
+                          <Td style={{ fontWeight: 600 }}>{log.workDate}</Td>
+                          <Td>{log.clockIn || '—'}</Td>
+                          <Td>{log.clockOut || '—'}</Td>
+                          <Td style={{ textAlign: 'center', fontWeight: 700 }}>
+                            {log.workHours !== undefined ? `${log.workHours} hrs` : '—'}
+                          </Td>
+                          <Td style={{ textAlign: 'right' }}>
+                            <Badge
+                              variant={
+                                log.status === 'PRESENT'
+                                  ? 'success'
+                                  : log.status === 'LATE'
+                                  ? 'warning'
+                                  : 'error'
+                              }
+                            >
+                              {log.status}
                             </Badge>
                           </Td>
                         </Tr>
@@ -718,7 +855,7 @@ export const EmployeeDetailPage: React.FC = () => {
             <Tbody>
               <Tr>
                 <Td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  No uploaded compliance documents found in database for this employee.
+                  No uploaded compliance documents found for this employee.
                 </Td>
               </Tr>
             </Tbody>

@@ -133,7 +133,7 @@ export const UsersRolesPage: React.FC = () => {
     { module: 'Company Documents Vault', admin: true, employer: true, employee: false },
     { module: 'Personal Profile & My Leave', admin: true, employer: true, employee: true },
     { module: 'Admin User Creation & Account Status', admin: true, employer: false, employee: false },
-    { module: 'System Security & MySQL Audit Logs', admin: true, employer: false, employee: false },
+    { module: 'System Security & Audit Logs', admin: true, employer: false, employee: false },
   ];
 
   return (
@@ -141,7 +141,7 @@ export const UsersRolesPage: React.FC = () => {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">Users & Role Access Control</h1>
-          <p className="page-subtitle">MySQL Database Users • 3-Role RBAC Architecture (Admin, Employer, Employee)</p>
+          <p className="page-subtitle">User Management • 3-Role RBAC Architecture (Admin, Employer, Employee)</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <Button variant="outline" onClick={fetchUsers} isLoading={isLoading}>
@@ -156,7 +156,7 @@ export const UsersRolesPage: React.FC = () => {
       {/* Database Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Registered MySQL Database Accounts ({usersList.length})</CardTitle>
+          <CardTitle>Registered System Accounts ({usersList.length})</CardTitle>
         </CardHeader>
         <CardBody>
           <TableContainer>
@@ -269,7 +269,7 @@ export const UsersRolesPage: React.FC = () => {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create New System User (MySQL)"
+        title="Create New System User"
       >
         <form onSubmit={handleCreateSubmit}>
           {modalError && <Alert variant="error" title="Error">{modalError}</Alert>}
