@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '@hrms/shared';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { NotificationDrawer } from './NotificationDrawer';
-import { Tooltip, Avatar, Badge, Dropdown, Button } from './ui';
+import { Tooltip, Avatar, Badge, Dropdown, Button, Modal } from './ui';
 import {
   LayoutDashboard,
   Users,
@@ -120,7 +120,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     setRoleSwitchError(null);
     const success = await setRole(targetRole);
     if (!success) {
-      alert(`Access Denied: Your authenticated user account (${user?.role || 'User'}) is not authorized to switch to ${targetRole} view.`);
+      setRoleSwitchError(`Access Denied: Your authenticated user account (${user?.role || 'User'}) is not authorized to switch to ${targetRole} view.`);
     }
   };
 
@@ -154,9 +154,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Sidebar */}
       <aside className={`hrms-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <Link to="/" className="sidebar-brand">
-            <div className="brand-icon">H</div>
-            {!collapsed && <span className="brand-text">HRMS Platform</span>}
+          <Link to="/" className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img
+              src="/hrms-brand.png"
+              alt="HRMS Brand"
+              style={{
+                height: collapsed ? '32px' : '44px',
+                maxWidth: collapsed ? '32px' : '175px',
+                objectFit: 'contain',
+                transition: 'all 0.2s ease',
+              }}
+            />
           </Link>
           <button
             className="sidebar-toggle-btn"
@@ -260,7 +268,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 onClick={() => setSearchOpen(true)}
                 style={{ color: 'var(--text-muted)', fontWeight: 400 }}
               >
-                Search system... <kbd style={{ marginLeft: '1rem', fontSize: '0.7rem', backgroundColor: 'var(--bg-surface-hover)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Ctrl K</kbd>
+                <span className="search-btn-text">Search system...</span> <kbd className="search-btn-kbd" style={{ marginLeft: '1rem', fontSize: '0.7rem', backgroundColor: 'var(--bg-surface-hover)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Ctrl K</kbd>
               </Button>
             </div>
           </div>
@@ -413,6 +421,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Global Search & Notification Center Overlay Modals */}
       <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <NotificationDrawer isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+
+      {/* Access Denied Modal */}
+      <Modal isOpen={Boolean(roleSwitchError)} onClose={() => setRoleSwitchError(null)} title="Access Authorization Alert">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            {roleSwitchError}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <Button variant="primary" onClick={() => setRoleSwitchError(null)}>
+              Understand & Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

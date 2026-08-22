@@ -65,6 +65,19 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * Delete Document
+ */
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM employee_documents WHERE id = ?`, [id]);
+    res.json({ success: true, message: 'Document deleted from database successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to delete document.' } });
+  }
+});
+
 export const documentsModule = {
   name: 'documents',
   version: '1.0.0',

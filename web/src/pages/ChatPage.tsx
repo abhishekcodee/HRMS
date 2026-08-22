@@ -19,7 +19,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Avatar, Badge, Button, Input, LoadingSpinner } from '../components/ui';
+import { Avatar, Badge, Button, Input, LoadingSpinner, Modal, Alert } from '../components/ui';
 import {
   fetchConversations,
   fetchConversationMessages,
@@ -62,6 +62,8 @@ export const ChatPage: React.FC = () => {
   const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string } | null>(null);
 
   // UI Modals & Popovers
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [deleteMessageId, setDeleteMessageId] = useState<string | null>(null);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isPostAnnounceOpen, setIsPostAnnounceOpen] = useState(false);
@@ -130,6 +132,18 @@ export const ChatPage: React.FC = () => {
     };
   }, [activeConvId]);
 
+  // Toggle body class for mobile full-screen WhatsApp view
+  useEffect(() => {
+    if (mobileShowMain) {
+      document.body.classList.add('mobile-chat-active');
+    } else {
+      document.body.classList.remove('mobile-chat-active');
+    }
+    return () => {
+      document.body.classList.remove('mobile-chat-active');
+    };
+  }, [mobileShowMain]);
+
   // Auto Scroll Messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -177,7 +191,7 @@ export const ChatPage: React.FC = () => {
       await loadConversations();
       handleSelectConversation(convId);
     } catch (err: any) {
-      alert(err.message || 'Failed to start private chat');
+      setChatError(err.message || 'Failed to start private chat');
     }
   };
 
@@ -210,7 +224,7 @@ export const ChatPage: React.FC = () => {
       setMessages((prev) => [...prev, newMsg]);
       loadConversations();
     } catch (err: any) {
-      alert(err.message || 'Failed to send message.');
+      setChatError(err.message || 'Failed to send message.');
     }
   };
 
@@ -221,7 +235,7 @@ export const ChatPage: React.FC = () => {
       const result = await uploadChatAttachment(file);
       await handleSendMessage(result);
     } catch (err: any) {
-      alert(err.message || 'File upload failed');
+      setChatError(err.message || 'File upload failed');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -276,15 +290,17 @@ export const ChatPage: React.FC = () => {
   };
 
   // Delete Message
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
+  const confirmDeleteMessage = async () => {
+    if (!deleteMessageId) return;
+    const msgId = deleteMessageId;
+    setDeleteMessageId(null);
     try {
-      await deleteChatMessage(messageId);
+      await deleteChatMessage(msgId);
       setMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, message: 'This message was deleted.' } : m))
+        prev.map((m) => (m.id === msgId ? { ...m, isDeleted: true, message: 'This message was deleted.' } : m))
       );
     } catch (err: any) {
-      alert(err.message || 'Failed to delete message');
+      setChatError(err.message || 'Failed to delete message');
     }
   };
 
@@ -458,7 +474,7 @@ export const ChatPage: React.FC = () => {
                 <button
                   className="mobile-only"
                   onClick={() => setMobileShowMain(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'none' }}
+                  title="Back to conversations"
                 >
                   <ArrowLeft size={20} />
                 </button>
@@ -597,7 +613,7 @@ export const ChatPage: React.FC = () => {
                               </button>
                               {(isOwn || String(user?.role) === 'admin' || String(user?.role) === 'ADMIN') && (
                                 <button
-                                  onClick={() => handleDeleteMessage(m.id)}
+                                  onClick={() => setDeleteMessageId(m.id)}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.7 }}
                                   title="Delete"
                                 >
@@ -650,64 +666,69 @@ export const ChatPage: React.FC = () => {
                   accept="image/*"
                 />
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<ImageIcon size={18} />}
-                  onClick={() => imageInputRef.current?.click()}
-                  isLoading={uploading}
-                  title="Send Image"
-                />
+                {/* WhatsApp Pill Capsule */}
+                <div className="chat-input-pill">
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      className="chat-pill-btn"
+                      onClick={() => setShowEmojiPicker((prev) => !prev)}
+                      title="Add Emoji"
+                    >
+                      <Smile size={20} />
+                    </button>
+                    {showEmojiPicker && (
+                      <EmojiPickerPopover
+                        onSelectEmoji={(emoji) => setMessageText((prev) => prev + emoji)}
+                        onClose={() => setShowEmojiPicker(false)}
+                      />
+                    )}
+                  </div>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Paperclip size={18} />}
-                  onClick={() => fileInputRef.current?.click()}
-                  isLoading={uploading}
-                  title="Attach File"
-                />
-
-                <textarea
-                  className="chat-textarea"
-                  placeholder={`Write a message to ${activeConv.name}...`}
-                  value={messageText}
-                  onChange={(e) => handleTyping(e.target.value)}
-                  onPaste={handlePaste}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  rows={1}
-                />
-
-                <div style={{ position: 'relative' }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Smile size={18} />}
-                    onClick={() => setShowEmojiPicker((prev) => !prev)}
-                    title="Add Emoji"
+                  <textarea
+                    className="chat-textarea"
+                    placeholder="Message..."
+                    value={messageText}
+                    onChange={(e) => handleTyping(e.target.value)}
+                    onPaste={handlePaste}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    rows={1}
                   />
-                  {showEmojiPicker && (
-                    <EmojiPickerPopover
-                      onSelectEmoji={(emoji) => setMessageText((prev) => prev + emoji)}
-                      onClose={() => setShowEmojiPicker(false)}
-                    />
-                  )}
+
+                  <button
+                    type="button"
+                    className="chat-pill-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach File"
+                  >
+                    <Paperclip size={19} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="chat-pill-btn"
+                    onClick={() => imageInputRef.current?.click()}
+                    title="Send Image"
+                  >
+                    <ImageIcon size={19} />
+                  </button>
                 </div>
 
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon={<Send size={16} />}
+                {/* WhatsApp Circular Action Button */}
+                <button
+                  type="button"
+                  className="chat-send-circle-btn"
                   onClick={() => handleSendMessage()}
-                  disabled={!messageText.trim()}
+                  disabled={!messageText.trim() && !uploading}
+                  title="Send Message"
                 >
-                  Send
-                </Button>
+                  <Send size={18} style={{ marginLeft: messageText.trim() ? '2px' : 0 }} />
+                </button>
               </div>
             </footer>
           </>
@@ -825,6 +846,31 @@ export const ChatPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Message Confirmation Modal */}
+      <Modal isOpen={Boolean(deleteMessageId)} onClose={() => setDeleteMessageId(null)} title="Confirm Delete Message">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+            Are you sure you want to delete this message? This cannot be undone.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <Button variant="outline" onClick={() => setDeleteMessageId(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmDeleteMessage}>Delete Message</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Chat Error Notification Modal */}
+      <Modal isOpen={Boolean(chatError)} onClose={() => setChatError(null)} title="Chat Notification">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <Alert variant="error" title="Action Failed">
+            {chatError}
+          </Alert>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="primary" onClick={() => setChatError(null)}>Close</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotifications } from '../context/NotificationContext';
 import {
   validateSalarySlipExcel,
   sendBulkSalarySlips,
@@ -31,6 +32,7 @@ import {
 import { Upload, FileSpreadsheet, Send, RefreshCw, CheckCircle2, AlertTriangle, XCircle, ShieldCheck } from 'lucide-react';
 
 export const SalarySlipBulkPage: React.FC = () => {
+  const { addNotification } = useNotifications();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationSummary, setValidationSummary] = useState<ExcelValidationSummary | null>(null);
@@ -97,6 +99,12 @@ export const SalarySlipBulkPage: React.FC = () => {
     setSending(false);
 
     if (res.success && res.summary && res.details) {
+      addNotification({
+        type: 'PAYROLL',
+        title: 'Salary Slips Dispatched',
+        message: `${res.summary.sent} salary slip emails sent successfully to employees.`,
+        link: '/salary-slips',
+      });
       setBulkSummary(res.summary);
       setSendDetails(res.details);
       setToastMsg(`Salary slips processed! ${res.summary.sent} sent successfully, ${res.summary.failed} failed.`);

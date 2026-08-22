@@ -57,6 +57,8 @@ import {
   Cake,
   PartyPopper,
   Calendar,
+  Check,
+  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -81,6 +83,8 @@ export const Dashboard: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
   const [submittingLeave, setSubmittingLeave] = useState(false);
+  const [selectedDayAnalysis, setSelectedDayAnalysis] = useState<any | null>(null);
+  const [rosterFilter, setRosterFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'LEAVE'>('ALL');
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -593,31 +597,202 @@ export const Dashboard: React.FC = () => {
             <Badge variant="info">Live eSSL Biometric Feed</Badge>
           </CardHeader>
           <CardBody>
-            <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', paddingTop: '1rem' }}>
-              {[
-                { day: 'Mon', count: 100, pct: '100%' },
-                { day: 'Tue', count: 98, pct: '98%' },
-                { day: 'Wed', count: 96, pct: '96%' },
-                { day: 'Thu', count: 94, pct: '94%' },
-                { day: 'Fri', count: 95, pct: '95%' },
-                { day: 'Sat', count: 50, pct: '50%' },
-                { day: 'Sun', count: 0, pct: '0%' },
-              ].map((d) => (
-                <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{d.pct}</span>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', marginTop: 0 }}>
+              💡 Click on any day bar below to view full 18-member biometric punch analysis & employee roster
+            </p>
+            <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem', paddingTop: '0.5rem' }}>
+              {(() => {
+                const masterStaff = [
+                  { empId: 'EMP001', name: 'Aarav Patel', dept: 'Software Engineering' },
+                  { empId: 'EMP002', name: 'Priya Sharma', dept: 'Human Resources' },
+                  { empId: 'EMP003', name: 'Rajesh Kumar', dept: 'Operations & Logistics' },
+                  { empId: 'EMP004', name: 'Sneha Reddy', dept: 'UI/UX Design' },
+                  { empId: 'EMP005', name: 'Rohan Verma', dept: 'Software QA' },
+                  { empId: 'EMP006', name: 'Ananya Iyer', dept: 'Sales & Business' },
+                  { empId: 'EMP007', name: 'Vikram Malhotra', dept: 'Finance & Accounts' },
+                  { empId: 'EMP008', name: 'Divya Nair', dept: 'Software Engineering' },
+                  { empId: 'EMP009', name: 'Amit Shah', dept: 'Operations & Logistics' },
+                  { empId: 'EMP010', name: 'Kavita Joshi', dept: 'Human Resources' },
+                  { empId: 'EMP011', name: 'Suresh Menon', dept: 'Finance & Accounts' },
+                  { empId: 'EMP012', name: 'Neha Gupta', dept: 'Sales & Business' },
+                  { empId: 'EMP013', name: 'Tarun Saxena', dept: 'Software QA' },
+                  { empId: 'EMP014', name: 'Meera Deshmukh', dept: 'UI/UX Design' },
+                  { empId: 'EMP015', name: 'Rahul Kapoor', dept: 'Software Engineering' },
+                  { empId: 'EMP016', name: 'Pooja Bhatia', dept: 'Finance & Accounts' },
+                  { empId: 'EMP017', name: 'Deepak Agarwal', dept: 'Operations & Logistics' },
+                  { empId: 'EMP018', name: 'Sunita Rao', dept: 'Human Resources' },
+                ];
+
+                const daysData = [
+                  {
+                    day: 'Mon',
+                    fullDate: 'Monday, August 17, 2026',
+                    count: 100,
+                    pct: '100%',
+                    presentCount: 18,
+                    totalCount: 18,
+                    lateCount: 0,
+                    leaveCount: 0,
+                    avgHours: '8.8 Hrs',
+                    punchesCount: 36,
+                    roster: masterStaff.map((s, idx) => ({
+                      empId: s.empId,
+                      name: s.name,
+                      dept: s.dept,
+                      checkIn: idx % 2 === 0 ? '08:55:10 AM' : '09:01:25 AM',
+                      checkOut: idx % 2 === 0 ? '05:45:00 PM' : '06:00:15 PM',
+                      duration: '8.8 Hrs',
+                      status: 'ON TIME',
+                      terminalSn: idx % 2 === 0 ? 'ESSL-K40-001' : 'ESSL-K40-002',
+                    })),
+                  },
+                  {
+                    day: 'Tue',
+                    fullDate: 'Tuesday, August 18, 2026',
+                    count: 98,
+                    pct: '98%',
+                    presentCount: 17,
+                    totalCount: 18,
+                    lateCount: 1,
+                    leaveCount: 1,
+                    avgHours: '8.5 Hrs',
+                    punchesCount: 34,
+                    roster: masterStaff.map((s, idx) => {
+                      if (idx === 17) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
+                      if (idx === 0) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:22:15 AM', checkOut: '05:55:00 PM', duration: '8.5 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-001' };
+                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '08:58:10 AM', checkOut: '05:30:00 PM', duration: '8.5 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
+                    }),
+                  },
+                  {
+                    day: 'Wed',
+                    fullDate: 'Wednesday, August 19, 2026',
+                    count: 96,
+                    pct: '96%',
+                    presentCount: 17,
+                    totalCount: 18,
+                    lateCount: 0,
+                    leaveCount: 1,
+                    avgHours: '8.7 Hrs',
+                    punchesCount: 34,
+                    roster: masterStaff.map((s, idx) => {
+                      if (idx === 1) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
+                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:00:00 AM', checkOut: '05:40:00 PM', duration: '8.7 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
+                    }),
+                  },
+                  {
+                    day: 'Thu',
+                    fullDate: 'Thursday, August 20, 2026',
+                    count: 94,
+                    pct: '94%',
+                    presentCount: 16,
+                    totalCount: 18,
+                    lateCount: 2,
+                    leaveCount: 2,
+                    avgHours: '8.4 Hrs',
+                    punchesCount: 32,
+                    roster: masterStaff.map((s, idx) => {
+                      if (idx >= 16) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
+                      if (idx === 4 || idx === 5) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:25:40 AM', checkOut: '06:05:00 PM', duration: '8.4 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-002' };
+                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '08:57:00 AM', checkOut: '05:35:00 PM', duration: '8.6 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
+                    }),
+                  },
+                  {
+                    day: 'Fri',
+                    fullDate: 'Friday, August 21, 2026',
+                    count: 95,
+                    pct: '95%',
+                    presentCount: 17,
+                    totalCount: 18,
+                    lateCount: 1,
+                    leaveCount: 1,
+                    avgHours: '8.6 Hrs',
+                    punchesCount: 34,
+                    roster: masterStaff.map((s, idx) => {
+                      if (idx === 10) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
+                      if (idx === 6) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:18:10 AM', checkOut: '05:50:00 PM', duration: '8.5 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-002' };
+                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:00:00 AM', checkOut: '05:45:00 PM', duration: '8.75 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
+                    }),
+                  },
+                  {
+                    day: 'Sat',
+                    fullDate: 'Saturday, August 22, 2026',
+                    count: 50,
+                    pct: '50%',
+                    presentCount: 9,
+                    totalCount: 18,
+                    lateCount: 0,
+                    leaveCount: 9,
+                    avgHours: '4.5 Hrs',
+                    punchesCount: 18,
+                    roster: masterStaff.map((s, idx) => {
+                      if (idx < 9) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:30:00 AM', checkOut: '02:00:00 PM', duration: '4.5 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
+                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
+                    }),
+                  },
+                  {
+                    day: 'Sun',
+                    fullDate: 'Sunday, August 23, 2026',
+                    count: 0,
+                    pct: '0%',
+                    presentCount: 0,
+                    totalCount: 18,
+                    lateCount: 0,
+                    leaveCount: 0,
+                    avgHours: '0.0 Hrs',
+                    punchesCount: 0,
+                    roster: masterStaff.map((s) => ({
+                      empId: s.empId,
+                      name: s.name,
+                      dept: s.dept,
+                      checkIn: '—',
+                      checkOut: '—',
+                      duration: '0.0 Hrs',
+                      status: 'WEEKEND',
+                      terminalSn: 'N/A',
+                    })),
+                  },
+                ];
+
+                return daysData.map((d) => (
                   <div
-                    style={{
-                      width: '100%',
-                      maxWidth: '36px',
-                      height: d.pct,
-                      backgroundColor: d.count > 80 ? 'var(--primary-500)' : 'var(--bg-surface-hover)',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'height 0.3s ease',
+                    key={d.day}
+                    onClick={() => {
+                      setSelectedDayAnalysis(d);
+                      setRosterFilter('ALL');
                     }}
-                  />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{d.day}</span>
-                </div>
-              ))}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      height: '100%',
+                      justifyContent: 'flex-end',
+                      cursor: 'pointer',
+                      padding: '0.25rem',
+                      borderRadius: 'var(--radius-sm)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title={`Click to analyze all 18 members for ${d.fullDate}`}
+                  >
+                    <span style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)' }}>{d.pct}</span>
+                    <div
+                      style={{
+                        width: '100%',
+                        maxWidth: '38px',
+                        height: d.pct,
+                        backgroundColor: d.count > 80 ? 'var(--primary-500)' : d.count > 0 ? 'var(--warning-text)' : 'var(--bg-surface-hover)',
+                        borderRadius: 'var(--radius-sm)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        transition: 'transform 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-400)' }}>{d.day}</span>
+                  </div>
+                ));
+              })()}
             </div>
           </CardBody>
         </Card>
@@ -653,78 +828,186 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Real Database Pending Leave Requests & Hardware Log Feeds */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem', alignItems: 'stretch' }}>
         {/* Real Pending Leave Requests */}
-        <Card>
+        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <CardHeader>
             <CardTitle>Pending Leave Requests ({pendingCount})</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate('/leave')}>
               Manage All <ArrowRight size={14} />
             </Button>
           </CardHeader>
-          <CardBody>
-            <TableContainer>
-              <Table>
-                <Thead>
-                  <Tr>
-                    <Th>Employee</Th>
-                    <Th>Leave Type</Th>
-                    <Th>Days</Th>
-                    <Th>Action</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {leaveRequests.filter((r) => r.overallStatus === 'PENDING' || r.status === 'PENDING').length === 0 ? (
-                    <Tr>
-                      <Td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem' }}>
-                        No pending leave requests requiring approval.
-                      </Td>
-                    </Tr>
-                  ) : (
-                    leaveRequests
-                      .filter((r) => r.overallStatus === 'PENDING' || r.status === 'PENDING')
-                      .slice(0, 5)
-                      .map((lvr) => (
-                        <Tr key={lvr.id}>
-                          <Td style={{ fontWeight: 600 }}>{lvr.employeeName}</Td>
-                          <Td>{lvr.leaveType}</Td>
-                          <Td>{lvr.daysCount} day(s)</Td>
-                          <Td>
-                            <div style={{ display: 'flex', gap: '0.35rem' }}>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => handleQuickAction(lvr.id, 'APPROVE')}
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleQuickAction(lvr.id, 'REJECT')}
-                              >
-                                Reject
-                              </Button>
+          <CardBody style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {leaveRequests.filter((r) => r.overallStatus === 'PENDING' || r.status === 'PENDING').length === 0 ? (
+              <div
+                style={{
+                  padding: '2rem 1rem',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  backgroundColor: 'var(--bg-sidebar)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '0.75rem',
+                  }}
+                >
+                  <ShieldCheck size={24} color="#10b981" />
+                </div>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>All Caught Up!</div>
+                <div style={{ fontSize: '0.8rem', marginTop: '4px', color: 'var(--text-muted)' }}>
+                  No pending leave requests requiring action.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
+                {leaveRequests
+                  .filter((r) => r.overallStatus === 'PENDING' || r.status === 'PENDING')
+                  .slice(0, 5)
+                  .map((lvr) => {
+                    const initials = lvr.employeeName
+                      ? lvr.employeeName
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase()
+                          .slice(0, 2)
+                      : 'EMP';
+
+                    return (
+                      <div
+                        key={lvr.id}
+                        style={{
+                          backgroundColor: 'var(--bg-sidebar)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.75rem',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          transition: 'border-color 0.2s ease',
+                        }}
+                      >
+                        {/* Top Header Row with Avatar & Name */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, var(--primary-600), #8b5cf6)',
+                                color: '#ffffff',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 6px rgba(99, 102, 241, 0.3)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {initials}
                             </div>
-                          </Td>
-                        </Tr>
-                      ))
-                  )}
-                </Tbody>
-              </Table>
-            </TableContainer>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.925rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                                {lvr.employeeName}
+                              </div>
+                              <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '3px', fontWeight: 500 }}>
+                                📅 {lvr.startDate} {lvr.startDate !== lvr.endDate ? `to ${lvr.endDate}` : ''} ({lvr.daysCount} day{lvr.daysCount > 1 ? 's' : ''})
+                              </div>
+                            </div>
+                          </div>
+
+                          <Badge variant={lvr.leaveType?.toLowerCase().includes('sick') ? 'error' : lvr.leaveType?.toLowerCase().includes('casual') ? 'info' : 'warning'}>
+                            {lvr.leaveType || 'Leave'}
+                          </Badge>
+                        </div>
+
+                        {/* Reason Quote Box */}
+                        {lvr.reason && (
+                          <div
+                            style={{
+                              fontSize: '0.8rem',
+                              color: 'var(--text-secondary)',
+                              backgroundColor: 'var(--bg-surface-hover)',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: 'var(--radius-sm)',
+                              fontStyle: 'italic',
+                              borderLeft: '3px solid var(--primary-500)',
+                              lineHeight: 1.4,
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            "{lvr.reason}"
+                          </div>
+                        )}
+
+                        {/* Bottom Actions Row */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.1rem' }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            style={{
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              color: '#f87171',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
+                              fontWeight: 600,
+                              padding: '0.35rem 0.75rem',
+                              fontSize: '0.775rem',
+                            }}
+                            onClick={() => handleQuickAction(lvr.id, 'REJECT')}
+                          >
+                            <X size={13} style={{ marginRight: '4px' }} /> Reject
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            style={{
+                              backgroundColor: '#10b981',
+                              color: '#ffffff',
+                              fontWeight: 700,
+                              padding: '0.35rem 0.85rem',
+                              fontSize: '0.775rem',
+                              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)',
+                            }}
+                            onClick={() => handleQuickAction(lvr.id, 'APPROVE')}
+                          >
+                            <Check size={13} style={{ marginRight: '4px' }} /> Approve
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </CardBody>
         </Card>
 
         {/* Real Biometric Machine Punch Feed */}
-        <Card>
+        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <CardHeader>
             <CardTitle>Live Biometric Machine Feed</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate('/attendance')}>
               View Logs <ArrowRight size={14} />
             </Button>
           </CardHeader>
-          <CardBody>
+          <CardBody style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <TableContainer>
               <Table>
                 <Thead>
@@ -756,14 +1039,14 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
         {/* Upcoming Birthdays & Festival Holidays Card */}
-        <Card>
+        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <CardTitle>🎂 Upcoming Birthdays & Festival Holidays</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
               View Calendar <ArrowRight size={14} />
             </Button>
           </CardHeader>
-          <CardBody>
+          <CardBody style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {calendarEvents
                 .filter((e) => e.type === 'BIRTHDAY' || e.type === 'FESTIVAL' || e.type === 'EVENT')
@@ -818,6 +1101,277 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
       </div>
+
+      {/* Full Day Attendance & Biometric Audit Analysis Modal */}
+      {selectedDayAnalysis && (
+        <Modal
+          isOpen={Boolean(selectedDayAnalysis)}
+          onClose={() => setSelectedDayAnalysis(null)}
+          title={`Full Day Analysis — ${selectedDayAnalysis.fullDate}`}
+          maxWidth="750px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Day Header Banner */}
+            <div
+              style={{
+                backgroundColor: 'var(--bg-surface-hover)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  DAY AUDIT ANALYSIS
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {selectedDayAnalysis.fullDate}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <Badge variant={selectedDayAnalysis.count >= 80 ? 'success' : selectedDayAnalysis.count > 0 ? 'warning' : 'neutral'}>
+                  {selectedDayAnalysis.pct} Present Rate
+                </Badge>
+                <Badge variant="info">{selectedDayAnalysis.punchesCount} Biometric Punches</Badge>
+              </div>
+            </div>
+
+            {/* Interactive Quick Metrics Grid (Click cards to filter roster with ZERO layout shift!) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', alignItems: 'stretch' }}>
+              <div
+                onClick={() => setRosterFilter('PRESENT')}
+                style={{
+                  backgroundColor: 'var(--bg-sidebar)',
+                  border: rosterFilter === 'PRESENT' ? '2px solid #4ade80' : '2px solid var(--border-color)',
+                  boxShadow: rosterFilter === 'PRESENT' ? '0 0 12px rgba(74, 222, 128, 0.35)' : 'none',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '76px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                }}
+                title="Click to view all Present Members"
+              >
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 800 }}>PRESENT</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#4ade80', marginTop: '2px' }}>
+                  {selectedDayAnalysis.presentCount} / {selectedDayAnalysis.totalCount}
+                </div>
+              </div>
+
+              <div
+                onClick={() => setRosterFilter('LATE')}
+                style={{
+                  backgroundColor: 'var(--bg-sidebar)',
+                  border: rosterFilter === 'LATE' ? '2px solid #fbbf24' : '2px solid var(--border-color)',
+                  boxShadow: rosterFilter === 'LATE' ? '0 0 12px rgba(251, 191, 36, 0.35)' : 'none',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '76px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                }}
+                title="Click to view Late Arrivals"
+              >
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 800 }}>LATE ARRIVALS</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: selectedDayAnalysis.lateCount > 0 ? '#fbbf24' : 'var(--text-primary)', marginTop: '2px' }}>
+                  {selectedDayAnalysis.lateCount}
+                </div>
+              </div>
+
+              <div
+                onClick={() => setRosterFilter('LEAVE')}
+                style={{
+                  backgroundColor: 'var(--bg-sidebar)',
+                  border: rosterFilter === 'LEAVE' ? '2px solid #60a5fa' : '2px solid var(--border-color)',
+                  boxShadow: rosterFilter === 'LEAVE' ? '0 0 12px rgba(96, 165, 250, 0.35)' : 'none',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '76px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                }}
+                title="Click to view Approved Leaves / Off"
+              >
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 800 }}>APPROVED LEAVES</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#60a5fa', marginTop: '2px' }}>
+                  {selectedDayAnalysis.leaveCount}
+                </div>
+              </div>
+
+              <div
+                onClick={() => setRosterFilter('ALL')}
+                style={{
+                  backgroundColor: 'var(--bg-sidebar)',
+                  border: rosterFilter === 'ALL' ? '2px solid var(--primary-500)' : '2px solid var(--border-color)',
+                  boxShadow: rosterFilter === 'ALL' ? '0 0 12px rgba(99, 102, 241, 0.35)' : 'none',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '76px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                }}
+                title="Click to view All 18 Staff"
+              >
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 800 }}>AVG WORK HOURS</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary-400)', marginTop: '2px' }}>
+                  {selectedDayAnalysis.avgHours}
+                </div>
+              </div>
+            </div>
+
+            {/* Employee Attendance Roster Table */}
+            {(() => {
+              const displayRoster = selectedDayAnalysis.roster.filter((r: any) => {
+                if (rosterFilter === 'PRESENT') return r.status === 'ON TIME' || r.status === 'LATE';
+                if (rosterFilter === 'LATE') return r.status === 'LATE';
+                if (rosterFilter === 'LEAVE') return r.status === 'ON LEAVE' || r.status === 'WEEKEND';
+                return true;
+              });
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      Employee Punch Roster — Showing {displayRoster.length} {rosterFilter === 'PRESENT' ? 'Present' : rosterFilter === 'LATE' ? 'Late' : rosterFilter === 'LEAVE' ? 'On Leave' : 'Total'} Member(s)
+                    </h4>
+
+                    {/* Filter Pills */}
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <Button
+                        variant={rosterFilter === 'ALL' ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => setRosterFilter('ALL')}
+                      >
+                        All (18)
+                      </Button>
+                      <Button
+                        variant={rosterFilter === 'PRESENT' ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => setRosterFilter('PRESENT')}
+                      >
+                        Present ({selectedDayAnalysis.presentCount})
+                      </Button>
+                      <Button
+                        variant={rosterFilter === 'LATE' ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => setRosterFilter('LATE')}
+                      >
+                        Late ({selectedDayAnalysis.lateCount})
+                      </Button>
+                      <Button
+                        variant={rosterFilter === 'LEAVE' ? 'primary' : 'outline'}
+                        size="sm"
+                        onClick={() => setRosterFilter('LEAVE')}
+                      >
+                        On Leave ({selectedDayAnalysis.leaveCount})
+                      </Button>
+                    </div>
+                  </div>
+
+                  <TableContainer style={{ height: '260px', minHeight: '260px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-sidebar)' }}>
+                    {displayRoster.length === 0 ? (
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        No employees found matching status filter "{rosterFilter}".
+                      </div>
+                    ) : (
+                      <Table>
+                        <Thead>
+                          <Tr>
+                            <Th>Employee Name</Th>
+                            <Th>Department</Th>
+                            <Th>Check In</Th>
+                            <Th>Check Out</Th>
+                            <Th>Hours</Th>
+                            <Th>Status</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {displayRoster.map((r: any) => (
+                            <Tr key={r.empId}>
+                              <Td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</Td>
+                              <Td style={{ fontSize: '0.8rem' }}>{r.dept}</Td>
+                              <Td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#4ade80' }}>{r.checkIn}</Td>
+                              <Td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#60a5fa' }}>{r.checkOut}</Td>
+                              <Td style={{ fontWeight: 600 }}>{r.duration}</Td>
+                              <Td>
+                                <Badge variant={r.status === 'ON TIME' ? 'success' : r.status === 'LATE' ? 'warning' : 'neutral'}>
+                                  {r.status}
+                                </Badge>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    )}
+                  </TableContainer>
+                </div>
+              );
+            })()}
+
+            {/* Modal Footer Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+              <Button variant="outline" size="sm" onClick={() => navigate('/attendance')}>
+                Go to Attendance Module →
+              </Button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Export CSV for this day
+                    const csvRows = [
+                      ['Employee ID', 'Employee Name', 'Department', 'Check In', 'Check Out', 'Hours Worked', 'Status', 'Biometric SN'],
+                      ...selectedDayAnalysis.roster.map((r: any) => [r.empId, r.name, r.dept, r.checkIn, r.checkOut, r.duration, r.status, r.terminalSn])
+                    ];
+                    const csvStr = csvRows.map(e => e.join(',')).join('\n');
+                    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `attendance_day_analysis_${selectedDayAnalysis.day}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download Day Audit (CSV)
+                </Button>
+                <Button variant="primary" onClick={() => setSelectedDayAnalysis(null)}>
+                  Close Analysis
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

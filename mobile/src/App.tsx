@@ -9,6 +9,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { AttendanceScreen } from './screens/AttendanceScreen';
 import { LeaveScreen } from './screens/LeaveScreen';
 import { EmployeesScreen } from './screens/EmployeesScreen';
+import { NotificationsScreen } from './screens/NotificationsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 
 export default function App() {
@@ -18,13 +19,15 @@ export default function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case 'home':
-        return <HomeScreen role={role} />;
+        return <HomeScreen role={role} onNavigateTab={setActiveTab} />;
       case 'attendance':
         return <AttendanceScreen />;
       case 'leave':
-        return <LeaveScreen />;
+        return <LeaveScreen role={role} />;
       case 'employees':
         return <EmployeesScreen />;
+      case 'notifications':
+        return <NotificationsScreen />;
       case 'profile':
       default:
         return <ProfileScreen role={role} onSwitchRole={setRole} />;
@@ -44,9 +47,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0f19'
+    backgroundColor: '#0b0f19',
   },
   content: {
-    flex: 1
-  }
+    flex: 1,
+  },
 });

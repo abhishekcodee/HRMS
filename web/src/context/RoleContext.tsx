@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, EmployeeMock } from '@hrms/shared';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationContext';
 
 interface RoleContextType {
   role: UserRole;
@@ -15,6 +16,7 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, activeRoleView, switchRoleView } = useAuth();
+  const { unreadCount } = useNotifications();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         theme,
         toggleTheme,
         currentUser,
-        unreadNotificationCount: 2,
+        unreadNotificationCount: unreadCount,
       }}
     >
       {children}

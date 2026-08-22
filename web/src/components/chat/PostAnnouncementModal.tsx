@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Megaphone } from 'lucide-react';
-import { Modal, Button, Input } from '../ui';
+import { Modal, Button, Input, Alert } from '../ui';
 import { postHRAnnouncement } from '../../services/chatApi';
 
 interface PostAnnouncementModalProps {
@@ -12,11 +12,13 @@ interface PostAnnouncementModalProps {
 export const PostAnnouncementModal: React.FC<PostAnnouncementModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    setError(null);
     if (!title.trim() || !message.trim()) {
-      alert('Please fill out both announcement Title and Message.');
+      setError('Please fill out both announcement Title and Message.');
       return;
     }
 
@@ -25,10 +27,11 @@ export const PostAnnouncementModal: React.FC<PostAnnouncementModalProps> = ({ is
       await postHRAnnouncement(title.trim(), message.trim());
       setTitle('');
       setMessage('');
+      setError(null);
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to post announcement.');
+      setError(err.message || 'Failed to post announcement.');
     } finally {
       setSubmitting(false);
     }
@@ -37,6 +40,12 @@ export const PostAnnouncementModal: React.FC<PostAnnouncementModalProps> = ({ is
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Publish Company Announcement" maxWidth="550px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {error && (
+          <Alert variant="error" title="Validation Error">
+            {error}
+          </Alert>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-500)', fontSize: '0.9rem', fontWeight: 600 }}>
           <Megaphone size={20} />
           Broadcast message to all active HRMS employees

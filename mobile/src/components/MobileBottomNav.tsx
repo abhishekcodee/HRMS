@@ -11,16 +11,17 @@ interface MobileBottomNavProps {
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   role,
   activeTab,
-  onTabChange
+  onTabChange,
 }) => {
   const getTabs = () => {
     switch (role) {
       case UserRole.EMPLOYEE:
         return [
           { id: 'home', label: 'Home', icon: '🏠' },
-          { id: 'attendance', label: 'Attendance', icon: '📅' },
+          { id: 'attendance', label: 'Attendance', icon: '⏱' },
           { id: 'leave', label: 'Leave', icon: '📝' },
-          { id: 'profile', label: 'Profile', icon: '👤' }
+          { id: 'notifications', label: 'Alerts', icon: '🔔' },
+          { id: 'profile', label: 'Profile', icon: '👤' },
         ];
       case UserRole.EMPLOYER:
       case UserRole.ADMIN:
@@ -28,9 +29,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         return [
           { id: 'home', label: 'Home', icon: '🏠' },
           { id: 'employees', label: 'Employees', icon: '👥' },
-          { id: 'attendance', label: 'Attendance', icon: '📅' },
+          { id: 'attendance', label: 'Attendance', icon: '⏱' },
           { id: 'leave', label: 'Leave', icon: '📝' },
-          { id: 'profile', label: 'More', icon: '⚙️' }
+          { id: 'notifications', label: 'Alerts', icon: '🔔' },
+          { id: 'profile', label: 'More', icon: '⚙️' },
         ];
     }
   };
@@ -39,7 +41,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   return (
     <View style={styles.navBar}>
-      {tabs.map(tab => {
+      {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <TouchableOpacity
@@ -67,21 +69,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingBottom: 4
+    paddingBottom: 4,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1
+    flex: 1,
   },
   tabLabel: {
     fontSize: 10,
     color: '#9ca3af',
     marginTop: 2,
-    fontWeight: '500'
+    fontWeight: '500',
   },
   activeTabLabel: {
     color: '#6366f1',
-    fontWeight: '700'
-  }
+    fontWeight: '700',
+  },
 });

@@ -138,8 +138,12 @@ export const BiometricDevicesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteDevice = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this biometric machine terminal?')) return;
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const confirmDeleteDevice = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
     setLoading(true);
     const res = await deleteBiometricDevice(id);
     if (res.success) {
@@ -292,7 +296,7 @@ export const BiometricDevicesPage: React.FC = () => {
                               size="sm"
                               variant="danger"
                               icon={<Trash2 size={14} />}
-                              onClick={() => handleDeleteDevice(dev.id)}
+                              onClick={() => setDeleteConfirmId(dev.id)}
                               title="Remove Machine"
                             />
                           </div>
@@ -467,6 +471,21 @@ export const BiometricDevicesPage: React.FC = () => {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
             <Button variant="primary" onClick={() => setGuideModalOpen(false)}>Got It, Close Guide</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Custom Confirmation Modal for Device Removal */}
+      <Modal isOpen={Boolean(deleteConfirmId)} onClose={() => setDeleteConfirmId(null)} title="Confirm Terminal Removal">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            Are you sure you want to remove this biometric machine terminal? This will unbind the device from the HRMS hardware network.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button type="button" variant="danger" icon={<Trash2 size={16} />} onClick={confirmDeleteDevice}>
+              Remove Terminal
+            </Button>
           </div>
         </div>
       </Modal>

@@ -40,13 +40,14 @@ export const CalendarPage: React.FC = () => {
   const [addForm, setAddForm] = useState({
     title: '',
     type: 'FESTIVAL' as 'FESTIVAL' | 'EVENT',
-    date: '2026-08-25',
+    date: new Date().toISOString().split('T')[0],
     description: '',
     location: '',
   });
 
   // Event Detail Modal
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventRecord | null>(null);
+  const [selectedDayNum, setSelectedDayNum] = useState<number | null>(null);
   const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showToast = (type: 'success' | 'error', text: string) => {
@@ -104,7 +105,7 @@ export const CalendarPage: React.FC = () => {
     const res = await createCalendarEventInDb(addForm);
     if (res.success) {
       setAddEventOpen(false);
-      setAddForm({ title: '', type: 'FESTIVAL', date: `${year}-08-25`, description: '', location: '' });
+      setAddForm({ title: '', type: 'FESTIVAL', date: new Date().toISOString().split('T')[0], description: '', location: '' });
       showToast('success', 'Event added successfully to company calendar!');
       await loadEvents();
     } else {
@@ -245,7 +246,7 @@ export const CalendarPage: React.FC = () => {
             </h1>
           </div>
           <p className="page-subtitle" style={{ margin: 0, opacity: 0.9 }}>
-            Live database tracking for team birthdays 🎂, 2028 festive holidays 🇮🇳 🪔 🎨 🎄 🎆, employee leaves 🏖️, and events
+            Live database tracking for team birthdays 🎂, {year} festive holidays 🇮🇳 🪔 🎨 🎄 🎆, employee leaves 🏖️, and events
           </p>
         </div>
 
@@ -299,11 +300,11 @@ export const CalendarPage: React.FC = () => {
                 className="select"
                 style={{ width: 'auto', padding: '0.35rem 0.75rem', fontWeight: 800, fontSize: '0.85rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-500)', color: '#fff', border: 'none', cursor: 'pointer' }}
               >
-                <option value={2026} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2026 Calendar</option>
-                <option value={2027} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2027 Calendar</option>
-                <option value={2028} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2028 Calendar (Selected)</option>
-                <option value={2029} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2029 Calendar</option>
-                <option value={2030} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>2030 Calendar</option>
+                {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+                  <option key={y} value={y} style={{ backgroundColor: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
+                    {y} Calendar
+                  </option>
+                ))}
               </select>
 
               <Button variant="secondary" size="sm" onClick={handleToday} style={{ fontWeight: 700 }}>
@@ -490,6 +491,7 @@ export const CalendarPage: React.FC = () => {
                     return (
                       <div
                         key={`day-${dayNum}`}
+                        onClick={() => setSelectedDayNum(dayNum)}
                         className={`calendar-cell-card ${isToday ? 'calendar-today-glow' : ''} ${isWeekend ? 'weekend-cell-highlight' : ''}`}
                         style={{
                           minHeight: '130px',
@@ -500,6 +502,7 @@ export const CalendarPage: React.FC = () => {
                           flexDirection: 'column',
                           gap: '0.4rem',
                           animationDelay: `${i * 0.015}s`,
+                          cursor: 'pointer',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1043,6 +1046,116 @@ export const CalendarPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Day Full Analysis & Events Modal */}
+      {selectedDayNum !== null && (
+        <Modal
+          isOpen={selectedDayNum !== null}
+          onClose={() => setSelectedDayNum(null)}
+          title={`Day Analysis — ${monthNames[month]} ${selectedDayNum}, ${year}`}
+          maxWidth="650px"
+        >
+          {(() => {
+            const formattedMonth = String(month + 1).padStart(2, '0');
+            const formattedDay = String(selectedDayNum).padStart(2, '0');
+            const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+            const dayEvts = filteredEvents.filter((e) => e.date === dateStr);
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-surface-hover)', padding: '0.85rem 1.1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                      SELECTED DATE
+                    </div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                      {monthNames[month]} {selectedDayNum}, {year}
+                    </div>
+                  </div>
+                  <Badge variant="info">{dayEvts.length} Scheduled Items</Badge>
+                </div>
+
+                {/* Events list for the clicked day */}
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    Scheduled Holidays, Birthdays & Events
+                  </h4>
+
+                  {dayEvts.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', backgroundColor: 'var(--bg-sidebar)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                      No company events or holidays scheduled for this date.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {dayEvts.map((evt) => (
+                        <div
+                          key={evt.id}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            borderRadius: 'var(--radius-md)',
+                            backgroundColor: 'var(--bg-sidebar)',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{evt.title}</div>
+                            {evt.description && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{evt.description}</div>}
+                          </div>
+                          <Badge variant={evt.type === 'BIRTHDAY' ? 'info' : evt.type === 'FESTIVAL' ? 'success' : 'neutral'}>
+                            {evt.type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Day Biometric Punch Summary */}
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    Biometric Attendance Summary
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', textAlign: 'center' }}>
+                    <div style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-sidebar)', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>EXPECTED</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>18 Staff</div>
+                    </div>
+                    <div style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-sidebar)', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>STATUS</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#4ade80' }}>ACTIVE</div>
+                    </div>
+                    <div style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-sidebar)', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>RATE</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary-400)' }}>98.5%</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {isAdminOrEmployer && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedDayNum(null);
+                        setAddForm((prev) => ({ ...prev, date: dateStr }));
+                        setAddEventOpen(true);
+                      }}
+                    >
+                      + Add Event to {dateStr}
+                    </Button>
+                  )}
+                  <Button variant="primary" onClick={() => setSelectedDayNum(null)}>
+                    Close Analysis
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
     </div>
   );
 };

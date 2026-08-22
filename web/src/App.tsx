@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { RoleProvider } from './context/RoleContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -58,8 +59,9 @@ export function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <RoleProvider>
-          <ToastProvider>
+        <NotificationProvider>
+          <RoleProvider>
+            <ToastProvider>
             <BrowserRouter>
               <Routes>
                 {/* Unauthenticated Login Route */}
@@ -134,7 +136,8 @@ export function App() {
             </BrowserRouter>
           </ToastProvider>
         </RoleProvider>
-      </AuthProvider>
+      </NotificationProvider>
+    </AuthProvider>
     </ErrorBoundary>
   );
 }

@@ -348,6 +348,19 @@ export async function seedDatabase() {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS in_app_notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36),
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(255),
+        is_read TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS master_teams (
         id VARCHAR(36) PRIMARY KEY,
         department_id VARCHAR(36) NOT NULL,

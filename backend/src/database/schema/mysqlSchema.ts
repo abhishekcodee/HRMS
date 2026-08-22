@@ -292,3 +292,18 @@ export const biometricPunchLogs = mysqlTable('biometric_punch_logs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+/**
+ * In-App User Notifications Table
+ */
+export const inAppNotifications = mysqlTable('in_app_notifications', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }),
+  type: varchar('type', { length: 50 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  link: varchar('link', { length: 255 }),
+  isRead: boolean('is_read').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+

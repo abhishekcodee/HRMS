@@ -53,14 +53,17 @@ export const AuditLogsPage: React.FC = () => {
     loadData();
   }, [activeTab]);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const handleRetryEmail = async (id: string) => {
+    setErrorMsg(null);
     const res = await retryEmailNotificationInDb(id);
     if (res.success) {
       setToastMsg('Email re-sent successfully!');
       await loadData();
       setTimeout(() => setToastMsg(null), 4000);
     } else {
-      alert(res.error || 'Failed to retry email.');
+      setErrorMsg(res.error || 'Failed to retry email.');
     }
   };
 
@@ -76,6 +79,12 @@ export const AuditLogsPage: React.FC = () => {
       {toastMsg && (
         <Alert variant="success" title="Success Notification">
           {toastMsg}
+        </Alert>
+      )}
+
+      {errorMsg && (
+        <Alert variant="error" title="Processing Error">
+          {errorMsg}
         </Alert>
       )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { UserRole } from '@hrms/shared';
 import {
   fetchLeaveRequests,
@@ -51,6 +52,7 @@ import {
 
 export const LeavePage: React.FC = () => {
   const { user, activeRoleView } = useAuth();
+  const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<LeaveRecord[]>([]);
   const [balances, setBalances] = useState<LeaveBalanceRecord[]>([]);
   const [ledger, setLedger] = useState<LeaveLedgerRecord[]>([]);
@@ -165,6 +167,12 @@ export const LeavePage: React.FC = () => {
 
     setSubmitting(false);
     if (res.success) {
+      addNotification({
+        type: 'LEAVE',
+        title: 'Leave Application Submitted',
+        message: `Your ${form.leaveType} request (${calculatedDays} day(s)) has been submitted for Dual Approval.`,
+        link: '/my-leave',
+      });
       setToastMessage({
         type: 'success',
         text: 'Leave request submitted successfully! Routed for Dual Approval.',

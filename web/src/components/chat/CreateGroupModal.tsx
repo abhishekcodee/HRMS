@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Check } from 'lucide-react';
-import { Modal, Button, Input, Avatar } from '../ui';
+import { Modal, Button, Input, Avatar, Alert } from '../ui';
 import { searchChatEmployees, createGroupChat, ChatEmployeeSearchResult } from '../../services/chatApi';
 
 interface CreateGroupModalProps {
@@ -15,6 +15,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
   const [searchTerm, setSearchTerm] = useState('');
   const [employees, setEmployees] = useState<ChatEmployeeSearchResult[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
       setGroupName('');
       setDescription('');
       setSelectedIds([]);
+      setError(null);
       handleSearch('');
     }
   }, [isOpen]);
@@ -41,12 +43,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
   };
 
   const handleCreate = async () => {
+    setError(null);
     if (!groupName.trim()) {
-      alert('Please enter a Group Name');
+      setError('Please enter a Group Name');
       return;
     }
     if (selectedIds.length === 0) {
-      alert('Please select at least 1 group member');
+      setError('Please select at least 1 group member');
       return;
     }
 
@@ -56,7 +59,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
       onGroupCreated(convId);
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to create group');
+      setError(err.message || 'Failed to create group');
     } finally {
       setSubmitting(false);
     }
@@ -65,6 +68,11 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Group Chat" maxWidth="550px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {error && (
+          <Alert variant="error" title="Validation Error">
+            {error}
+          </Alert>
+        )}
         <Input
           label="Group Name *"
           placeholder="e.g. Development Sprint Team"

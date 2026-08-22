@@ -9,6 +9,7 @@ import {
   retryFailedNotification,
 } from '../../services/emailService.js';
 import { calculateEmployeeLeaveSummary, calculateCL, calculatePL, calculateCLPLDuration } from './leaveCalculationService.js';
+import { insertInAppNotification } from '../notifications/notificationsController.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -197,7 +198,15 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       [uuidv4(), leaveId, userObj.employeeId, userObj.fullName, reason || 'Applied for leave', clientIp]
     );
 
-    // Step C: Trigger HR Email Notification Immediately
+    // Step C: Trigger HR Email & In-App Notification
+    await insertInAppNotification({
+      userId,
+      type: 'LEAVE',
+      title: 'Leave Application Submitted',
+      message: `${userObj.fullName} applied for ${count} day(s) of ${leaveType} (${startDate} to ${endDate}).`,
+      link: '/my-leave',
+    });
+
     const emailResult = await sendLeaveAppliedEmail({
       leaveRequestId: leaveId,
       employeeId: userObj.employeeId,
