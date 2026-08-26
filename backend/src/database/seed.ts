@@ -605,6 +605,18 @@ export async function seedDatabase() {
         designation: 'Chief Administrator',
       },
       {
+        employeeId: 'AMAN001',
+        fullName: 'Aman Upadhyay',
+        email: 'amanupadhyay2030@gmail.com',
+        phone: '+91 98765 99999',
+        passwordRaw: 'Amanupa10@',
+        role: 'admin',
+        status: 'active',
+        mustChangePassword: 0,
+        department: 'Information Technology',
+        designation: 'Lead Architect & Administrator',
+      },
+      {
         employeeId: 'ER001',
         fullName: 'Enterprise Employer Officer',
         email: 'employer@hrms.com',

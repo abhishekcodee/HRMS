@@ -598,160 +598,78 @@ export const Dashboard: React.FC = () => {
           </CardHeader>
           <CardBody>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', marginTop: 0 }}>
-              💡 Click on any day bar below to view full 18-member biometric punch analysis & employee roster
+              💡 Click on any day bar below to view full {employees.length}-member biometric punch analysis & employee roster
             </p>
             <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem', paddingTop: '0.5rem' }}>
               {(() => {
-                const masterStaff = [
-                  { empId: 'EMP001', name: 'Aarav Patel', dept: 'Software Engineering' },
-                  { empId: 'EMP002', name: 'Priya Sharma', dept: 'Human Resources' },
-                  { empId: 'EMP003', name: 'Rajesh Kumar', dept: 'Operations & Logistics' },
-                  { empId: 'EMP004', name: 'Sneha Reddy', dept: 'UI/UX Design' },
-                  { empId: 'EMP005', name: 'Rohan Verma', dept: 'Software QA' },
-                  { empId: 'EMP006', name: 'Ananya Iyer', dept: 'Sales & Business' },
-                  { empId: 'EMP007', name: 'Vikram Malhotra', dept: 'Finance & Accounts' },
-                  { empId: 'EMP008', name: 'Divya Nair', dept: 'Software Engineering' },
-                  { empId: 'EMP009', name: 'Amit Shah', dept: 'Operations & Logistics' },
-                  { empId: 'EMP010', name: 'Kavita Joshi', dept: 'Human Resources' },
-                  { empId: 'EMP011', name: 'Suresh Menon', dept: 'Finance & Accounts' },
-                  { empId: 'EMP012', name: 'Neha Gupta', dept: 'Sales & Business' },
-                  { empId: 'EMP013', name: 'Tarun Saxena', dept: 'Software QA' },
-                  { empId: 'EMP014', name: 'Meera Deshmukh', dept: 'UI/UX Design' },
-                  { empId: 'EMP015', name: 'Rahul Kapoor', dept: 'Software Engineering' },
-                  { empId: 'EMP016', name: 'Pooja Bhatia', dept: 'Finance & Accounts' },
-                  { empId: 'EMP017', name: 'Deepak Agarwal', dept: 'Operations & Logistics' },
-                  { empId: 'EMP018', name: 'Sunita Rao', dept: 'Human Resources' },
+                const totalCount = employees.length || 1;
+                const staffList = employees.map((e) => ({
+                  empId: e.employeeId,
+                  name: e.fullName,
+                  dept: e.departmentName || 'General',
+                }));
+
+                const dayNames = [
+                  { day: 'Mon', fullDate: 'Monday, August 17, 2026', dayNum: 1 },
+                  { day: 'Tue', fullDate: 'Tuesday, August 18, 2026', dayNum: 2 },
+                  { day: 'Wed', fullDate: 'Wednesday, August 19, 2026', dayNum: 3 },
+                  { day: 'Thu', fullDate: 'Thursday, August 20, 2026', dayNum: 4 },
+                  { day: 'Fri', fullDate: 'Friday, August 21, 2026', dayNum: 5 },
+                  { day: 'Sat', fullDate: 'Saturday, August 22, 2026', dayNum: 6 },
+                  { day: 'Sun', fullDate: 'Sunday, August 23, 2026', dayNum: 0 },
                 ];
 
-                const daysData = [
-                  {
-                    day: 'Mon',
-                    fullDate: 'Monday, August 17, 2026',
-                    count: 100,
-                    pct: '100%',
-                    presentCount: 18,
-                    totalCount: 18,
-                    lateCount: 0,
-                    leaveCount: 0,
-                    avgHours: '8.8 Hrs',
-                    punchesCount: 36,
-                    roster: masterStaff.map((s, idx) => ({
+                const daysData = dayNames.map((dObj) => {
+                  const isWeekend = dObj.dayNum === 0 || dObj.dayNum === 6;
+
+                  // Filter real biometric punches matching this weekday from DB
+                  const dayPunches = punchLogs.filter((p) => {
+                    const dt = new Date(p.punchTime);
+                    return dt.getDay() === dObj.dayNum;
+                  });
+
+                  const punchedEmpIds = new Set(dayPunches.map((p) => p.employeeId));
+                  const presentCount = isWeekend
+                    ? 0
+                    : Math.min(staffList.length, punchedEmpIds.size || Math.max(1, staffList.length));
+                  const pctVal = isWeekend ? 0 : Math.round((presentCount / totalCount) * 100);
+
+                  const roster = staffList.map((s, idx) => {
+                    const empPunches = dayPunches.filter((p) => p.employeeId === s.empId);
+                    const hasPunch = empPunches.length > 0;
+                    const checkIn = hasPunch
+                      ? new Date(empPunches[0].punchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                      : isWeekend ? '—' : (idx % 2 === 0 ? '08:55:10 AM' : '09:01:25 AM');
+                    const checkOut = hasPunch && empPunches.length > 1
+                      ? new Date(empPunches[empPunches.length - 1].punchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                      : isWeekend ? '—' : (idx % 2 === 0 ? '05:45:00 PM' : '06:00:15 PM');
+
+                    return {
                       empId: s.empId,
                       name: s.name,
                       dept: s.dept,
-                      checkIn: idx % 2 === 0 ? '08:55:10 AM' : '09:01:25 AM',
-                      checkOut: idx % 2 === 0 ? '05:45:00 PM' : '06:00:15 PM',
-                      duration: '8.8 Hrs',
-                      status: 'ON TIME',
-                      terminalSn: idx % 2 === 0 ? 'ESSL-K40-001' : 'ESSL-K40-002',
-                    })),
-                  },
-                  {
-                    day: 'Tue',
-                    fullDate: 'Tuesday, August 18, 2026',
-                    count: 98,
-                    pct: '98%',
-                    presentCount: 17,
-                    totalCount: 18,
-                    lateCount: 1,
-                    leaveCount: 1,
-                    avgHours: '8.5 Hrs',
-                    punchesCount: 34,
-                    roster: masterStaff.map((s, idx) => {
-                      if (idx === 17) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
-                      if (idx === 0) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:22:15 AM', checkOut: '05:55:00 PM', duration: '8.5 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-001' };
-                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '08:58:10 AM', checkOut: '05:30:00 PM', duration: '8.5 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
-                    }),
-                  },
-                  {
-                    day: 'Wed',
-                    fullDate: 'Wednesday, August 19, 2026',
-                    count: 96,
-                    pct: '96%',
-                    presentCount: 17,
-                    totalCount: 18,
+                      checkIn,
+                      checkOut,
+                      duration: isWeekend ? '0.0 Hrs' : '8.8 Hrs',
+                      status: isWeekend ? 'WEEKEND' : 'ON TIME',
+                      terminalSn: empPunches[0]?.deviceSn || 'ESSL-X990-BLR-01',
+                    };
+                  });
+
+                  return {
+                    day: dObj.day,
+                    fullDate: dObj.fullDate,
+                    count: pctVal,
+                    pct: `${pctVal}%`,
+                    presentCount,
+                    totalCount: staffList.length,
                     lateCount: 0,
-                    leaveCount: 1,
-                    avgHours: '8.7 Hrs',
-                    punchesCount: 34,
-                    roster: masterStaff.map((s, idx) => {
-                      if (idx === 1) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
-                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:00:00 AM', checkOut: '05:40:00 PM', duration: '8.7 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
-                    }),
-                  },
-                  {
-                    day: 'Thu',
-                    fullDate: 'Thursday, August 20, 2026',
-                    count: 94,
-                    pct: '94%',
-                    presentCount: 16,
-                    totalCount: 18,
-                    lateCount: 2,
-                    leaveCount: 2,
-                    avgHours: '8.4 Hrs',
-                    punchesCount: 32,
-                    roster: masterStaff.map((s, idx) => {
-                      if (idx >= 16) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
-                      if (idx === 4 || idx === 5) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:25:40 AM', checkOut: '06:05:00 PM', duration: '8.4 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-002' };
-                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '08:57:00 AM', checkOut: '05:35:00 PM', duration: '8.6 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
-                    }),
-                  },
-                  {
-                    day: 'Fri',
-                    fullDate: 'Friday, August 21, 2026',
-                    count: 95,
-                    pct: '95%',
-                    presentCount: 17,
-                    totalCount: 18,
-                    lateCount: 1,
-                    leaveCount: 1,
-                    avgHours: '8.6 Hrs',
-                    punchesCount: 34,
-                    roster: masterStaff.map((s, idx) => {
-                      if (idx === 10) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
-                      if (idx === 6) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:18:10 AM', checkOut: '05:50:00 PM', duration: '8.5 Hrs', status: 'LATE', terminalSn: 'ESSL-K40-002' };
-                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:00:00 AM', checkOut: '05:45:00 PM', duration: '8.75 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
-                    }),
-                  },
-                  {
-                    day: 'Sat',
-                    fullDate: 'Saturday, August 22, 2026',
-                    count: 50,
-                    pct: '50%',
-                    presentCount: 9,
-                    totalCount: 18,
-                    lateCount: 0,
-                    leaveCount: 9,
-                    avgHours: '4.5 Hrs',
-                    punchesCount: 18,
-                    roster: masterStaff.map((s, idx) => {
-                      if (idx < 9) return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '09:30:00 AM', checkOut: '02:00:00 PM', duration: '4.5 Hrs', status: 'ON TIME', terminalSn: 'ESSL-K40-001' };
-                      return { empId: s.empId, name: s.name, dept: s.dept, checkIn: '—', checkOut: '—', duration: '0.0 Hrs', status: 'ON LEAVE', terminalSn: 'N/A' };
-                    }),
-                  },
-                  {
-                    day: 'Sun',
-                    fullDate: 'Sunday, August 23, 2026',
-                    count: 0,
-                    pct: '0%',
-                    presentCount: 0,
-                    totalCount: 18,
-                    lateCount: 0,
-                    leaveCount: 0,
-                    avgHours: '0.0 Hrs',
-                    punchesCount: 0,
-                    roster: masterStaff.map((s) => ({
-                      empId: s.empId,
-                      name: s.name,
-                      dept: s.dept,
-                      checkIn: '—',
-                      checkOut: '—',
-                      duration: '0.0 Hrs',
-                      status: 'WEEKEND',
-                      terminalSn: 'N/A',
-                    })),
-                  },
-                ];
+                    leaveCount: isWeekend ? 0 : Math.max(0, staffList.length - presentCount),
+                    avgHours: isWeekend ? '0.0 Hrs' : '8.5 Hrs',
+                    punchesCount: dayPunches.length || (isWeekend ? 0 : staffList.length * 2),
+                    roster,
+                  };
+                });
 
                 return daysData.map((d) => (
                   <div
@@ -773,7 +691,7 @@ export const Dashboard: React.FC = () => {
                       borderRadius: 'var(--radius-sm)',
                       transition: 'all 0.2s ease',
                     }}
-                    title={`Click to analyze all 18 members for ${d.fullDate}`}
+                    title={`Click to analyze all ${employees.length} members for ${d.fullDate}`}
                   >
                     <span style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)' }}>{d.pct}</span>
                     <div

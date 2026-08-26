@@ -121,11 +121,27 @@ export function calculateCLPLDuration(rawDays: number, leaveType?: string): numb
 }
 
 /**
- * Calculate CL Entitlement using exact HRMS Business Rule:
- * Formula:
- *   Monthly CL = Annual CL / 12 (10 / 12 = 0.8333333333)
- *   Remaining Months = 12 - Joining Financial Year Month
- *   CL Entitlement = (Annual CL / 12) * (12 - Joining Financial Year Month)
+ * Helper to add months (EDATE equivalent)
+ */
+function addMonths(date: Date, months: number): Date {
+  const res = new Date(date);
+  res.setMonth(res.getMonth() + months);
+  return res;
+}
+
+/**
+ * Helper for DATEDIF(start, end, "m") + 1
+ */
+function getEligibleMonthCount(startDate: Date, endDate: Date): number {
+  if (startDate > endDate) return 0;
+  const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+  const monthDiff = endDate.getMonth() - startDate.getMonth();
+  return Math.max(0, yearDiff * 12 + monthDiff + 1);
+}
+
+/**
+ * Calculate CL Entitlement using exact Excel Proration Formula:
+ * =IF(C5="","", ROUND((10/12)*(DATEDIF(MAX(C5, FY_START), FY_END, "m") + 1), 0))
  */
 export function calculateCLEntitlement(joiningDateStr: string, fy: FinancialYearInfo, annualCL: number = 10.0): {
   joiningFinancialMonth: number;
@@ -142,7 +158,7 @@ export function calculateCLEntitlement(joiningDateStr: string, fy: FinancialYear
       remainingMonths: 12,
       monthlyCL,
       annualCL,
-      clEntitlement: roundLeave(annualCL),
+      clEntitlement: Math.round(annualCL),
     };
   }
 
@@ -150,52 +166,37 @@ export function calculateCLEntitlement(joiningDateStr: string, fy: FinancialYear
   const fyStart = new Date(fy.fyStartDate);
   const fyEnd = new Date(fy.fyEndDate);
 
-  // Joined before or at the start of current FY -> Full year entitlement
-  if (joinDate <= fyStart) {
-    return {
-      joiningFinancialMonth: 1,
-      remainingMonths: 12,
-      monthlyCL,
-      annualCL,
-      clEntitlement: roundLeave(annualCL),
-    };
-  }
-
-  // Joined after current FY -> 0 days in current FY
   if (joinDate > fyEnd) {
     return {
       joiningFinancialMonth: 0,
       remainingMonths: 0,
       monthlyCL,
       annualCL,
-      clEntitlement: 0.0,
+      clEntitlement: 0,
     };
   }
 
-  // Joined during current Financial Year
-  const joiningFinancialMonth = getFinancialYearMonthNumber(joiningDateStr);
-  // Exact Business Rule Formula: Remaining Months = 12 - Joining Financial Month
-  const remainingMonths = Math.max(0, 12 - joiningFinancialMonth);
+  const effectiveStart = joinDate > fyStart ? joinDate : fyStart;
+  const remainingMonths = getEligibleMonthCount(effectiveStart, fyEnd);
   const rawEntitlement = monthlyCL * remainingMonths;
 
   return {
-    joiningFinancialMonth,
+    joiningFinancialMonth: getFinancialYearMonthNumber(joiningDateStr),
     remainingMonths,
     monthlyCL,
     annualCL,
-    clEntitlement: roundLeave(rawEntitlement),
+    clEntitlement: Math.round(rawEntitlement),
   };
 }
 
 /**
- * Calculate PL (Privilege Leave) Entitlement using exact HRMS Business Rule:
- * 1. Annual PL = 14 Days
- * 2. Financial Year = April -> March (12 months)
- * 3. Experience-based Probation: If experience >= 4 years -> probationMonths = 6, else 0
- * 4. Financial-Year Joining Month: April=1 ... March=12
- * 5. Output 1 = Financial-Year Joining Month + probationMonths
- * 6. Output 2 = 12 - Output 1
- * 7. PL = (14 / 12) * Output 2
+ * Calculate PL (Privilege Leave) Entitlement using exact Excel Formula:
+ * =IF(C5="","",
+ *   IF(D5>3,
+ *     IF(EDATE(C5,6)>DATE(2027,3,31),0,
+ *       ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,6),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0)),
+ *     IF(EDATE(C5,8)>DATE(2027,3,31),0,
+ *       ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,8),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0))))
  */
 export function calculatePLEntitlement(
   joiningDateStr: string,
@@ -211,21 +212,17 @@ export function calculatePLEntitlement(
   plEntitlement: number;
 } {
   const defaultAnnual = annualPL > 0 ? annualPL : 14.0;
-  // Exact 4-year experience probation condition: >= 4 -> 6 months, < 4 -> 8 months
-  const probationMonths = totalExperienceYears >= 4 ? 6 : 8;
+  // D5 > 3 -> 6 months probation, else 8 months probation
+  const probationMonths = totalExperienceYears > 3 ? 6 : 8;
 
   if (!joiningDateStr) {
-    const joiningFinancialMonth = 1;
-    const output1 = joiningFinancialMonth + probationMonths;
-    const output2 = 12 - output1;
-    const rawPl = (defaultAnnual / 12) * output2;
     return {
-      joiningFinancialMonth,
+      joiningFinancialMonth: 1,
       probationMonths,
-      output1,
-      output2,
+      output1: 1 + probationMonths,
+      output2: 12,
       annualPL: defaultAnnual,
-      plEntitlement: roundLeave(rawPl),
+      plEntitlement: Math.round(defaultAnnual),
     };
   }
 
@@ -233,10 +230,13 @@ export function calculatePLEntitlement(
   const fyStart = new Date(fy.fyStartDate);
   const fyEnd = new Date(fy.fyEndDate);
 
-  // Joined after current FY -> 0 entitlement in current FY
-  if (joinDate > fyEnd) {
+  // EDATE(C5, probationMonths) -> Confirmation Date
+  const confirmationDate = addMonths(joinDate, probationMonths);
+
+  // IF(EDATE(C5, probationMonths) > FY_END, 0, ...)
+  if (confirmationDate > fyEnd) {
     return {
-      joiningFinancialMonth: 0,
+      joiningFinancialMonth: getFinancialYearMonthNumber(joiningDateStr),
       probationMonths,
       output1: 0,
       output2: 0,
@@ -245,18 +245,23 @@ export function calculatePLEntitlement(
     };
   }
 
-  const joiningFinancialMonth = joinDate <= fyStart ? 1 : getFinancialYearMonthNumber(joiningDateStr);
-  const output1 = joiningFinancialMonth + probationMonths;
-  const output2 = 12 - output1;
-  const rawPl = (defaultAnnual / 12) * output2;
+  // MAX(EDATE(C5, probationMonths), FY_START)
+  const effectiveStart = confirmationDate > fyStart ? confirmationDate : fyStart;
+
+  // DATEDIF(MAX(...), FY_END, "m") + 1
+  const eligibleMonths = getEligibleMonthCount(effectiveStart, fyEnd);
+
+  // ROUND((14/12) * eligibleMonths, 0)
+  const rawPl = (defaultAnnual / 12) * eligibleMonths;
+  const plEntitlement = Math.round(rawPl);
 
   return {
-    joiningFinancialMonth,
+    joiningFinancialMonth: getFinancialYearMonthNumber(joiningDateStr),
     probationMonths,
-    output1,
-    output2,
+    output1: probationMonths,
+    output2: eligibleMonths,
     annualPL: defaultAnnual,
-    plEntitlement: roundLeave(rawPl),
+    plEntitlement,
   };
 }
 
