@@ -99,7 +99,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/salary-slips', label: 'Salary Slips (Bulk Mail)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/documents', label: 'Documents', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/reports', label: 'Reports', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
 
     // Employee Self Service Nav
     { path: '/my-profile', label: 'My Profile', icon: <User size={20} />, roles: [UserRole.EMPLOYEE] },

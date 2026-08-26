@@ -116,6 +116,7 @@ export function App() {
                           
                           {/* Reports & Analytics */}
                           <Route path="/reports" element={<ReportsPage />} />
+                          <Route path="/reports-analytics" element={<ReportsPage />} />
                           
                           {/* Employee Self Service */}
                           <Route path="/my-profile" element={<EmployeeDetailPage />} />
