@@ -14,8 +14,14 @@ export const Card: React.FC<CardProps> = ({ children, className = '', padding, s
   );
 };
 
-export const CardHeader: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', ...style }} className={className}>
+export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '', style, ...props }) => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', ...style }} className={className} {...props}>
     {children}
   </div>
 );

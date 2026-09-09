@@ -43,9 +43,71 @@ import {
   ArrowUp,
   ArrowDown,
   Scissors,
+  User,
+  Building2,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Info,
+  Search,
 } from 'lucide-react';
 import { MultiDocumentPreview } from '../../components/documents/MultiDocumentPreview';
 import { buildNormalizedVariableMap, interpolateTemplateString, NormalizedDocumentData } from '../../utils/documentDataNormalizer';
+
+export interface DocumentFieldItem {
+  label: string;
+  tag: string;
+  icon: string;
+  description: string;
+  category: 'EMPLOYEE' | 'SALARY' | 'COMPANY' | 'SIGNATORY' | 'DOCUMENT' | 'LAYOUT';
+}
+
+export const DOCUMENT_FIELDS: DocumentFieldItem[] = [
+  // Employee Information
+  { label: 'Employee Name', tag: '{{employee_full_name}}', icon: '👤', description: 'Inserts full employee name', category: 'EMPLOYEE' },
+  { label: 'Employee ID', tag: '{{employee_id}}', icon: '🆔', description: 'Inserts employee code (e.g. EMP-1024)', category: 'EMPLOYEE' },
+  { label: 'Salutation', tag: '{{title}}', icon: '🏷️', description: 'Inserts title (Mr. / Ms. / Mrs. / Dr.)', category: 'EMPLOYEE' },
+  { label: 'Designation', tag: '{{designation}}', icon: '💼', description: 'Inserts job title or designation', category: 'EMPLOYEE' },
+  { label: 'Department', tag: '{{department}}', icon: '🏢', description: 'Inserts assigned department', category: 'EMPLOYEE' },
+  { label: 'Joining Date', tag: '{{joining_date}}', icon: '📅', description: 'Inserts official joining date', category: 'EMPLOYEE' },
+  { label: 'Acceptance Date', tag: '{{acceptance_date}}', icon: '📝', description: 'Inserts offer acceptance date', category: 'EMPLOYEE' },
+
+  // Salary Information
+  { label: 'Monthly Gross', tag: '{{monthly_gross_salary}}', icon: '💵', description: 'Inserts monthly gross salary', category: 'SALARY' },
+  { label: 'Annual CTC', tag: '{{annual_ctc}}', icon: '💰', description: 'Inserts annual Cost to Company', category: 'SALARY' },
+  { label: 'Basic Salary', tag: '{{basic_salary}}', icon: '🪙', description: 'Inserts basic monthly salary', category: 'SALARY' },
+  { label: 'HRA', tag: '{{hra}}', icon: '🏠', description: 'Inserts House Rent Allowance', category: 'SALARY' },
+  { label: 'Conveyance', tag: '{{conveyance}}', icon: '🚗', description: 'Inserts conveyance allowance', category: 'SALARY' },
+  { label: 'Special Allowance', tag: '{{special_allowance}}', icon: '✨', description: 'Inserts special monthly allowance', category: 'SALARY' },
+  { label: 'Other Allowances', tag: '{{other_allowances}}', icon: '➕', description: 'Inserts miscellaneous allowances total', category: 'SALARY' },
+
+  // Company Information
+  { label: 'Company Name', tag: '{{company_name}}', icon: '🏢', description: 'Inserts official company name', category: 'COMPANY' },
+  { label: 'Company Tagline', tag: '{{company_tagline}}', icon: '💬', description: 'Inserts company slogan or tagline', category: 'COMPANY' },
+  { label: 'Company Address', tag: '{{company_address}}', icon: '📍', description: 'Inserts corporate works address', category: 'COMPANY' },
+  { label: 'Corporate Email', tag: '{{corporate_email}}', icon: '✉️', description: 'Inserts official corporate email', category: 'COMPANY' },
+  { label: 'Corporate Phone', tag: '{{corporate_phone}}', icon: '📞', description: 'Inserts corporate phone number', category: 'COMPANY' },
+  { label: 'Website', tag: '{{website_domain}}', icon: '🌐', description: 'Inserts company website domain', category: 'COMPANY' },
+  { label: 'CIN', tag: '{{cin}}', icon: '🏛️', description: 'Inserts Corporate Identification Number', category: 'COMPANY' },
+  { label: 'GSTIN', tag: '{{gstin}}', icon: '🧾', description: 'Inserts Goods and Services Tax ID', category: 'COMPANY' },
+  { label: 'PAN', tag: '{{pan}}', icon: '💳', description: 'Inserts company PAN registration', category: 'COMPANY' },
+  { label: 'Registered Office', tag: '{{registered_office_address}}', icon: '📌', description: 'Inserts registered office address', category: 'COMPANY' },
+
+  // Signatory Information
+  { label: 'Authorized Person Name', tag: '{{authorized_person_name}}', icon: '✍️', description: 'Inserts signatory / HR manager name', category: 'SIGNATORY' },
+  { label: 'Authorized Person Designation', tag: '{{authorized_person_designation}}', icon: '👔', description: 'Inserts signatory official title', category: 'SIGNATORY' },
+
+  // Document Information
+  { label: 'Document Date', tag: '{{document_date}}', icon: '🗓️', description: 'Inserts official document issue date', category: 'DOCUMENT' },
+  { label: 'Probation Period', tag: '{{probation_period}}', icon: '⏳', description: 'Inserts probation period duration', category: 'DOCUMENT' },
+  { label: 'Work Location', tag: '{{work_location}}', icon: '🗺️', description: 'Inserts branch or work location', category: 'DOCUMENT' },
+  { label: 'Working Hours', tag: '{{working_hours}}', icon: '⏰', description: 'Inserts standard daily office shift', category: 'DOCUMENT' },
+  { label: 'Working Days', tag: '{{working_days}}', icon: '📆', description: 'Inserts weekly working schedule', category: 'DOCUMENT' },
+
+  // Page & Layout
+  { label: 'Page Break', tag: '{{page_break}}', icon: '✂️', description: 'Starts the following content on a new page', category: 'LAYOUT' },
+];
 
 function getAuthHeaders() {
   const token = localStorage.getItem('hrms_token') || localStorage.getItem('token');
@@ -310,7 +372,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
 
   // Preview & Generation State
   const [previewMode, setPreviewMode] = useState(false);
-  const [previewScale, setPreviewScale] = useState(0.85);
+  const [previewScale, setPreviewScale] = useState(0.65);
   const [generating, setGenerating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -326,12 +388,51 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   const [letterheadHistory, setLetterheadHistory] = useState<any[]>([]);
   const [letterheadFile, setLetterheadFile] = useState<File | null>(null);
   const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
-  const [margins, setMargins] = useState({ top: 25, bottom: 25, left: 20, right: 20 });
+  const [margins, setMargins] = useState({ top: 48, bottom: 60, left: 20, right: 20 });
   const [letterheadSettings, setLetterheadSettings] = useState({
     requireLetterhead: false,
     allowHrReplace: true,
     allowHrEditCompanyDetails: true,
   });
+
+  // Non-Technical UX State: Document Fields, Search, and Collapsible Sections
+  const [showDeveloperFields, setShowDeveloperFields] = useState(false);
+  const [activeFieldCategory, setActiveFieldCategory] = useState<string>('ALL');
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    employee: false,
+    docDetails: false,
+    contentTerms: false,
+    salary: false,
+    company: false,
+  });
+
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
+  };
+
+  const filteredEmployeesList = employeesList.filter((emp) => {
+    if (!employeeSearchQuery.trim()) return true;
+    const q = employeeSearchQuery.toLowerCase();
+    const name = (emp.fullName || emp.name || '').toLowerCase();
+    const code = (emp.employeeId || emp.emp_code || '').toLowerCase();
+    const desig = (emp.designation || '').toLowerCase();
+    const dept = (emp.department || emp.department_name || '').toLowerCase();
+    return name.includes(q) || code.includes(q) || desig.includes(q) || dept.includes(q);
+  });
+
+  const selectedEmployee = employeesList.find(
+    (emp) => (emp.id || emp.userId || emp.employeeId) === selectedEmployeeId
+  );
+
+  const handleInsertFieldIntoDocument = (field: DocumentFieldItem) => {
+    if (field.tag === '{{page_break}}') {
+      handleInsertPageBreak();
+      return;
+    }
+    navigator.clipboard.writeText(field.tag);
+    setSuccessMsg(`Copied ${field.label} (${field.tag}) to clipboard! Paste it wherever you want in your document text.`);
+  };
 
   useEffect(() => {
     fetchCompanyDetails();
@@ -340,6 +441,16 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
     fetchActiveLetterhead();
     fetchLetterheadHistory();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewMode) {
+        setPreviewMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewMode]);
 
   const fetchCompanyDetails = async () => {
     try {
@@ -1241,232 +1352,312 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
           </Card>
 
           {/* 2-Column Studio Grid: Left Form & Right Live Preview */}
-          <div style={{ display: 'grid', gridTemplateColumns: previewMode ? '440px 1fr' : '1fr 1fr', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: previewMode ? '440px 1fr' : '1fr 1fr', gap: '24px', alignItems: 'start' }}>
             {/* Left Column Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Option: Select Existing Employee / Filling Mode */}
-              <Card style={{ borderLeft: '4px solid #3B82F6' }}>
-                <CardBody style={{ padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Card style={{ borderLeft: '4px solid #3B82F6', overflow: 'hidden' }}>
+                <CardBody style={{ padding: '20px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <UserCheck style={{ width: '18px', height: '18px', color: '#3B82F6' }} />
-                      <strong style={{ fontSize: '14px', color: '#0F172A' }}>Document Generator Mode</strong>
+                      <strong style={{ fontSize: '15px', color: '#0F172A' }}>
+                        How would you like to create this document?
+                      </strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                      Choose how you want to prepare information for this document.
+                    </p>
+                  </div>
+
+                  {/* 2 Workflow Selection Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    {/* Option 1: Edit & Fill (Recommended) */}
+                    <div
+                      onClick={() => handleSetInputMode('autofill')}
+                      style={{
+                        border: inputMode === 'autofill' ? '2px solid #3B82F6' : '1px solid #E2E8F0',
+                        background: inputMode === 'autofill' ? '#EFF6FF' : '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        boxShadow: inputMode === 'autofill' ? '0 2px 8px rgba(59,130,246,0.15)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                        <span style={{
+                          background: '#10B981',
+                          color: '#FFFFFF',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          letterSpacing: '0.02em',
+                        }}>
+                          Recommended
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <Sparkles style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
+                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>Edit & Fill</strong>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
+                        Automatically fill information from existing employee/company records.
+                      </p>
                     </div>
 
-                    {/* Mode Action Buttons */}
-                    <div style={{ display: 'flex', background: '#F1F5F9', padding: '3px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleSetInputMode('autofill')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: inputMode === 'autofill' ? '#3B82F6' : 'transparent',
-                          color: inputMode === 'autofill' ? '#FFFFFF' : '#475569',
-                          fontWeight: 600,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: inputMode === 'autofill' ? '0 2px 4px rgba(59,130,246,0.3)' : 'none',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <Sparkles style={{ width: '14px', height: '14px' }} /> Edit & Fill
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSetInputMode('manual')}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: inputMode === 'manual' ? '#3B82F6' : 'transparent',
-                          color: inputMode === 'manual' ? '#FFFFFF' : '#475569',
-                          fontWeight: 600,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: inputMode === 'manual' ? '0 2px 4px rgba(59,130,246,0.3)' : 'none',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <Edit3 style={{ width: '14px', height: '14px' }} /> Manual Entry
-                      </button>
+                    {/* Option 2: Manual Entry */}
+                    <div
+                      onClick={() => handleSetInputMode('manual')}
+                      style={{
+                        border: inputMode === 'manual' ? '2px solid #3B82F6' : '1px solid #E2E8F0',
+                        background: inputMode === 'manual' ? '#EFF6FF' : '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        cursor: 'pointer',
+                        boxShadow: inputMode === 'manual' ? '0 2px 8px rgba(59,130,246,0.15)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <Edit3 style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
+                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>Manual Entry</strong>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
+                        Enter the information yourself without loading employee records.
+                      </p>
                     </div>
                   </div>
 
+                  {/* Employee Search & Selection (Edit & Fill Mode) */}
                   {inputMode === 'autofill' ? (
                     <div>
-                      <label htmlFor="employee-autofill-select" style={{ fontSize: '12px', color: '#64748B', display: 'block', marginBottom: '6px' }}>
-                        Select an existing employee profile to automatically populate fields (you can edit any value):
+                      <label htmlFor="employee-search-input" style={{ fontSize: '12px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                        Select Employee
                       </label>
+                      <div style={{ position: 'relative', marginBottom: '8px' }}>
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#94A3B8' }} />
+                        <input
+                          id="employee-search-input"
+                          type="text"
+                          value={employeeSearchQuery}
+                          onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                          placeholder="Search employee by name, ID or email..."
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px 8px 32px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '13px',
+                            background: '#FFFFFF',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
                       <select
                         id="employee-autofill-select"
                         value={selectedEmployeeId}
                         onChange={(e) => handleSelectExistingEmployee(e.target.value)}
                         style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FFFFFF' }}
                       >
-                        <option value="">-- Choose Employee Profile --</option>
-                        {employeesList.map((emp) => (
+                        <option value="">-- Choose an employee to automatically fill available information --</option>
+                        {filteredEmployeesList.map((emp) => (
                           <option key={emp.id || emp.userId || emp.employeeId} value={emp.id || emp.userId || emp.employeeId}>
-                            {emp.fullName || emp.name} ({emp.employeeId || 'EMP'}) - {emp.designation || 'Staff'}
+                            {emp.fullName || emp.name} ({emp.employeeId || 'EMP'}) - {emp.designation || 'Staff'} ({emp.department || 'General'})
                           </option>
                         ))}
                       </select>
+
+                      <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '6px' }}>
+                        Choose an employee to automatically fill available information. Don't see the information you need? You can enter it manually.
+                      </div>
+
+                      {/* Compact Selected Employee Summary Card */}
+                      {selectedEmployee && (
+                        <div
+                          style={{
+                            marginTop: '14px',
+                            padding: '12px 16px',
+                            background: '#F8FAFC',
+                            borderRadius: '10px',
+                            border: '1px solid #CBD5E1',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                background: '#DBEAFE',
+                                color: '#1D4ED8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '18px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              👤
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>
+                                {selectedEmployee.fullName || selectedEmployee.name || employeeName}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                <span><strong>Employee ID:</strong> {selectedEmployee.employeeId || employeeCode || 'EMP'}</span>
+                                <span><strong>Designation:</strong> {selectedEmployee.designation || designation || 'Staff'}</span>
+                                <span><strong>Department:</strong> {selectedEmployee.department || department || 'General'}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              marginTop: '10px',
+                              paddingTop: '8px',
+                              borderTop: '1px dashed #CBD5E1',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '12px',
+                              color: '#16A34A',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <CheckCircle2 style={{ width: '15px', height: '15px' }} />
+                            <span>Employee information filled automatically</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '6px', border: '1px dashed #CBD5E1', fontSize: '12px', color: '#334155' }}>
-                      ✍️ <strong>Manual Entry Mode Active:</strong> Fields can be typed manually. Entered values will remain intact and will not be overwritten automatically.
+                    <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '8px', border: '1px dashed #CBD5E1', fontSize: '12.5px', color: '#334155' }}>
+                      ✍️ <strong>Manual Entry Mode Active:</strong> You can enter all details yourself in the fields below. Values you type will remain intact and will not be overwritten automatically.
                     </div>
                   )}
                 </CardBody>
               </Card>
 
-              {/* Section 1: Common Employee Details */}
+              {/* Section 1: Employee Information (Collapsible) */}
               <Card>
-                <CardHeader><CardTitle style={{ fontSize: '15px' }}>1. Employee Details</CardTitle></CardHeader>
-                <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1.1fr', gap: '12px', alignItems: 'flex-start' }}>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>Title</label>
-                      <select
-                        value={salutation}
-                        onChange={(e) => setSalutation(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          fontSize: '13px',
-                          fontWeight: 500,
-                          backgroundColor: '#FFF',
-                          color: '#0F172A',
-                        }}
-                      >
-                        <option value="Mr.">Mr.</option>
-                        <option value="Ms.">Ms.</option>
-                        <option value="Mrs.">Mrs.</option>
-                        <option value="Dr.">Dr.</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>
-                        Employee Full Name <span style={{ color: '#DC2626' }}>*</span>
-                      </label>
-                      <Input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} required />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>
-                        Employee ID <span style={{ color: '#DC2626' }}>*</span>
-                      </label>
-                      <Input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} required />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Designation</label>
-                      <Input value={designation} onChange={(e) => setDesignation(e.target.value)} />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Department</label>
-                      <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
-                    </div>
-                  </div>
-
+                <CardHeader
+                  onClick={() => toggleSection('employee')}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '14px 20px',
+                  }}
+                >
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Document Date</label>
-                    <Input value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} placeholder="e.g. November 28, 2050" />
+                    <CardTitle style={{ fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <User style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
+                      1. Employee Information
+                    </CardTitle>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      Review or edit the employee's personal and job details
+                    </span>
                   </div>
-                </CardBody>
+                  <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                    {collapsedSections.employee ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
+                  </div>
+                </CardHeader>
+                {!collapsedSections.employee && (
+                  <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1.1fr', gap: '12px', alignItems: 'flex-start' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>Title</label>
+                        <select
+                          value={salutation}
+                          onChange={(e) => setSalutation(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            backgroundColor: '#FFF',
+                            color: '#0F172A',
+                          }}
+                        >
+                          <option value="Mr.">Mr.</option>
+                          <option value="Ms.">Ms.</option>
+                          <option value="Mrs.">Mrs.</option>
+                          <option value="Dr.">Dr.</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>
+                          Employee Full Name <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <Input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} required />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px', whiteSpace: 'nowrap' }}>
+                          Employee ID <span style={{ color: '#DC2626' }}>*</span>
+                        </label>
+                        <Input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} required />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Designation</label>
+                        <Input value={designation} onChange={(e) => setDesignation(e.target.value)} />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Department</label>
+                        <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Document Date</label>
+                      <Input value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} placeholder="e.g. November 28, 2050" />
+                    </div>
+                  </CardBody>
+                )}
               </Card>
 
-              {/* Section 2: Document Specific Fields */}
+              {/* Section 2: Document Specific Details (Dynamic Title & Collapsible) */}
               <Card>
-                <CardHeader>
-                  <CardTitle style={{ fontSize: '15px' }}>
-                    2. Specific Details & Dynamic Variables for {docTypeOptions.find((d) => d.type === selectedDocType)?.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {/* Dynamic Variables Insertion Panel */}
-                  <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '12px' }}>
-                    <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>Available Dynamic Variable Placeholders (Click to copy):</span>
-                      <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Grouped by Domain</span>
-                    </div>
-
-                    {[
-                      {
-                        group: 'EMPLOYEE',
-                        tags: ['{{employee_full_name}}', '{{employee_id}}', '{{title}}', '{{designation}}', '{{department}}', '{{joining_date}}', '{{acceptance_date}}'],
-                      },
-                      {
-                        group: 'SALARY',
-                        tags: ['{{monthly_gross_salary}}', '{{annual_ctc}}', '{{basic_salary}}', '{{hra}}', '{{conveyance}}', '{{special_allowance}}', '{{other_allowances}}'],
-                      },
-                      {
-                        group: 'COMPANY',
-                        tags: ['{{company_name}}', '{{company_tagline}}', '{{company_address}}', '{{corporate_email}}', '{{corporate_phone}}', '{{website_domain}}', '{{cin}}', '{{gstin}}', '{{pan}}', '{{registered_office_address}}'],
-                      },
-                      {
-                        group: 'SIGNATORY',
-                        tags: ['{{authorized_person_name}}', '{{authorized_person_designation}}'],
-                      },
-                      {
-                        group: 'OTHER',
-                        tags: ['{{document_date}}', '{{probation_period}}', '{{work_location}}', '{{working_hours}}', '{{working_days}}', '{{page_break}}'],
-                      },
-                    ].map((grp) => (
-                      <div key={grp.group} style={{ marginBottom: '8px' }}>
-                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                          {grp.group}
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                          {grp.tags.map((tag) => {
-                            const isPageBreak = tag === '{{page_break}}';
-                            return (
-                              <span
-                                key={tag}
-                                onClick={() => {
-                                  navigator.clipboard.writeText(tag);
-                                  setSuccessMsg(`Copied placeholder variable ${tag} to clipboard!`);
-                                }}
-                                style={{
-                                  background: isPageBreak ? '#FEF2F2' : '#FFFFFF',
-                                  border: isPageBreak ? '1.5px dashed #EF4444' : '1px solid #CBD5E1',
-                                  borderRadius: '5px',
-                                  padding: '3px 8px',
-                                  fontFamily: 'monospace',
-                                  fontSize: '11px',
-                                  color: isPageBreak ? '#DC2626' : '#2563EB',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                                }}
-                                title={`Click to copy ${tag}`}
-                              >
-                                {isPageBreak && <span>✂️</span>}
-                                {tag}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                <CardHeader
+                  onClick={() => toggleSection('docDetails')}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '14px 20px',
+                  }}
+                >
+                  <div>
+                    <CardTitle style={{ fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <Calendar style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
+                      2. {selectedDocType === 'PAYSLIP' ? 'Salary Slip Details' : selectedDocType === 'OFFER_LETTER' ? 'Offer Letter Details' : `${docTypeOptions.find((d) => d.type === selectedDocType)?.name?.split('(')[0].trim() || 'Document'} Details`}
+                    </CardTitle>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      Configure dates, remarks, and schedule details for this {docTypeOptions.find((d) => d.type === selectedDocType)?.name?.split('(')[0].trim() || 'document'}
+                    </span>
                   </div>
+                  <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                    {collapsedSections.docDetails ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
+                  </div>
+                </CardHeader>
+                {!collapsedSections.docDetails && (
+                  <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px' }}>
                   {(selectedDocType === 'OFFER_LETTER' || selectedDocType === 'APPOINTMENT_LETTER') && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
@@ -1724,304 +1915,611 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </>
                   )}
                 </CardBody>
-              </Card>
+              )}
+            </Card>
 
-              {/* Section 3: Template Text & Clause Customizer (100% Customizable) */}
+              {/* Section 3: Document Content & Clauses */}
               <Card style={{ borderLeft: '4px solid #7C3AED' }}>
-                <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <CardTitle style={{ fontSize: '15px', color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Edit3 style={{ width: '18px', height: '18px' }} />
-                    3. Customize Document Body Text & Clauses
-                  </CardTitle>
-                  <Badge variant="info">100% CUSTOMIZABLE</Badge>
+                <CardHeader
+                  onClick={() => toggleSection('contentTerms')}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '14px 20px',
+                  }}
+                >
+                  <div>
+                    <CardTitle style={{ fontSize: '15px', color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <Edit3 style={{ width: '16px', height: '16px' }} />
+                      3. Document Content & Clauses
+                    </CardTitle>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      Customize letter title, opening statement, custom clauses, and closing remarks
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Badge variant="info">100% CUSTOMIZABLE</Badge>
+                    <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                      {collapsedSections.contentTerms ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                      Document Header Title
-                    </label>
-                    <Input
-                      value={letterTitle}
-                      onChange={(e) => setLetterTitle(e.target.value)}
-                      placeholder="e.g. APPOINTMENT LETTER / OFFER LETTER"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                      Document Subject Line
-                    </label>
-                    <Input
-                      value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
-                      placeholder="e.g. Subject: Appointment as {{designation}}"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                      Opening Paragraph / Main Body Text
-                    </label>
-                    <textarea
-                      value={customOpeningText}
-                      onChange={(e) => setCustomOpeningText(e.target.value)}
-                      rows={4}
+                {!collapsedSections.contentTerms && (
+                  <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '6px' }}>
+                    {/* Friendly Document Fields Insertion Panel (Requirement 1, 2, 3, 4) */}
+                    <div
                       style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: '6px',
+                        padding: '16px',
+                        background: '#F8FAFC',
+                        borderRadius: '12px',
                         border: '1px solid #CBD5E1',
-                        fontSize: '13px',
-                        fontFamily: 'inherit',
-                        lineHeight: 1.5,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                       }}
-                      placeholder="Enter custom opening statement or letter body text with {{placeholders}}..."
-                    />
-                  </div>
-
-                  {/* Custom Clauses Editor */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <strong style={{ fontSize: '13px', color: '#0F172A' }}>
-                        Custom Document Clauses & Terms ({customClauses.length})
-                      </strong>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleInsertPageBreak}
-                          icon={<Scissors style={{ width: '14px', height: '14px', color: '#DC2626' }} />}
-                          style={{ border: '1px dashed #EF4444', color: '#DC2626', background: '#FEF2F2' }}
-                        >
-                          Insert Page Break
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleAddCustomClause}
-                          icon={<Plus style={{ width: '14px', height: '14px' }} />}
-                        >
-                          Add Clause
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {customClauses.map((clause, idx) => {
-                        const isPageBreak = clause.text === '{{page_break}}' || clause.title === 'Page Break';
-                        const isEnabled = clause.enabled !== false;
-                        return (
-                          <div
-                            key={idx}
-                            style={{
-                              padding: '12px',
-                              background: isPageBreak ? '#FEF2F2' : isEnabled ? '#F8FAFC' : '#F1F5F9',
-                              borderRadius: '8px',
-                              border: isPageBreak ? '1.5px dashed #EF4444' : isEnabled ? '1px solid #E2E8F0' : '1px solid #CBD5E1',
-                              opacity: isEnabled ? 1 : 0.6,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '8px',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: isPageBreak ? '#DC2626' : '#7C3AED', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {isPageBreak ? <span>✂️ PAGE BREAKER (Page splits here)</span> : <span>Clause #{idx + 1}</span>}
-                                {!isEnabled && <Badge variant="warning">DISABLED</Badge>}
-                              </span>
-                              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  title={isEnabled ? 'Disable Clause' : 'Enable Clause'}
-                                  onClick={() => handleToggleEnableClause(idx)}
-                                >
-                                  {isEnabled ? <Eye style={{ width: '12px', height: '12px' }} /> : <Eye style={{ width: '12px', height: '12px', opacity: 0.4 }} />}
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  title="Duplicate Clause"
-                                  onClick={() => handleDuplicateClause(idx)}
-                                  icon={<Copy style={{ width: '12px', height: '12px' }} />}
-                                />
-                                <Button variant="secondary" size="sm" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)}>↑</Button>
-                                <Button variant="secondary" size="sm" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)}>↓</Button>
-                                <Button variant="danger" size="sm" onClick={() => handleRemoveCustomClause(idx)} icon={<Trash2 style={{ width: '12px', height: '12px' }} />} />
-                              </div>
-                            </div>
-                            <Input
-                              value={clause.title}
-                              onChange={(e) => handleUpdateClause(idx, 'title', e.target.value)}
-                              placeholder="Clause Title (e.g. Offer Terms & Position)"
-                            />
-                            <textarea
-                              value={clause.text}
-                              onChange={(e) => handleUpdateClause(idx, 'text', e.target.value)}
-                              rows={isPageBreak ? 1 : 2}
-                              style={{
-                                width: '100%',
-                                padding: '8px 10px',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                fontSize: '12px',
-                                fontFamily: 'inherit',
-                              }}
-                              placeholder="Clause Content (Supports {{tokens}} e.g. You will be appointed as {{designation}}...)"
-                            />
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Tag style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
+                            Document Fields
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                          <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                            Select a field to insert information into your document.
+                          </span>
+                        </div>
 
-                  <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                      Closing Statement / Signatory Text
-                    </label>
-                    <textarea
-                      value={customClosingText}
-                      onChange={(e) => setCustomClosingText(e.target.value)}
-                      rows={2}
-                      style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '13px',
-                        fontFamily: 'inherit',
-                      }}
-                      placeholder="e.g. We welcome you to {{company_name}} and look forward to your contribution..."
-                    />
-                  </div>
-                </CardBody>
-              </Card>
-
-              {/* Section 3: Salary Details (Shown for Offer Letter, Appointment Letter & Salary Certificate) */}
-              {(selectedDocType === 'OFFER_LETTER' || selectedDocType === 'APPOINTMENT_LETTER' || selectedDocType === 'SALARY_CERTIFICATE') && (
-                <Card>
-                  <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <CardTitle style={{ fontSize: '15px' }}>3. Salary & Remuneration</CardTitle>
-                    <Button variant="secondary" size="sm" onClick={handleUseExistingSalary} style={{ fontSize: '12px' }}>
-                      Autofill Existing Salary
-                    </Button>
-                  </CardHeader>
-                  <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Monthly Gross (₹)</label>
-                        <Input
-                          type="number"
-                          value={monthlyGross}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setMonthlyGross(val);
-                            setAnnualCtc(val * 12);
-                            setBasicSalary(val * 0.5);
-                            setHra(val * 0.25);
-                            setConveyanceAllowance(val * 0.05);
-                            setSpecialAllowance(val * 0.1);
-                            setOtherAllowances(val * 0.1);
+                        {/* Advanced / Developer Fields Toggle (Requirement 4) */}
+                        <button
+                          type="button"
+                          onClick={() => setShowDeveloperFields(!showDeveloperFields)}
+                          style={{
+                            padding: '5px 12px',
+                            borderRadius: '6px',
+                            border: showDeveloperFields ? '1px solid #3B82F6' : '1px solid #CBD5E1',
+                            background: showDeveloperFields ? '#EFF6FF' : '#FFFFFF',
+                            color: showDeveloperFields ? '#1D4ED8' : '#64748B',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            transition: 'all 0.15s ease',
                           }}
-                        />
+                        >
+                          <Sliders style={{ width: '13px', height: '13px' }} />
+                          {showDeveloperFields ? 'Hide Advanced' : 'Advanced (Developer Fields)'}
+                        </button>
                       </div>
-                      <div>
-                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Annual CTC (₹)</label>
-                        <Input type="number" value={annualCtc} onChange={(e) => setAnnualCtc(Number(e.target.value))} />
+
+                      {/* Category Filter Pills */}
+                      {!showDeveloperFields && (
+                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '10px' }}>
+                          {[
+                            { id: 'ALL', label: 'All Fields' },
+                            { id: 'EMPLOYEE', label: '👤 Employee' },
+                            { id: 'SALARY', label: '💰 Salary' },
+                            { id: 'COMPANY', label: '🏢 Company' },
+                            { id: 'SIGNATORY', label: '✍️ Signatory' },
+                            { id: 'DOCUMENT', label: '🗓️ Document' },
+                            { id: 'LAYOUT', label: '✂️ Layout' },
+                          ].map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setActiveFieldCategory(cat.id)}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                border: activeFieldCategory === cat.id ? '1px solid #3B82F6' : '1px solid #CBD5E1',
+                                background: activeFieldCategory === cat.id ? '#3B82F6' : '#FFFFFF',
+                                color: activeFieldCategory === cat.id ? '#FFFFFF' : '#475569',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {cat.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* User-Friendly Chips View */}
+                      {!showDeveloperFields ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {DOCUMENT_FIELDS
+                            .filter((f) => activeFieldCategory === 'ALL' || f.category === activeFieldCategory)
+                            .map((field) => {
+                              const isLayout = field.category === 'LAYOUT';
+                              return (
+                                <button
+                                  key={field.tag}
+                                  type="button"
+                                  onClick={() => handleInsertFieldIntoDocument(field)}
+                                  title={`Click to insert ${field.label}`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    border: isLayout ? '1.5px dashed #EF4444' : '1px solid #CBD5E1',
+                                    background: isLayout ? '#FEF2F2' : '#FFFFFF',
+                                    color: isLayout ? '#DC2626' : '#1E293B',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = isLayout ? '#DC2626' : '#3B82F6';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = isLayout ? '#EF4444' : '#CBD5E1';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                  }}
+                                >
+                                  <span>{field.icon}</span>
+                                  <span>{field.label}</span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      ) : (
+                        /* Advanced / Developer Raw Placeholders View */
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic' }}>
+                            Advanced Developer Placeholders: Click any token below to copy its raw placeholder syntax:
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {DOCUMENT_FIELDS.map((f) => (
+                              <span
+                                key={f.tag}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(f.tag);
+                                  setSuccessMsg(`Copied raw placeholder ${f.tag} to clipboard!`);
+                                }}
+                                title={`Click to copy ${f.tag}`}
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '5px',
+                                  background: f.tag === '{{page_break}}' ? '#FEF2F2' : '#FFFFFF',
+                                  border: f.tag === '{{page_break}}' ? '1.5px dashed #EF4444' : '1px solid #CBD5E1',
+                                  fontFamily: 'monospace',
+                                  fontSize: '11px',
+                                  color: f.tag === '{{page_break}}' ? '#DC2626' : '#2563EB',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {f.tag === '{{page_break}}' && <span style={{ marginRight: '4px' }}>✂️</span>}
+                                {f.tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: '10px', fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Info style={{ width: '14px', height: '14px', color: '#3B82F6', flexShrink: 0 }} />
+                        <span>Click a field above to insert it into your document text or copy it to clipboard.</span>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Basic Salary (₹)</label>
-                        <Input type="number" value={basicSalary} onChange={(e) => setBasicSalary(Number(e.target.value))} />
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Document Header Title
+                      </label>
+                      <Input
+                        value={letterTitle}
+                        onChange={(e) => setLetterTitle(e.target.value)}
+                        placeholder="e.g. APPOINTMENT LETTER / OFFER LETTER"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Document Subject Line
+                      </label>
+                      <Input
+                        value={customSubject}
+                        onChange={(e) => setCustomSubject(e.target.value)}
+                        placeholder="e.g. Subject: Appointment as {{designation}}"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Opening Paragraph / Main Body Text
+                      </label>
+                      <textarea
+                        value={customOpeningText}
+                        onChange={(e) => setCustomOpeningText(e.target.value)}
+                        rows={4}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '13px',
+                          fontFamily: 'inherit',
+                          lineHeight: 1.5,
+                        }}
+                        placeholder="Enter opening statement or letter body text..."
+                      />
+                    </div>
+
+                    {/* Custom Clauses Editor */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>
+                          Document Clauses & Terms ({customClauses.length})
+                        </strong>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleInsertPageBreak}
+                            icon={<Scissors style={{ width: '14px', height: '14px', color: '#DC2626' }} />}
+                            style={{ border: '1px dashed #EF4444', color: '#DC2626', background: '#FEF2F2' }}
+                            title="Start the next content on a new page"
+                          >
+                            Page Break
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleAddCustomClause}
+                            icon={<Plus style={{ width: '14px', height: '14px' }} />}
+                          >
+                            Add Clause
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HRA (₹)</label>
-                        <Input type="number" value={hra} onChange={(e) => setHra(Number(e.target.value))} />
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {customClauses.map((clause, idx) => {
+                          const isPageBreak = clause.text === '{{page_break}}' || clause.title === 'Page Break';
+                          const isEnabled = clause.enabled !== false;
+
+                          if (isPageBreak) {
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '12px 16px',
+                                  background: '#FEF2F2',
+                                  borderRadius: '8px',
+                                  border: '1.5px dashed #EF4444',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '12px',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div
+                                    style={{
+                                      width: '32px',
+                                      height: '32px',
+                                      borderRadius: '6px',
+                                      background: '#FEE2E2',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#DC2626',
+                                      fontSize: '16px',
+                                    }}
+                                  >
+                                    ✂️
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#991B1B' }}>
+                                      Page Break
+                                    </div>
+                                    <div style={{ fontSize: '11.5px', color: '#B91C1C' }}>
+                                      Start the next content on a new page.
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                  <Button variant="secondary" size="sm" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)}>↑</Button>
+                                  <Button variant="secondary" size="sm" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)}>↓</Button>
+                                  <Button variant="danger" size="sm" onClick={() => handleRemoveCustomClause(idx)} icon={<Trash2 style={{ width: '12px', height: '12px' }} />} />
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '12px',
+                                background: isEnabled ? '#F8FAFC' : '#F1F5F9',
+                                borderRadius: '8px',
+                                border: isEnabled ? '1px solid #E2E8F0' : '1px solid #CBD5E1',
+                                opacity: isEnabled ? 1 : 0.6,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>Clause #{idx + 1}</span>
+                                  {!isEnabled && <Badge variant="warning">DISABLED</Badge>}
+                                </span>
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    title={isEnabled ? 'Disable Clause' : 'Enable Clause'}
+                                    onClick={() => handleToggleEnableClause(idx)}
+                                  >
+                                    {isEnabled ? <Eye style={{ width: '12px', height: '12px' }} /> : <Eye style={{ width: '12px', height: '12px', opacity: 0.4 }} />}
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    title="Duplicate Clause"
+                                    onClick={() => handleDuplicateClause(idx)}
+                                    icon={<Copy style={{ width: '12px', height: '12px' }} />}
+                                  />
+                                  <Button variant="secondary" size="sm" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)}>↑</Button>
+                                  <Button variant="secondary" size="sm" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)}>↓</Button>
+                                  <Button variant="danger" size="sm" onClick={() => handleRemoveCustomClause(idx)} icon={<Trash2 style={{ width: '12px', height: '12px' }} />} />
+                                </div>
+                              </div>
+                              <Input
+                                value={clause.title}
+                                onChange={(e) => handleUpdateClause(idx, 'title', e.target.value)}
+                                placeholder="Clause Title (e.g. Terms of Employment)"
+                              />
+                              <textarea
+                                value={clause.text}
+                                onChange={(e) => handleUpdateClause(idx, 'text', e.target.value)}
+                                rows={2}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #CBD5E1',
+                                  fontSize: '12px',
+                                  fontFamily: 'inherit',
+                                }}
+                                placeholder="Clause Content..."
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                        Closing Statement / Signatory Text
+                      </label>
+                      <textarea
+                        value={customClosingText}
+                        onChange={(e) => setCustomClosingText(e.target.value)}
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          fontSize: '13px',
+                          fontFamily: 'inherit',
+                        }}
+                        placeholder="e.g. We look forward to your contribution..."
+                      />
                     </div>
                   </CardBody>
+                )}
+              </Card>
+
+              {/* Section 4: Salary & Remuneration (Collapsible) */}
+              {(selectedDocType === 'OFFER_LETTER' || selectedDocType === 'APPOINTMENT_LETTER' || selectedDocType === 'SALARY_CERTIFICATE') && (
+                <Card>
+                  <CardHeader
+                    onClick={() => toggleSection('salary')}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      padding: '14px 20px',
+                    }}
+                  >
+                    <div>
+                      <CardTitle style={{ fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <DollarSign style={{ width: '16px', height: '16px', color: '#10B981' }} />
+                        4. Salary & Remuneration
+                      </CardTitle>
+                      <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                        Specify the compensation structure and monthly breakdown
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUseExistingSalary();
+                        }}
+                        style={{ fontSize: '12px' }}
+                      >
+                        Use Existing Salary
+                      </Button>
+                      <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                        {collapsedSections.salary ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {!collapsedSections.salary && (
+                    <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Monthly Gross (₹)</label>
+                          <Input
+                            type="number"
+                            value={monthlyGross}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setMonthlyGross(val);
+                              setAnnualCtc(val * 12);
+                              setBasicSalary(val * 0.5);
+                              setHra(val * 0.25);
+                              setConveyanceAllowance(val * 0.05);
+                              setSpecialAllowance(val * 0.1);
+                              setOtherAllowances(val * 0.1);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Annual CTC (₹)</label>
+                          <Input type="number" value={annualCtc} onChange={(e) => setAnnualCtc(Number(e.target.value))} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Basic Salary (₹)</label>
+                          <Input type="number" value={basicSalary} onChange={(e) => setBasicSalary(Number(e.target.value))} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HRA (₹)</label>
+                          <Input type="number" value={hra} onChange={(e) => setHra(Number(e.target.value))} />
+                        </div>
+                      </div>
+                    </CardBody>
+                  )}
                 </Card>
               )}
 
-              {/* Section 4: Company & HR Signatory Details */}
+              {/* Section 5: Company & HR Signatory Details (Collapsible) */}
               <Card>
-                <CardHeader><CardTitle style={{ fontSize: '15px' }}>4. Corporate Signatory & Letterhead Configuration</CardTitle></CardHeader>
-                <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Name</label>
-                      <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Tagline</label>
-                      <Input value={companyTagline} onChange={(e) => setCompanyTagline(e.target.value)} placeholder="e.g. Work Meets Human." />
-                    </div>
-                  </div>
-
+                <CardHeader
+                  onClick={() => toggleSection('company')}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '14px 20px',
+                  }}
+                >
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Address</label>
-                    <Input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
+                    <CardTitle style={{ fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <Building2 style={{ width: '16px', height: '16px', color: '#6366F1' }} />
+                      5. Company & HR Signatory Details
+                    </CardTitle>
+                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                      Official company identity, registration numbers, and signatory authority
+                    </span>
                   </div>
+                  <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+                    {collapsedSections.company ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
+                  </div>
+                </CardHeader>
+                {!collapsedSections.company && (
+                  <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Name</label>
+                        <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Tagline</label>
+                        <Input value={companyTagline} onChange={(e) => setCompanyTagline(e.target.value)} placeholder="e.g. Work Meets Human." />
+                      </div>
+                    </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Corporate Email</label>
-                      <Input value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} placeholder="info@wokhman.com" />
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Company Address</label>
+                      <Input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
                     </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Corporate Phone</label>
-                      <Input value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} placeholder="+91 22 5555 7777" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Website Domain</label>
-                      <Input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="www.wokhman.com" />
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>CIN</label>
-                      <Input value={companyCin} onChange={(e) => setCompanyCin(e.target.value)} placeholder="U74999MH2024PTC123456" />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Corporate Email</label>
+                        <Input value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} placeholder="info@wokhman.com" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Corporate Phone</label>
+                        <Input value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} placeholder="+91 22 5555 7777" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Website Domain</label>
+                        <Input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="www.wokhman.com" />
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>GSTIN</label>
-                      <Input value={companyGstin} onChange={(e) => setCompanyGstin(e.target.value)} placeholder="27AAACW1234F1Z5" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>PAN</label>
-                      <Input value={companyPan} onChange={(e) => setCompanyPan(e.target.value)} placeholder="AAACW1234F" />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Registered Office Address</label>
-                    <Input value={registeredOffice} onChange={(e) => setRegisteredOffice(e.target.value)} placeholder="MIDC Industrial Area, Navi Mumbai, MH 400701" />
-                  </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>CIN</label>
+                        <Input value={companyCin} onChange={(e) => setCompanyCin(e.target.value)} placeholder="U74999MH2024PTC123456" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>GSTIN</label>
+                        <Input value={companyGstin} onChange={(e) => setCompanyGstin(e.target.value)} placeholder="27AAACW1234F1Z5" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>PAN</label>
+                        <Input value={companyPan} onChange={(e) => setCompanyPan(e.target.value)} placeholder="AAACW1234F" />
+                      </div>
+                    </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HR Signatory Name</label>
-                      <Input value={hrName} onChange={(e) => setHrName(e.target.value)} />
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Registered Office Address</label>
+                      <Input value={registeredOffice} onChange={(e) => setRegisteredOffice(e.target.value)} placeholder="MIDC Industrial Area, Navi Mumbai, MH 400701" />
                     </div>
-                    <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HR Designation</label>
-                      <Input value={hrDesignation} onChange={(e) => setHrDesignation(e.target.value)} />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HR Signatory Name</label>
+                        <Input value={hrName} onChange={(e) => setHrName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>HR Designation</label>
+                        <Input value={hrDesignation} onChange={(e) => setHrDesignation(e.target.value)} />
+                      </div>
                     </div>
-                  </div>
-                </CardBody>
+                  </CardBody>
+                )}
               </Card>
             </div>
 
-            {/* Right Column: Live Document Preview */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Card>
-                <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Right Column: Live Document Preview (100vh Sticky Viewport) */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                position: 'sticky',
+                top: '16px',
+                height: 'calc(100vh - 120px)',
+                maxHeight: 'calc(100vh - 120px)',
+                zIndex: 10,
+              }}
+            >
+              <Card style={{ flexShrink: 0, marginBottom: 0 }}>
+                <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
                   <CardTitle style={{ fontSize: '15px' }}>Document Preview & Toolbar</CardTitle>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Button variant="secondary" size="sm" onClick={() => setPreviewMode(!previewMode)}>
-                      {previewMode ? 'Edit Form' : 'Full Preview'}
+                      {previewMode ? 'Exit Full Preview' : 'Full Preview (100vh)'}
                     </Button>
                     <Button
                       variant="primary"
@@ -2046,27 +2544,131 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardBody style={{ background: '#F8FAFC', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <CardBody style={{ background: '#F8FAFC', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>
                       Target PDF File: <code>{selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf</code>
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Zoom: {Math.round(previewScale * 100)}%</span>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.max(0.4, Number((s - 0.1).toFixed(2))))}>Zoom -</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(0.85)}>100%</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.min(1.5, Number((s + 0.1).toFixed(2))))}>Zoom +</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.max(0.35, Number((s - 0.05).toFixed(2))))}>Zoom -</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(0.65)}>Fit Width</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(1.0)}>100%</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.min(1.5, Number((s + 0.05).toFixed(2))))}>Zoom +</Button>
                       <Badge variant="success">Print-Ready A4</Badge>
                     </div>
                   </div>
                 </CardBody>
               </Card>
 
-              {/* Dynamic Rendered Preview */}
-              <div style={{ overflowX: 'auto', background: '#334155', padding: '24px', borderRadius: '12px', display: 'flex', justifyContent: 'center' }}>
+              {/* Dynamic Rendered Preview - 100vh Viewport with internal smooth scroll */}
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: 'auto',
+                  overflowX: 'auto',
+                  background: '#1E293B',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'flex-start',
+                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.4)',
+                }}
+              >
                 <MultiDocumentPreview documentType={selectedDocType} data={getPreviewData()} scale={previewScale} activeLetterhead={activeLetterhead} />
               </div>
             </div>
+
+            {/* 100vh Fullscreen Preview Modal */}
+            {previewMode && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100vw',
+                  height: '100vh',
+                  backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                  backdropFilter: 'blur(8px)',
+                  zIndex: 99999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* 100vh Modal Top Control Bar */}
+                <div
+                  style={{
+                    height: '60px',
+                    padding: '0 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#0F172A',
+                    borderBottom: '1px solid #334155',
+                    color: '#FFFFFF',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <FileText style={{ width: '20px', height: '20px', color: '#38BDF8' }} />
+                    <span style={{ fontWeight: 700, fontSize: '15px' }}>
+                      {docTypeOptions.find((d) => d.type === selectedDocType)?.name || selectedDocType} — 100vh Fullscreen View
+                    </span>
+                    <Badge variant="info">Live Preview</Badge>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1E293B', padding: '4px 10px', borderRadius: '6px', border: '1px solid #334155' }}>
+                      <span style={{ fontSize: '12px', color: '#94A3B8' }}>Zoom: {Math.round(previewScale * 100)}%</span>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.max(0.4, Number((s - 0.1).toFixed(2))))}>-</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(0.85)}>Fit</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.min(1.5, Number((s + 0.1).toFixed(2))))}>+</Button>
+                    </div>
+
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleGeneratePDF}
+                      disabled={generating}
+                      icon={<Sparkles style={{ width: '14px', height: '14px' }} />}
+                    >
+                      {generating ? 'Generating...' : 'Generate PDF'}
+                    </Button>
+
+                    <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<Printer style={{ width: '14px', height: '14px' }} />}>
+                      Print
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPreviewMode(false)}
+                      style={{ background: '#DC2626', color: '#FFF', borderColor: '#DC2626' }}
+                    >
+                      Close (Esc)
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 100vh Modal Body Canvas */}
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'auto',
+                    padding: '32px 16px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <MultiDocumentPreview documentType={selectedDocType} data={getPreviewData()} scale={previewScale} activeLetterhead={activeLetterhead} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

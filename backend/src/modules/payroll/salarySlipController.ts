@@ -15,6 +15,13 @@ const upload = multer({
 
 export const uploadMiddleware = upload;
 
+const uploadSingle = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+}).single('slipFile');
+
+export const uploadSingleMiddleware = uploadSingle;
+
 export interface ExcelSalaryRecord {
   employeeId: string;
   employeeName: string;
@@ -158,7 +165,103 @@ export async function validateSalarySlipExcel(req: AuthRequest, res: Response): 
 }
 
 /**
- * 2. Send Bulk Salary Slips (After HR Confirmation)
+ * 2. Send Single Salary Slip Manually (Individual Employee)
+ */
+export async function sendSingleSalarySlip(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const {
+      employeeId,
+      employeeName,
+      employeeEmail,
+      salaryMonth,
+      salaryYear,
+      basicSalary,
+      hra,
+      totalEarnings,
+      totalDeductions,
+      netPayableSalary,
+      salarySlipFile,
+    } = req.body;
+
+    if (!employeeId || !salaryMonth || !salaryYear) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Employee ID, salary month, and salary year are required.' },
+      });
+      return;
+    }
+
+    let targetEmail = (employeeEmail || '').trim();
+    let targetName = (employeeName || '').trim();
+
+    // If name or email missing, attempt DB lookup
+    if (!targetEmail || !targetName) {
+      const [dbMatch]: any = await pool.query(
+        `SELECT id, employee_id as employeeId, full_name as fullName, email FROM users
+         WHERE employee_id = ? OR id = ? LIMIT 1`,
+        [employeeId, employeeId]
+      );
+      if (dbMatch && dbMatch.length > 0) {
+        if (!targetName) targetName = dbMatch[0].fullName || employeeId;
+        if (!targetEmail) targetEmail = dbMatch[0].email || '';
+      }
+    }
+
+    if (!targetEmail || !isValidEmail(targetEmail)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_EMAIL', message: `A valid email address is required for dispatch. Provided: "${targetEmail || 'empty'}"` },
+      });
+      return;
+    }
+
+    let attachmentBuffer: Buffer | undefined = undefined;
+    let attachmentFilename: string | undefined = undefined;
+
+    if (req.file) {
+      attachmentBuffer = req.file.buffer;
+      attachmentFilename = req.file.originalname;
+    }
+
+    const sendRes = await sendSalarySlipEmail({
+      employeeId: String(employeeId).trim(),
+      employeeName: targetName || String(employeeId),
+      employeeEmail: targetEmail,
+      salaryMonth: String(salaryMonth).trim(),
+      salaryYear: String(salaryYear).trim(),
+      salarySlipFilePath: salarySlipFile ? String(salarySlipFile).trim() : undefined,
+      attachmentBuffer,
+      attachmentFilename,
+      basicSalary: basicSalary ? Number(basicSalary) : undefined,
+      hra: hra ? Number(hra) : undefined,
+      totalEarnings: totalEarnings ? Number(totalEarnings) : undefined,
+      totalDeductions: totalDeductions ? Number(totalDeductions) : undefined,
+      netPayableSalary: netPayableSalary ? Number(netPayableSalary) : undefined,
+    });
+
+    if (sendRes.success) {
+      res.json({
+        success: true,
+        message: `Salary slip for ${targetName} (${salaryMonth} ${salaryYear}) has been dispatched successfully to ${targetEmail}.`,
+        data: { logId: sendRes.logId },
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: { code: 'SEND_FAILED', message: sendRes.error || 'Failed to dispatch salary slip email.' },
+      });
+    }
+  } catch (error: any) {
+    logger.error('Send Single Salary Slip Error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: error.message || 'Failed to send single salary slip email.' },
+    });
+  }
+}
+
+/**
+ * 3. Send Bulk Salary Slips (After HR Confirmation)
  */
 export async function sendBulkSalarySlips(req: AuthRequest, res: Response): Promise<void> {
   try {

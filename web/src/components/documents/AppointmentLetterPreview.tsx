@@ -185,7 +185,7 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
     );
   };
 
-  const margins = activeLetterhead?.margins || { top: 25, bottom: 25, left: 20, right: 20 };
+  const margins = activeLetterhead?.margins || { top: 48, bottom: 60, left: 20, right: 20 };
   const hasLetterhead = Boolean(activeLetterhead && activeLetterhead.fileUrl);
 
   const renderLetterheadBg = () => {
@@ -216,53 +216,36 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
     );
   };
 
+  const leftPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.left || 20, 20) : 20;
+  const rightPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.right || 20, 20) : 20;
   const topPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.top || 48, 48) : 18;
   const bottomPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.bottom || 60, 60) : 20;
 
-  const pageStyle: React.CSSProperties = isEmbedded
-    ? {
-        width: '100%',
-        minHeight: '297mm',
-        height: '297mm',
-        paddingTop: `${topPaddingMm}mm`,
-        paddingBottom: `${bottomPaddingMm}mm`,
-        paddingLeft: '5px',
-        paddingRight: '5px',
-        backgroundColor: '#FFFFFF',
-        color: '#1E293B',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        fontSize: '10pt',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        marginBottom: '24px',
-        overflow: 'hidden',
-      }
-    : {
-        width: '210mm',
-        minHeight: '297mm',
-        height: '297mm',
-        paddingTop: `${topPaddingMm}mm`,
-        paddingBottom: `${bottomPaddingMm}mm`,
-        paddingLeft: '5px',
-        paddingRight: '5px',
-        backgroundColor: '#FFFFFF',
-        color: '#1E293B',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        fontSize: '10pt',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        margin: '0 auto 24px auto',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-      };
+  const pageStyle: React.CSSProperties = {
+    width: '210mm',
+    minWidth: '210mm',
+    maxWidth: '210mm',
+    minHeight: '297mm',
+    height: '297mm',
+    maxHeight: '297mm',
+    paddingTop: `${topPaddingMm}mm`,
+    paddingBottom: `${bottomPaddingMm}mm`,
+    paddingLeft: `${leftPaddingMm}mm`,
+    paddingRight: `${rightPaddingMm}mm`,
+    backgroundColor: '#FFFFFF',
+    color: '#1E293B',
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: '10pt',
+    lineHeight: 1.5,
+    boxSizing: 'border-box',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    margin: '0 auto 24px auto',
+    boxShadow: isEmbedded ? '0 4px 20px rgba(0,0,0,0.15)' : '0 10px 30px rgba(0,0,0,0.15)',
+    overflow: 'hidden',
+  };
 
   return (
     <div style={{ transform: isEmbedded ? 'none' : `scale(${scale})`, transformOrigin: 'top center' }}>
@@ -320,7 +303,7 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
               </div>
             </div>
 
-            {/* Numbered Clauses 1 to 7 */}
+            {/* Numbered Clauses 1 to 4 on Page 1 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'justify', fontSize: '9.5pt', color: '#334155', lineHeight: 1.45 }}>
               <div>
                 <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
@@ -357,33 +340,6 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
                   You will not, at any time, during the employment or after, without the consent of the Management disclose or divulge or make public, except on legal obligations, any information regarding the Company's affairs or administration or research carried out, whether the same is confided to you or becomes known to you in the course of your service or otherwise.
                 </p>
               </div>
-
-              <div>
-                <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
-                  5. Intellectual Property
-                </h3>
-                <p style={{ margin: 0 }}>
-                  If you conceive any new or advanced method of improving designs/ processes/ formulae/ systems, etc. in relation to the business/ operations of the Company, such developments will be fully communicated to the company and will be, and remain, the sole right/ property of the Company.
-                </p>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
-                  6. Responsibilities & Duties
-                </h3>
-                <p style={{ margin: 0 }}>
-                  Your work in the organization will be subject to the rules and regulations of the organization as laid down in relation to conduct, discipline and other matters. You will always be alive to responsibilities and duties attached to your office and conduct yourself accordingly. You must effectively perform to ensure results.
-                </p>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
-                  7. Past Records
-                </h3>
-                <p style={{ margin: 0 }}>
-                  This letter of appointment is based on the information furnished in your application for employment and during the interviews you had with us. If any declaration given, or information furnished by you, to the company proves to be false, or if you are found to have willfully suppressed any material information, in such cases, you will be liable to removal from
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -395,7 +351,7 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
       <PageBreakDivider pageNumber={1} totalPages={totalPages} />
 
       {/* ========================================================
-          PAGE 2: Exact Uploaded Reference Template (Clauses 8 & 9 + HR Signatory + Employee Acceptance)
+          PAGE 2: Exact Uploaded Reference Template (Clauses 5 to 9 + HR Signatory + Employee Acceptance)
          ======================================================== */}
       <div className="document-page a4-page" style={pageStyle}>
         {renderLetterheadBg()}
@@ -410,13 +366,35 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
 
           <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
             <div>
-              {/* Continuation text from Clause 7 */}
-              <p style={{ margin: '0 0 14px 0', fontSize: '9.5pt', color: '#334155' }}>
-                services without any notice.
-              </p>
+              {/* Clauses 5 to 9 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'justify', fontSize: '9.5pt', color: '#334155', lineHeight: 1.45 }}>
+                <div>
+                  <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
+                    5. Intellectual Property
+                  </h3>
+                  <p style={{ margin: 0 }}>
+                    If you conceive any new or advanced method of improving designs/ processes/ formulae/ systems, etc. in relation to the business/ operations of the Company, such developments will be fully communicated to the company and will be, and remain, the sole right/ property of the Company.
+                  </p>
+                </div>
 
-              {/* Clause 8 & 9 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'justify', fontSize: '9.5pt', color: '#334155', lineHeight: 1.45 }}>
+                <div>
+                  <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
+                    6. Responsibilities & Duties
+                  </h3>
+                  <p style={{ margin: 0 }}>
+                    Your work in the organization will be subject to the rules and regulations of the organization as laid down in relation to conduct, discipline and other matters. You will always be alive to responsibilities and duties attached to your office and conduct yourself accordingly. You must effectively perform to ensure results.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 2px 0' }}>
+                    7. Past Records
+                  </h3>
+                  <p style={{ margin: 0 }}>
+                    This letter of appointment is based on the information furnished in your application for employment and during the interviews you had with us. If any declaration given, or information furnished by you, to the company proves to be false, or if you are found to have willfully suppressed any material information, in such cases, you will be liable to removal from services without any notice.
+                  </p>
+                </div>
+
                 <div>
                   <h3 style={{ fontSize: '11.5pt', fontWeight: 600, color: '#1E293B', margin: '0 0 4px 0' }}>
                     8. Termination of employment
@@ -427,19 +405,6 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
                   <p style={{ margin: '0 0 6px 0' }}>
                     Upon resignation/termination of employment, you will immediately hand over to the Company all correspondence, specifications, formulae, books, documents, market data, cost data, drawings, affects or records belonging to the Company or relating to its business and shall not retain or make copies of these items.
                   </p>
-                  <p style={{ margin: '0 0 6px 0' }}>
-                    Upon resignation/termination of employment, you will also return all company property, which may be in your possession.
-                  </p>
-                  <p style={{ margin: '0 0 6px 0' }}>
-                    Notwithstanding the above condition, the contract of service may also be terminated because of under mentioned stipulations. This will be without payment of any compensation.
-                  </p>
-                  <ul style={{ margin: '4px 0 6px 20px', padding: 0, listStyleType: 'disc' }}>
-                    <li style={{ marginBottom: '4px' }}>If you fail, refuse or neglect to carry out and perform your duties assigned to you by the company.</li>
-                    <li style={{ marginBottom: '4px' }}>For loss of confidence in you by the company for any of the act committed by you.</li>
-                    <li style={{ marginBottom: '4px' }}>If you are found to be guilty of fraud, insubordination or misconduct whether in course of performance of duties entrusted to you or otherwise.</li>
-                    <li style={{ marginBottom: '4px' }}>If you are found unfit for being entrusted with the responsible work commensurate with your position in consequences of any misconduct, moral turpitude. * If you commit any act prejudicial to the continuing good relationship between you and the company.</li>
-                    <li style={{ marginBottom: '4px' }}>If you commit breach of any of the terms of this letter of appointment.</li>
-                  </ul>
                 </div>
 
                 <div>
@@ -453,26 +418,26 @@ export const AppointmentLetterPreview: React.FC<AppointmentLetterPreviewProps> =
               </div>
 
               {/* Acceptance prompt */}
-              <div style={{ marginTop: '18px', fontSize: '9.5pt', color: '#334155' }}>
+              <div style={{ marginTop: '14px', fontSize: '9.5pt', color: '#334155' }}>
                 If you agree to the above terms and conditions of the appointment, kindly confirm your acceptance by signing and returning the duplicate copy of this letter for our file and records.
               </div>
 
               {/* HR Signatory Block */}
-              <div style={{ marginTop: '22px', lineHeight: 1.4, fontSize: '10pt', color: '#0F172A' }}>
+              <div style={{ marginTop: '16px', lineHeight: 1.4, fontSize: '10pt', color: '#0F172A' }}>
                 <div>Sincerely,</div>
-                <div style={{ marginTop: '30px', fontWeight: 500 }}>[{displayHrName}]</div>
+                <div style={{ marginTop: '24px', fontWeight: 500 }}>[{displayHrName}]</div>
                 <div>[{displayHrDesignation}]</div>
                 <div>[{displayCompanyName}]</div>
               </div>
             </div>
 
             {/* Bottom Employee Acceptance Section */}
-            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #CBD5E1', fontSize: '9.5pt', color: '#0F172A', lineHeight: 1.5 }}>
+            <div style={{ marginTop: '18px', paddingTop: '12px', borderTop: '1px dashed #CBD5E1', fontSize: '9.5pt', color: '#0F172A', lineHeight: 1.4 }}>
               <div>I agree to the appointment and accept the above terms and conditions of service.</div>
-              <div style={{ marginTop: '12px' }}>Name: <strong>[{fullEmployeeName}]</strong></div>
+              <div style={{ marginTop: '8px' }}>Name: <strong>[{fullEmployeeName}]</strong></div>
               <div>Employee ID : <strong>[{displayEmployeeCode}]</strong></div>
               <div>Date: <strong>{acceptanceDate}</strong></div>
-              <div style={{ marginTop: '14px' }}>Signature: ....................................</div>
+              <div style={{ marginTop: '10px' }}>Signature: ....................................</div>
             </div>
           </div>
         </div>

@@ -160,7 +160,7 @@ export const SalaryCertificatePreview: React.FC<SalaryCertificatePreviewProps> =
     </div>
   );
 
-  const margins = activeLetterhead?.margins || { top: 25, bottom: 25, left: 20, right: 20 };
+  const margins = activeLetterhead?.margins || { top: 48, bottom: 60, left: 20, right: 20 };
   const hasLetterhead = Boolean(activeLetterhead && activeLetterhead.fileUrl);
 
   const renderLetterheadBg = () => {
@@ -191,6 +191,8 @@ export const SalaryCertificatePreview: React.FC<SalaryCertificatePreviewProps> =
     );
   };
 
+  const leftPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.left || 20, 20) : 20;
+  const rightPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.right || 20, 20) : 20;
   const topPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.top || 48, 48) : 15;
   const bottomPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.bottom || 60, 60) : 20;
 
@@ -204,6 +206,7 @@ export const SalaryCertificatePreview: React.FC<SalaryCertificatePreviewProps> =
             box-shadow: none !important;
             width: 210mm !important;
             height: 297mm !important;
+            min-height: 297mm !important;
             margin: 0 !important;
             padding: 15mm 20mm 15mm 20mm !important;
           }
@@ -212,52 +215,35 @@ export const SalaryCertificatePreview: React.FC<SalaryCertificatePreviewProps> =
 
       <div
         className="a4-page"
-        style={
-          isEmbedded
-            ? {
-                width: '100%',
-                minHeight: '297mm',
-                paddingTop: `${topPaddingMm}mm`,
-                paddingBottom: `${bottomPaddingMm}mm`,
-                paddingLeft: '5px',
-                paddingRight: '5px',
-                backgroundColor: '#FFFFFF',
-                color: '#0F172A',
-                fontFamily: "'Times New Roman', Times, serif, 'Arial', sans-serif",
-                fontSize: '11pt',
-                lineHeight: 1.6,
-                boxSizing: 'border-box',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }
-            : {
-                width: '210mm',
-                minHeight: '297mm',
-                paddingTop: `${topPaddingMm}mm`,
-                paddingBottom: `${bottomPaddingMm}mm`,
-                paddingLeft: '5px',
-                paddingRight: '5px',
-                backgroundColor: '#FFFFFF',
-                color: '#0F172A',
-                fontFamily: "'Times New Roman', Times, serif, 'Arial', sans-serif",
-                fontSize: '11pt',
-                lineHeight: 1.6,
-                boxSizing: 'border-box',
-                margin: '0 auto',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }
-        }
+        style={{
+          width: '210mm',
+          minWidth: '210mm',
+          maxWidth: '210mm',
+          minHeight: '297mm',
+          height: '297mm',
+          paddingTop: `${topPaddingMm}mm`,
+          paddingBottom: `${bottomPaddingMm}mm`,
+          paddingLeft: `${leftPaddingMm}mm`,
+          paddingRight: `${rightPaddingMm}mm`,
+          backgroundColor: '#FFFFFF',
+          color: '#0F172A',
+          fontFamily: "'Times New Roman', Times, serif, 'Arial', sans-serif",
+          fontSize: '11pt',
+          lineHeight: 1.6,
+          boxSizing: 'border-box',
+          margin: '0 auto 24px auto',
+          boxShadow: isEmbedded ? '0 4px 20px rgba(0,0,0,0.15)' : '0 10px 30px rgba(0,0,0,0.15)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          overflow: 'hidden',
+        }}
       >
         {renderLetterheadBg()}
         {!hideHeader && renderHeader()}
 
-        <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', paddingLeft: '5px', paddingRight: '5px' }}>
+        <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
               position: 'absolute',

@@ -136,7 +136,9 @@ export function App() {
                           {/* Security & Audit Center */}
                           <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
 
-                          
+                          {/* Payroll & Salary Slips */}
+                          <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
+
                           {/* Reports & Analytics */}
                           <Route path="/reports" element={<ReportsPage />} />
                           <Route path="/reports-analytics" element={<ReportsPage />} />

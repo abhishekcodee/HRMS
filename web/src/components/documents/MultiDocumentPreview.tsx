@@ -69,11 +69,20 @@ export const MultiDocumentPreview: React.FC<MultiDocumentPreviewProps> = ({
     }
   };
 
-  if (!hasLetterhead) {
-    return (
-      <div style={{ position: 'relative' }}>
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      }}
+    >
+      {!hasLetterhead && (
         <div
           style={{
+            maxWidth: '210mm',
+            width: '100%',
             marginBottom: '16px',
             padding: '10px 14px',
             backgroundColor: '#EFF6FF',
@@ -88,22 +97,21 @@ export const MultiDocumentPreview: React.FC<MultiDocumentPreviewProps> = ({
         >
           <span>ℹ️ <strong>No active custom uploaded letterhead configured.</strong> Using standard company corporate letterhead format.</span>
         </div>
+      )}
+
+      <div
+        style={{
+          position: 'relative',
+          width: '210mm',
+          minWidth: '210mm',
+          maxWidth: '210mm',
+          margin: '0 auto',
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+        }}
+      >
         {renderDocumentBody()}
       </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        margin: '0 auto',
-        transform: `scale(${scale})`,
-        transformOrigin: 'top center',
-      }}
-    >
-      {renderDocumentBody()}
     </div>
   );
 };

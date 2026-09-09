@@ -14,8 +14,8 @@ export interface LetterheadMargins {
 }
 
 export const DEFAULT_MARGINS: LetterheadMargins = {
-  top: 25,
-  bottom: 25,
+  top: 48,
+  bottom: 60,
   left: 20,
   right: 20,
 };
@@ -61,9 +61,15 @@ export async function getActiveCompanyLetterhead(req: AuthRequest, res: Response
     if (rows.length === 0) {
       res.json({
         success: true,
-        data: null,
+        data: {
+          id: 'default-active',
+          version: 1,
+          fileName: 'Standard Corporate Letterhead',
+          margins: DEFAULT_MARGINS,
+          fileUrl: null,
+        },
         settings,
-        message: 'No active company letterhead configured.',
+        message: 'Using standard company letterhead defaults with 60mm bottom margin clearance.',
       });
       return;
     }
@@ -266,19 +272,39 @@ export async function activateLetterheadVersion(req: AuthRequest, res: Response)
 export async function updateLetterheadMargins(req: AuthRequest, res: Response): Promise<void> {
   try {
     const companyId = getTenantCompanyId(req);
-    const { top = 25, bottom = 25, left = 20, right = 20 } = req.body;
+    const { top = 48, bottom = 60, left = 20, right = 20 } = req.body;
 
     const margins: LetterheadMargins = {
-      top: Number(top) || 25,
-      bottom: Number(bottom) || 25,
+      top: Number(top) || 48,
+      bottom: Number(bottom) || 60,
       left: Number(left) || 20,
       right: Number(right) || 20,
     };
 
-    await pool.query(
+    const [updateResult]: any = await pool.query(
       `UPDATE company_letterheads SET margins_json = ? WHERE company_id = ? AND is_active = 1`,
       [JSON.stringify(margins), companyId]
     );
+
+    if (updateResult.affectedRows === 0) {
+      const letterheadId = uuidv4();
+      await pool.query(
+        `INSERT INTO company_letterheads 
+          (id, company_id, file_name, file_path, file_type, file_size, version, is_active, margins_json, uploaded_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [
+          letterheadId,
+          companyId,
+          'Standard Corporate Letterhead',
+          '',
+          'pdf',
+          0,
+          1,
+          JSON.stringify(margins),
+          req.user?.id || 'admin',
+        ]
+      );
+    }
 
     res.json({ success: true, message: 'Content safe area margins updated successfully.', margins });
   } catch (error: any) {

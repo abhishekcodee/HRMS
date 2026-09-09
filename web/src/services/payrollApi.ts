@@ -43,7 +43,7 @@ export interface SalarySlipLogRecord {
   salaryYear: string;
   salarySlipFile?: string;
   emailSubject: string;
-  status: 'PENDING' | 'SENT' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
   sentAt?: string;
   errorMessage?: string;
   retryCount: number;
@@ -84,7 +84,69 @@ export async function validateSalarySlipExcel(file: File): Promise<{
       preview: json.preview,
     };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Network error parsing Excel file.' };
+    return { success: false, error: err.message || 'Network error validating Excel file.' };
+  }
+}
+
+export interface SingleSalarySlipData {
+  employeeId: string;
+  employeeName?: string;
+  employeeEmail?: string;
+  salaryMonth: string;
+  salaryYear: string;
+  basicSalary?: number;
+  hra?: number;
+  totalEarnings?: number;
+  totalDeductions?: number;
+  netPayableSalary?: number;
+  salarySlipFile?: string;
+}
+
+export async function sendSingleSalarySlip(
+  data: SingleSalarySlipData,
+  file?: File | null
+): Promise<{
+  success: boolean;
+  message?: string;
+  logId?: string;
+  error?: string;
+}> {
+  try {
+    const token = localStorage.getItem('hrms_token');
+    const formData = new FormData();
+    formData.append('employeeId', data.employeeId);
+    if (data.employeeName) formData.append('employeeName', data.employeeName);
+    if (data.employeeEmail) formData.append('employeeEmail', data.employeeEmail);
+    formData.append('salaryMonth', data.salaryMonth);
+    formData.append('salaryYear', data.salaryYear);
+    if (data.basicSalary !== undefined) formData.append('basicSalary', String(data.basicSalary));
+    if (data.hra !== undefined) formData.append('hra', String(data.hra));
+    if (data.totalEarnings !== undefined) formData.append('totalEarnings', String(data.totalEarnings));
+    if (data.totalDeductions !== undefined) formData.append('totalDeductions', String(data.totalDeductions));
+    if (data.netPayableSalary !== undefined) formData.append('netPayableSalary', String(data.netPayableSalary));
+    if (data.salarySlipFile) formData.append('salarySlipFile', data.salarySlipFile);
+    if (file) formData.append('slipFile', file);
+
+    const res = await fetch('/api/v1/payroll/salary-slips/send-single', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error?.message || 'Failed to dispatch salary slip.' };
+    }
+
+    return {
+      success: true,
+      message: json.message,
+      logId: json.data?.logId,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error sending single salary slip.' };
   }
 }
 

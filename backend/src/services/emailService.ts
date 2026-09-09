@@ -29,6 +29,11 @@ export interface SalarySlipEmailPayload {
   salarySlipFilePath?: string;
   attachmentBuffer?: Buffer;
   attachmentFilename?: string;
+  basicSalary?: number;
+  hra?: number;
+  totalEarnings?: number;
+  totalDeductions?: number;
+  netPayableSalary?: number;
 }
 
 // 1. Centralized SMTP Transport configuration
@@ -208,6 +213,11 @@ function renderSalarySlipTemplate(payload: SalarySlipEmailPayload): string {
             <tr><td style="padding: 6px 0; color: #64748b; width: 140px;">Employee ID:</td><td style="font-weight: 600; font-family: monospace;">${payload.employeeId}</td></tr>
             <tr><td style="padding: 6px 0; color: #64748b;">Pay Period:</td><td style="font-weight: 600;">${payload.salaryMonth} ${payload.salaryYear}</td></tr>
             <tr><td style="padding: 6px 0; color: #64748b;">Recipient Email:</td><td>${payload.employeeEmail}</td></tr>
+            ${payload.basicSalary ? `<tr><td style="padding: 6px 0; color: #64748b;">Basic Salary:</td><td style="font-weight: 600;">₹${Number(payload.basicSalary).toLocaleString('en-IN')}</td></tr>` : ''}
+            ${payload.hra ? `<tr><td style="padding: 6px 0; color: #64748b;">HRA:</td><td style="font-weight: 600;">₹${Number(payload.hra).toLocaleString('en-IN')}</td></tr>` : ''}
+            ${payload.totalEarnings ? `<tr><td style="padding: 6px 0; color: #64748b;">Gross Earnings:</td><td style="font-weight: 600;">₹${Number(payload.totalEarnings).toLocaleString('en-IN')}</td></tr>` : ''}
+            ${payload.totalDeductions ? `<tr><td style="padding: 6px 0; color: #64748b;">Total Deductions:</td><td style="color: #dc2626; font-weight: 600;">-₹${Number(payload.totalDeductions).toLocaleString('en-IN')}</td></tr>` : ''}
+            ${payload.netPayableSalary ? `<tr><td style="padding: 8px 0; color: #0f172a; font-weight: 700; border-top: 1px dashed #cbd5e1;">Net Salary Paid:</td><td style="font-weight: 700; color: #16a34a; font-size: 15px; border-top: 1px dashed #cbd5e1;">₹${Number(payload.netPayableSalary).toLocaleString('en-IN')}</td></tr>` : ''}
           </table>
         </div>
 

@@ -70,7 +70,7 @@ interface PayslipPreviewProps {
  * Converts a numeric amount to Indian English Words
  * E.g. 18610 => "Rupees Eighteen Thousand Six Hundred Ten Only"
  */
-function convertToIndianWords(amount: number): string {
+export function convertToIndianWords(amount: number): string {
   const num = Math.round(amount || 0);
   if (isNaN(num) || num === 0) return 'Rupees Zero Only';
 
@@ -197,10 +197,12 @@ export const PayslipPreview: React.FC<PayslipPreviewProps> = ({
     return num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const margins = activeLetterhead?.margins || { top: 10, bottom: 10, left: 10, right: 10 };
+  const margins = activeLetterhead?.margins || { top: 48, bottom: 60, left: 20, right: 20 };
   const hasLetterhead = Boolean(activeLetterhead && activeLetterhead.fileUrl);
-  const topPaddingPx = hasLetterhead ? Math.max((margins.top || 48) * 3.78, 170) : 12;
-  const bottomPaddingPx = hasLetterhead ? Math.max((margins.bottom || 60) * 3.78, 227) : 12;
+  const leftPaddingMm = hasLetterhead ? Math.max(margins.left || 20, 20) : 10;
+  const rightPaddingMm = hasLetterhead ? Math.max(margins.right || 20, 20) : 10;
+  const topPaddingMm = hasLetterhead ? Math.max(margins.top || 48, 48) : 10;
+  const bottomPaddingMm = hasLetterhead ? Math.max(margins.bottom || 60, 60) : 10;
 
   return (
     <div style={{ transform: isEmbedded ? 'none' : `scale(${scale})`, transformOrigin: 'top center' }}>
@@ -220,41 +222,54 @@ export const PayslipPreview: React.FC<PayslipPreviewProps> = ({
 
       <div
         className="payslip-page"
-        style={
-          isEmbedded
-            ? {
-                width: '100%',
-                backgroundColor: '#FFFFFF',
-                color: '#000000',
-                fontFamily: "'Times New Roman', Times, serif, Arial, sans-serif",
-                fontSize: '10.5pt',
-                lineHeight: 1.35,
-                boxSizing: 'border-box',
-                position: 'relative',
-                paddingTop: `${topPaddingPx}px`,
-                paddingBottom: `${bottomPaddingPx}px`,
-                paddingLeft: '5px',
-                paddingRight: '5px',
-              }
-            : {
-                width: '210mm',
-                minHeight: '270mm',
-                margin: '0 auto',
-                backgroundColor: '#FFFFFF',
-                color: '#000000',
-                fontFamily: "'Times New Roman', Times, serif, Arial, sans-serif",
-                fontSize: '10.5pt',
-                lineHeight: 1.35,
-                boxSizing: 'border-box',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                position: 'relative',
-                paddingTop: `${topPaddingPx}px`,
-                paddingBottom: `${bottomPaddingPx}px`,
-                paddingLeft: '5px',
-                paddingRight: '5px',
-              }
-        }
+        style={{
+          width: '210mm',
+          minWidth: '210mm',
+          maxWidth: '210mm',
+          minHeight: '297mm',
+          height: '297mm',
+          margin: '0 auto 24px auto',
+          backgroundColor: '#FFFFFF',
+          color: '#000000',
+          fontFamily: "'Times New Roman', Times, serif, Arial, sans-serif",
+          fontSize: '10.5pt',
+          lineHeight: 1.35,
+          boxSizing: 'border-box',
+          boxShadow: isEmbedded ? '0 4px 20px rgba(0,0,0,0.15)' : '0 10px 30px rgba(0,0,0,0.15)',
+          position: 'relative',
+          paddingTop: `${topPaddingMm}mm`,
+          paddingBottom: `${bottomPaddingMm}mm`,
+          paddingLeft: `${leftPaddingMm}mm`,
+          paddingRight: `${rightPaddingMm}mm`,
+          overflow: 'hidden',
+        }}
       >
+        {/* Render Letterhead Background if active */}
+        {hasLetterhead && activeLetterhead?.fileUrl && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <img
+              src={activeLetterhead.fileUrl}
+              alt="Company Letterhead Background"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          </div>
+        )}
+
         {/* Outer Rectangular Border Box matching the PDF exact style */}
         <div
           style={{

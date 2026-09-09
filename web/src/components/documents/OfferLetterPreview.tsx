@@ -163,7 +163,7 @@ export const OfferLetterPreview: React.FC<OfferLetterPreviewProps> = ({
   const hasLetterhead = Boolean(activeLetterhead && activeLetterhead.fileUrl);
   const letterheadUrl = activeLetterhead?.fileUrl || '';
   const isPdf = activeLetterhead?.fileType === 'pdf';
-  const margins = activeLetterhead?.margins || { top: 25, bottom: 25, left: 20, right: 20 };
+  const margins = activeLetterhead?.margins || { top: 48, bottom: 60, left: 20, right: 20 };
 
   const titlePrefix = salutation ? `${salutation} ` : '';
   const fullEmployeeName = `${titlePrefix}${employeeName}`.trim();
@@ -305,6 +305,8 @@ export const OfferLetterPreview: React.FC<OfferLetterPreviewProps> = ({
     overflow: 'hidden',
   };
 
+  const leftPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.left || 20, 20) : 20;
+  const rightPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.right || 20, 20) : 20;
   const topPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.top || 48, 48) : 15;
   const bottomPaddingMm = (hasLetterhead || hideHeader) ? Math.max(margins.bottom || 60, 60) : 20;
 
@@ -318,8 +320,8 @@ export const OfferLetterPreview: React.FC<OfferLetterPreviewProps> = ({
     justifyContent: 'space-between',
     paddingTop: `${topPaddingMm}mm`,
     paddingBottom: `${bottomPaddingMm}mm`,
-    paddingLeft: '5px',
-    paddingRight: '5px',
+    paddingLeft: `${leftPaddingMm}mm`,
+    paddingRight: `${rightPaddingMm}mm`,
     boxSizing: 'border-box',
   };
 
