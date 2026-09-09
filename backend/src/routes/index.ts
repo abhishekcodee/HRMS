@@ -21,6 +21,83 @@ import { zktecoRouter } from './zkteco.routes.js';
 import { chatRouter } from '../modules/chat/index.js';
 import settingsRouter from '../modules/settings/index.js';
 
+import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
+import {
+  getEmployees,
+  createEmployee,
+  getEmployeeById,
+  updateEmployee,
+  importEmployeesCsv,
+  getLeavePolicies,
+  updateLeavePolicy,
+  calculateEntitlements,
+  getEntitlements,
+  getEmployeeDerivedBalance,
+  createLeaveTransaction,
+  getLeaveTransactions,
+  getEntitlementRegisterReport,
+} from '../modules/leave/leaveAccrualController.js';
+
+import {
+  getDefaultTemplate,
+  saveTemplate,
+  generateAppointmentLetter,
+  getAppointmentLettersHistory,
+  getEmployeeAppointmentLetters,
+  getAppointmentLetterById,
+} from '../modules/documents/appointmentLetterController.js';
+
+import {
+  getHRDocumentTypes,
+  generateHRDocument,
+  getHRDocumentsHistory,
+} from '../modules/documents/multiDocumentController.js';
+
+import {
+  getActiveCompanyLetterhead,
+  uploadCompanyLetterhead,
+  getCompanyLetterheadHistory,
+  activateLetterheadVersion,
+  updateLetterheadMargins,
+  updateLetterheadSettings,
+} from '../modules/documents/companyLetterheadController.js';
+
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+const letterheadDir = path.join(process.cwd(), 'uploads', 'letterheads');
+const publicLetterheadDir = path.join(process.cwd(), 'public', 'uploads', 'letterheads');
+if (!fs.existsSync(letterheadDir)) {
+  fs.mkdirSync(letterheadDir, { recursive: true });
+}
+if (!fs.existsSync(publicLetterheadDir)) {
+  fs.mkdirSync(publicLetterheadDir, { recursive: true });
+}
+
+const letterheadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, letterheadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = `letterhead_${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, uniqueName);
+  },
+});
+const uploadLetterhead = multer({ storage: letterheadStorage });
+
+import {
+  getCompanies,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  getStatutorySettings,
+  updateStatutorySettings,
+  getLetterNumberingFormats,
+  updateLetterNumberingFormat,
+} from '../modules/documents/settingsController.js';
+
 export const v1Router = Router();
 
 // Health & Readiness Routes
@@ -28,6 +105,58 @@ v1Router.use('/', healthRouter);
 
 // Employee Self Service Isolated Routes
 v1Router.use('/employee', employeeRouter);
+
+// Companies & Multi-Entity Endpoints
+v1Router.get('/companies', authenticateToken, getCompanies);
+v1Router.post('/companies', authenticateToken, requireRole(['admin', 'employer']), createCompany);
+v1Router.put('/companies/:id', authenticateToken, requireRole(['admin', 'employer']), updateCompany);
+v1Router.delete('/companies/:id', authenticateToken, requireRole(['admin', 'employer']), deleteCompany);
+
+// Statutory Settings Endpoints
+v1Router.get('/statutory-settings', authenticateToken, getStatutorySettings);
+v1Router.put('/statutory-settings', authenticateToken, requireRole(['admin', 'employer']), updateStatutorySettings);
+
+// Reference Numbering Endpoints
+v1Router.get('/letter-numbering/company/:companyId', authenticateToken, getLetterNumberingFormats);
+v1Router.put('/letter-numbering', authenticateToken, requireRole(['admin', 'employer']), updateLetterNumberingFormat);
+
+// Company Letterhead System Endpoints
+v1Router.get('/document-management/letterhead/active', authenticateToken, getActiveCompanyLetterhead);
+v1Router.post('/document-management/letterhead/upload', authenticateToken, requireRole(['admin', 'employer']), uploadLetterhead.single('file'), uploadCompanyLetterhead);
+v1Router.get('/document-management/letterhead/history', authenticateToken, getCompanyLetterheadHistory);
+v1Router.post('/document-management/letterhead/activate/:id', authenticateToken, requireRole(['admin', 'employer']), activateLetterheadVersion);
+v1Router.put('/document-management/letterhead/margins', authenticateToken, requireRole(['admin', 'employer']), updateLetterheadMargins);
+v1Router.put('/document-management/letterhead/settings', authenticateToken, requireRole(['admin', 'employer']), updateLetterheadSettings);
+
+// Centralized Multi-Document Generator Endpoints
+v1Router.get('/document-management/generator/types', authenticateToken, getHRDocumentTypes);
+v1Router.post('/document-management/generator/generate', authenticateToken, requireRole(['admin', 'employer']), generateHRDocument);
+v1Router.get('/document-management/generator/history', authenticateToken, getHRDocumentsHistory);
+
+// Appointment Letters Top-Level Endpoints
+v1Router.get('/appointment-letters/templates/default', authenticateToken, getDefaultTemplate);
+v1Router.post('/appointment-letters/templates', authenticateToken, requireRole(['admin', 'employer']), saveTemplate);
+v1Router.put('/appointment-letters/templates/:id', authenticateToken, requireRole(['admin', 'employer']), saveTemplate);
+v1Router.post('/appointment-letters/generate', authenticateToken, requireRole(['admin', 'employer']), generateAppointmentLetter);
+v1Router.get('/appointment-letters/history', authenticateToken, getAppointmentLettersHistory);
+v1Router.get('/appointment-letters/employee/:employeeId', authenticateToken, getEmployeeAppointmentLetters);
+v1Router.get('/appointment-letters/:id', authenticateToken, getAppointmentLetterById);
+
+// Prompt Endpoints Exact Mounts
+v1Router.get('/employees/import', authenticateToken, requireRole(['admin', 'employer']), importEmployeesCsv);
+v1Router.post('/employees/import', authenticateToken, requireRole(['admin', 'employer']), importEmployeesCsv);
+v1Router.get('/employees/:id/balance', authenticateToken, getEmployeeDerivedBalance);
+
+v1Router.get('/policies', authenticateToken, getLeavePolicies);
+v1Router.put('/policies/:id', authenticateToken, requireRole(['admin']), updateLeavePolicy);
+
+v1Router.post('/entitlements/calculate', authenticateToken, requireRole(['admin', 'employer']), calculateEntitlements);
+v1Router.get('/entitlements', authenticateToken, getEntitlements);
+
+v1Router.post('/leave-transactions', authenticateToken, createLeaveTransaction);
+v1Router.get('/leave-transactions', authenticateToken, getLeaveTransactions);
+
+v1Router.get('/reports/entitlement-register', authenticateToken, getEntitlementRegisterReport);
 
 // Module Boundaries Mount Points
 v1Router.use('/auth', authModule.router);
@@ -49,3 +178,11 @@ v1Router.use('/audit', auditModule.router);
 v1Router.use('/calendar', calendarModule.router);
 v1Router.use('/chat', chatRouter);
 v1Router.use('/settings', settingsRouter);
+
+// Layer A & B Enterprise Additions Mount Points
+import documentManagementRouter from '../modules/documentManagement/index.js';
+import securityRouter from '../modules/security/index.js';
+
+v1Router.use('/document-management', documentManagementRouter);
+v1Router.use('/security', securityRouter);
+

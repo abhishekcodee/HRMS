@@ -9,9 +9,10 @@ import { AuthRequest } from '../../middleware/authMiddleware.js';
 
 export async function login(req: Request, res: Response): Promise<void> {
   try {
-    const { identifier, password } = req.body;
+    const rawIdentifier = req.body.identifier || req.body.email || req.body.username || req.body.employeeId || '';
+    const password = req.body.password;
 
-    if (!identifier || !password) {
+    if (!rawIdentifier || !password) {
       res.status(400).json({
         success: false,
         error: {
@@ -22,7 +23,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const trimmedIdentifier = identifier.trim();
+    const trimmedIdentifier = rawIdentifier.trim();
 
     const [rows]: any = await pool.query(
       `SELECT id, employee_id, full_name, email, phone, password_hash, role, status, profile_photo, must_change_password

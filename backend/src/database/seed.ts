@@ -108,6 +108,15 @@ export async function seedDatabase() {
         gender VARCHAR(20),
         dob VARCHAR(20),
         address TEXT,
+        residential_address TEXT,
+        residential_city VARCHAR(100),
+        residential_state VARCHAR(100),
+        residential_pincode VARCHAR(20),
+        permanent_address TEXT,
+        permanent_city VARCHAR(100),
+        permanent_state VARCHAR(100),
+        permanent_pincode VARCHAR(20),
+        permanent_address_same TINYINT(1) DEFAULT 0,
         emergency_contact VARCHAR(255),
         emergency_phone VARCHAR(50),
         manager_id VARCHAR(36),
@@ -125,10 +134,29 @@ export async function seedDatabase() {
       'ALTER TABLE employee_profiles ADD COLUMN gender VARCHAR(20);',
       'ALTER TABLE employee_profiles ADD COLUMN dob VARCHAR(20);',
       'ALTER TABLE employee_profiles ADD COLUMN address TEXT;',
+      'ALTER TABLE employee_profiles ADD COLUMN residential_address TEXT;',
+      'ALTER TABLE employee_profiles ADD COLUMN residential_city VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN residential_state VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN residential_pincode VARCHAR(20);',
+      'ALTER TABLE employee_profiles ADD COLUMN permanent_address TEXT;',
+      'ALTER TABLE employee_profiles ADD COLUMN permanent_city VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN permanent_state VARCHAR(100);',
+      'ALTER TABLE employee_profiles ADD COLUMN permanent_pincode VARCHAR(20);',
+      'ALTER TABLE employee_profiles ADD COLUMN permanent_address_same TINYINT(1) DEFAULT 0;',
       'ALTER TABLE employee_profiles ADD COLUMN emergency_contact VARCHAR(255);',
       'ALTER TABLE employee_profiles ADD COLUMN emergency_phone VARCHAR(50);',
       'ALTER TABLE employee_profiles ADD COLUMN manager_id VARCHAR(36);',
       'ALTER TABLE employee_profiles ADD COLUMN manager_name VARCHAR(255);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN employee_name VARCHAR(255);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN employee_code VARCHAR(50);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN designation VARCHAR(150);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN joining_date VARCHAR(20);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN acceptance_date VARCHAR(20);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN salary_details_json TEXT;',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN company_details_json TEXT;',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN hr_name VARCHAR(255);',
+      'ALTER TABLE employee_appointment_letters ADD COLUMN hr_designation VARCHAR(255);',
+      'ALTER TABLE employee_appointment_letters MODIFY user_id VARCHAR(36) NULL;',
     ];
     for (const sql of extraCols) {
       try { await conn.query(sql); } catch (_) {}
@@ -440,6 +468,395 @@ export async function seedDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Document Management & Security System Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_categories (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36),
+        name VARCHAR(100) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        description TEXT,
+        is_system TINYINT(1) NOT NULL DEFAULT 1,
+        display_order INT NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_types (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36),
+        category_id VARCHAR(36) NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        description TEXT,
+        requires_approval TINYINT(1) NOT NULL DEFAULT 0,
+        requires_signature TINYINT(1) NOT NULL DEFAULT 0,
+        requires_employee_access TINYINT(1) NOT NULL DEFAULT 1,
+        approval_chain_json TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_templates (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36),
+        document_type_id VARCHAR(36) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        current_version_id VARCHAR(36),
+        current_version_number INT NOT NULL DEFAULT 1,
+        numbering_format VARCHAR(150),
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS generated_hr_documents (
+        id VARCHAR(36) PRIMARY KEY,
+        document_type VARCHAR(100) NOT NULL,
+        template_id VARCHAR(36),
+        template_version INT NOT NULL DEFAULT 1,
+        user_id VARCHAR(36),
+        employee_name VARCHAR(255) NOT NULL,
+        employee_code VARCHAR(50) NOT NULL,
+        designation VARCHAR(150),
+        department VARCHAR(150),
+        document_date VARCHAR(20),
+        joining_date VARCHAR(20),
+        leaving_date VARCHAR(20),
+        relieving_date VARCHAR(20),
+        salary_details_json TEXT,
+        document_data_json TEXT,
+        company_details_json TEXT,
+        hr_name VARCHAR(255),
+        hr_designation VARCHAR(255),
+        file_path VARCHAR(500),
+        status VARCHAR(50) NOT NULL DEFAULT 'GENERATED',
+        generated_by VARCHAR(36),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_template_versions (
+        id VARCHAR(36) PRIMARY KEY,
+        template_id VARCHAR(36) NOT NULL,
+        version_number INT NOT NULL,
+        content LONGTEXT NOT NULL,
+        css_styles TEXT,
+        header_template TEXT,
+        footer_template TEXT,
+        signatory_name VARCHAR(255),
+        signatory_designation VARCHAR(255),
+        signatory_signature_url TEXT,
+        company_logo_url TEXT,
+        primary_color VARCHAR(20),
+        secondary_color VARCHAR(20),
+        change_summary TEXT,
+        created_by VARCHAR(36),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36) NOT NULL,
+        employee_id VARCHAR(36) NOT NULL,
+        document_type_id VARCHAR(36) NOT NULL,
+        template_id VARCHAR(36),
+        template_version_id VARCHAR(36),
+        template_version_number INT DEFAULT 1,
+        reference_number VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+        html_snapshot LONGTEXT,
+        pdf_path TEXT,
+        file_size VARCHAR(50),
+        document_hash VARCHAR(64),
+        metadata_json TEXT,
+        generated_by VARCHAR(36),
+        approved_at DATETIME,
+        signed_at DATETIME,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_approvals (
+        id VARCHAR(36) PRIMARY KEY,
+        document_id VARCHAR(36) NOT NULL,
+        step_order INT NOT NULL DEFAULT 1,
+        approver_role_id VARCHAR(50),
+        approver_user_id VARCHAR(36),
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        comments TEXT,
+        action_at DATETIME,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS document_signatures (
+        id VARCHAR(36) PRIMARY KEY,
+        document_id VARCHAR(36) NOT NULL,
+        signatory_type VARCHAR(20) NOT NULL,
+        signatory_name VARCHAR(255) NOT NULL,
+        signatory_designation VARCHAR(255),
+        signature_image LONGTEXT,
+        signed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ip_address VARCHAR(50)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_mfa_credentials (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL UNIQUE,
+        mfa_enabled TINYINT(1) NOT NULL DEFAULT 0,
+        mfa_method VARCHAR(20) NOT NULL DEFAULT 'TOTP',
+        totp_secret TEXT,
+        backup_codes_json TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        device_info TEXT,
+        ip_address VARCHAR(50),
+        expires_at DATETIME NOT NULL,
+        is_revoked TINYINT(1) NOT NULL DEFAULT 0,
+        last_active_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS security_audit_logs (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36),
+        actor_user_id VARCHAR(36),
+        actor_user_email VARCHAR(255),
+        actor_role VARCHAR(20),
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(50) NOT NULL,
+        resource_id VARCHAR(100),
+        status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
+        ip_address VARCHAR(50),
+        user_agent TEXT,
+        metadata_json TEXT,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS company_letterheads (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_type VARCHAR(50) NOT NULL,
+        file_size INT,
+        version INT NOT NULL DEFAULT 1,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        margins_json TEXT,
+        uploaded_by VARCHAR(36),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_comp_letterhead (company_id, is_active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS company_letterhead_settings (
+        id VARCHAR(36) PRIMARY KEY,
+        company_id VARCHAR(36) NOT NULL UNIQUE,
+        require_letterhead TINYINT(1) NOT NULL DEFAULT 0,
+        allow_hr_replace TINYINT(1) NOT NULL DEFAULT 1,
+        allow_hr_edit_company_details TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Column Migration checks for generated_hr_documents
+    try {
+      await conn.query(`ALTER TABLE generated_hr_documents ADD COLUMN company_id VARCHAR(36)`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE generated_hr_documents ADD COLUMN letterhead_id VARCHAR(36)`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE generated_hr_documents ADD COLUMN letterhead_version INT DEFAULT 1`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE generated_hr_documents ADD COLUMN employee_salutation VARCHAR(10)`);
+    } catch (e) {}
+
+    // Column Migration checks for employee_appointment_letters
+    try {
+      await conn.query(`ALTER TABLE employee_appointment_letters ADD COLUMN company_id VARCHAR(36)`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE employee_appointment_letters ADD COLUMN letterhead_id VARCHAR(36)`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE employee_appointment_letters ADD COLUMN letterhead_version INT DEFAULT 1`);
+    } catch (e) {}
+    try {
+      await conn.query(`ALTER TABLE employee_appointment_letters ADD COLUMN employee_salutation VARCHAR(10)`);
+    } catch (e) {}
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS appointment_letter_templates (
+        id VARCHAR(36) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL DEFAULT 'Standard Corporate Template',
+        company_name VARCHAR(255) NOT NULL DEFAULT 'Acme Global Technologies Pvt. Ltd.',
+        company_tagline TEXT,
+        company_logo TEXT,
+        company_address TEXT,
+        company_email VARCHAR(255),
+        company_phone VARCHAR(50),
+        company_website VARCHAR(255),
+        primary_brand_color VARCHAR(20) NOT NULL DEFAULT '#1E3A5F',
+        secondary_brand_color VARCHAR(20) NOT NULL DEFAULT '#0F172A',
+        accent_color VARCHAR(20) NOT NULL DEFAULT '#3B82F6',
+        font_family VARCHAR(100) NOT NULL DEFAULT 'Plus Jakarta Sans',
+        letter_title VARCHAR(255) NOT NULL DEFAULT 'APPOINTMENT LETTER',
+        reference_prefix VARCHAR(50) NOT NULL DEFAULT 'APPT/2026/',
+        opening_template TEXT,
+        terms_and_conditions TEXT,
+        signatory_name VARCHAR(255) NOT NULL DEFAULT 'Rajesh Sharma',
+        signatory_designation VARCHAR(255) NOT NULL DEFAULT 'Head of Human Resources',
+        signatory_signature TEXT,
+        acceptance_text TEXT,
+        footer_text TEXT,
+        sections_order TEXT,
+        sections_visibility TEXT,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS employee_appointment_letters (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36),
+        template_id VARCHAR(36),
+        employee_name VARCHAR(255),
+        employee_code VARCHAR(50),
+        designation VARCHAR(150),
+        joining_date VARCHAR(20),
+        acceptance_date VARCHAR(20),
+        reference_number VARCHAR(100) NOT NULL,
+        version_number INT NOT NULL DEFAULT 1,
+        generated_date VARCHAR(20) NOT NULL,
+        annual_ctc DECIMAL(12,2),
+        monthly_gross DECIMAL(12,2),
+        basic_salary DECIMAL(12,2),
+        allowances DECIMAL(12,2),
+        other_components DECIMAL(12,2),
+        salary_details_json TEXT,
+        company_details_json TEXT,
+        hr_name VARCHAR(255),
+        hr_designation VARCHAR(255),
+        probation_period VARCHAR(50),
+        notice_period VARCHAR(50),
+        working_hours VARCHAR(100),
+        weekly_off VARCHAR(50),
+        work_location VARCHAR(100),
+        status VARCHAR(20) NOT NULL DEFAULT 'GENERATED',
+        pdf_path TEXT,
+        html_snapshot LONGTEXT,
+        generated_by VARCHAR(36),
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Seed default document categories and types if empty
+    const [catCount]: any = await conn.query('SELECT COUNT(*) as count FROM document_categories');
+    if (catCount[0].count === 0) {
+      const defaultCategories = [
+        { id: 'cat-joining', name: 'Joining & Recruitment', code: 'JOINING', order: 1 },
+        { id: 'cat-employee', name: 'Employee Certificates', code: 'EMPLOYEE', order: 2 },
+        { id: 'cat-performance', name: 'Performance & Growth', code: 'PERFORMANCE', order: 3 },
+        { id: 'cat-transfer', name: 'Transfer & Movements', code: 'TRANSFER', order: 4 },
+        { id: 'cat-disciplinary', name: 'Disciplinary Actions', code: 'DISCIPLINARY', order: 5 },
+        { id: 'cat-exit', name: 'Exit & Offboarding', code: 'EXIT', order: 6 },
+        { id: 'cat-custom', name: 'Custom Corporate Documents', code: 'CUSTOM', order: 7 },
+      ];
+
+      for (const cat of defaultCategories) {
+        await conn.query(
+          `INSERT INTO document_categories (id, name, code, is_system, display_order) VALUES (?, ?, ?, 1, ?)`,
+          [cat.id, cat.name, cat.code, cat.order]
+        );
+      }
+
+      const defaultTypes = [
+        // Joining
+        { id: 'dt-offer', catId: 'cat-joining', name: 'Offer Letter', code: 'OFFER_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-appt', catId: 'cat-joining', name: 'Appointment Letter', code: 'APPOINTMENT_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-join', catId: 'cat-joining', name: 'Joining Letter', code: 'JOINING_LETTER', appr: 0, sig: 1 },
+        { id: 'dt-emp-agree', catId: 'cat-joining', name: 'Employment Agreement', code: 'EMPLOYMENT_AGREEMENT', appr: 1, sig: 1 },
+        { id: 'dt-nda', catId: 'cat-joining', name: 'Non-Disclosure Agreement (NDA)', code: 'NDA', appr: 0, sig: 1 },
+        { id: 'dt-code-conduct', catId: 'cat-joining', name: 'Code of Conduct Acknowledgement', code: 'CODE_OF_CONDUCT', appr: 0, sig: 1 },
+        
+        // Employee
+        { id: 'dt-sal-cert', catId: 'cat-employee', name: 'Salary Certificate', code: 'SALARY_CERTIFICATE', appr: 1, sig: 1 },
+        { id: 'dt-emp-cert', catId: 'cat-employee', name: 'Employment Certificate', code: 'EMPLOYMENT_CERTIFICATE', appr: 0, sig: 1 },
+        { id: 'dt-policy-ack', catId: 'cat-employee', name: 'Policy Acknowledgement', code: 'POLICY_ACK', appr: 0, sig: 1 },
+        
+        // Performance
+        { id: 'dt-increment', catId: 'cat-performance', name: 'Increment Letter', code: 'INCREMENT_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-promotion', catId: 'cat-performance', name: 'Promotion Letter', code: 'PROMOTION_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-confirmation', catId: 'cat-performance', name: 'Confirmation Letter', code: 'CONFIRMATION_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-probation-ext', catId: 'cat-performance', name: 'Probation Extension Letter', code: 'PROBATION_EXTENSION', appr: 1, sig: 1 },
+        
+        // Transfer
+        { id: 'dt-transfer', catId: 'cat-transfer', name: 'Transfer Letter', code: 'TRANSFER_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-dept-change', catId: 'cat-transfer', name: 'Department Change Letter', code: 'DEPT_CHANGE', appr: 1, sig: 0 },
+        { id: 'dt-desig-change', catId: 'cat-transfer', name: 'Designation Change Letter', code: 'DESIG_CHANGE', appr: 1, sig: 0 },
+        
+        // Disciplinary
+        { id: 'dt-warning', catId: 'cat-disciplinary', name: 'Warning Letter', code: 'WARNING_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-show-cause', catId: 'cat-disciplinary', name: 'Show Cause Notice', code: 'SHOW_CAUSE_NOTICE', appr: 1, sig: 0 },
+        { id: 'dt-suspension', catId: 'cat-disciplinary', name: 'Suspension Letter', code: 'SUSPENSION_LETTER', appr: 1, sig: 1 },
+        
+        // Exit
+        { id: 'dt-resig-ack', catId: 'cat-exit', name: 'Resignation Acceptance Letter', code: 'RESIGNATION_ACCEPTANCE', appr: 1, sig: 1 },
+        { id: 'dt-relieving', catId: 'cat-exit', name: 'Relieving Letter', code: 'RELIEVING_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-exp-cert', catId: 'cat-exit', name: 'Experience Certificate', code: 'EXPERIENCE_CERTIFICATE', appr: 1, sig: 1 },
+        { id: 'dt-termination', catId: 'cat-exit', name: 'Termination Letter', code: 'TERMINATION_LETTER', appr: 1, sig: 1 },
+        { id: 'dt-fnf-settlement', catId: 'cat-exit', name: 'Full & Final Settlement', code: 'FNF_SETTLEMENT', appr: 1, sig: 1 },
+        { id: 'dt-no-dues', catId: 'cat-exit', name: 'No-Dues Certificate', code: 'NO_DUES_CERTIFICATE', appr: 1, sig: 1 },
+      ];
+
+      for (const t of defaultTypes) {
+        await conn.query(
+          `INSERT INTO document_types (id, category_id, name, code, requires_approval, requires_signature, requires_employee_access)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [t.id, t.catId, t.name, t.code, t.appr, t.sig]
+        );
+      }
+    }
 
     try {
       await conn.query(`ALTER TABLE master_departments ADD COLUMN head_name VARCHAR(100);`);
@@ -758,7 +1175,7 @@ export async function seedDatabase() {
           await conn.query(
             `INSERT INTO leave_balances (id, user_id, leave_type, allocated_days, used_days) VALUES
              (UUID(), ?, 'CL', 12.00, 0.00),
-             (UUID(), ?, 'PL', 18.00, 0.00)`,
+             (UUID(), ?, 'PL', 14.00, 0.00)`,
             [userId, userId]
           );
         }

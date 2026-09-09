@@ -19,8 +19,33 @@ import {
   getEmployeeLeaveHistory,
 } from './leaveController.js';
 
+import {
+  getEmployees,
+  createEmployee,
+  getEmployeeById,
+  updateEmployee,
+  importEmployeesCsv,
+  getLeavePolicies,
+  updateLeavePolicy,
+  calculateEntitlements,
+  getEntitlements,
+  getEmployeeDerivedBalance,
+  createLeaveTransaction,
+  getLeaveTransactions,
+  getEntitlementRegisterReport,
+} from './leaveAccrualController.js';
+
 const router = Router();
 router.use(authenticateToken);
+
+// Leave Accrual & Policy Engine Endpoints
+router.get('/policies', getLeavePolicies);
+router.put('/policies/:id', requireRole(['admin']), updateLeavePolicy);
+router.post('/entitlements/calculate', requireRole(['admin', 'employer']), calculateEntitlements);
+router.get('/entitlements', getEntitlements);
+router.post('/transactions', createLeaveTransaction);
+router.get('/transactions', getLeaveTransactions);
+router.get('/reports/entitlement-register', getEntitlementRegisterReport);
 
 router.get('/balances', getLeaveBalances);
 router.get('/ledger', getLeaveLedger);

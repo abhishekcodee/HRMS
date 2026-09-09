@@ -19,8 +19,8 @@ export const Thead: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 export const Tbody: React.FC<{ children: React.ReactNode }> = ({ children }) => <tbody>{children}</tbody>;
 
-export const Tr: React.FC<{ children: React.ReactNode; onClick?: () => void; className?: string }> = ({ children, onClick, className = '' }) => (
-  <tr onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }} className={className}>
+export const Tr: React.FC<{ children: React.ReactNode; onClick?: () => void; className?: string; style?: React.CSSProperties }> = ({ children, onClick, className = '', style }) => (
+  <tr onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', ...style }} className={className}>
     {children}
   </tr>
 );

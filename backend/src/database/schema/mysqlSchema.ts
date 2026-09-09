@@ -93,10 +93,21 @@ export const employeeProfiles = mysqlTable('employee_profiles', {
   gender: varchar('gender', { length: 20 }),
   dob: varchar('dob', { length: 20 }),
   address: text('address'),
+  residentialAddress: text('residential_address'),
+  residentialCity: varchar('residential_city', { length: 100 }),
+  residentialState: varchar('residential_state', { length: 100 }),
+  residentialPincode: varchar('residential_pincode', { length: 20 }),
+  permanentAddress: text('permanent_address'),
+  permanentCity: varchar('permanent_city', { length: 100 }),
+  permanentState: varchar('permanent_state', { length: 100 }),
+  permanentPincode: varchar('permanent_pincode', { length: 20 }),
+  permanentAddressSame: boolean('permanent_address_same').default(false),
   emergencyContact: varchar('emergency_contact', { length: 255 }),
   emergencyPhone: varchar('emergency_phone', { length: 50 }),
   managerId: varchar('manager_id', { length: 36 }),
   managerName: varchar('manager_name', { length: 255 }),
+  grade: int('grade'),
+  dateOfSeparation: varchar('date_of_separation', { length: 20 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -167,6 +178,56 @@ export const leaveBalances = mysqlTable('leave_balances', {
   usedDays: decimal('used_days', { precision: 5, scale: 2 }).notNull().default('0.00'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Leave Policies Table - Configuration for PL / CL Accruals
+ */
+export const leavePolicies = mysqlTable('leave_policies', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  leaveType: varchar('leave_type', { length: 20 }).notNull(), // 'PL' | 'CL'
+  annualQuota: decimal('annual_quota', { precision: 5, scale: 2 }).notNull(), // TODO: confirm with HR policy (14.00 for PL, 7.00 for CL)
+  waitingMonthsHigh: int('waiting_months_high').notNull().default(6),
+  waitingMonthsLow: int('waiting_months_low').notNull().default(8),
+  gradeThreshold: int('grade_threshold').notNull().default(3),
+  effectiveFrom: varchar('effective_from', { length: 20 }).notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Leave Entitlements Table - Calculated Output for Audit & Diffing
+ */
+export const leaveEntitlements = mysqlTable('leave_entitlements', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  employeeId: varchar('employee_id', { length: 36 }).notNull(),
+  leaveType: varchar('leave_type', { length: 20 }).notNull(),
+  fyStart: varchar('fy_start', { length: 20 }).notNull(),
+  fyEnd: varchar('fy_end', { length: 20 }).notNull(),
+  eligibleFrom: varchar('eligible_from', { length: 20 }),
+  monthsCounted: int('months_counted').notNull().default(0),
+  rawDays: decimal('raw_days', { precision: 7, scale: 3 }).notNull().default('0.000'),
+  entitledDays: int('entitled_days').notNull().default(0),
+  policyId: varchar('policy_id', { length: 36 }),
+  calculatedAt: timestamp('calculated_at').notNull().defaultNow(),
+});
+
+/**
+ * Leave Transactions Table - Immutable Ledger (Credit, Debit, Adjustment, Carry Forward)
+ */
+export const leaveTransactions = mysqlTable('leave_transactions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  employeeId: varchar('employee_id', { length: 36 }).notNull(),
+  leaveType: varchar('leave_type', { length: 20 }).notNull(),
+  fyStart: varchar('fy_start', { length: 20 }).notNull(),
+  type: varchar('type', { length: 30 }).notNull(), // 'credit' | 'debit' | 'adjustment' | 'carry_forward'
+  days: decimal('days', { precision: 5, scale: 2 }).notNull(),
+  fromDate: varchar('from_date', { length: 20 }),
+  toDate: varchar('to_date', { length: 20 }),
+  reason: text('reason'),
+  createdBy: varchar('created_by', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 /**
@@ -305,5 +366,316 @@ export const inAppNotifications = mysqlTable('in_app_notifications', {
   isRead: boolean('is_read').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+/**
+ * Appointment Letter Templates Table - Customizable Corporate HR Branding & Layout Configuration
+ */
+export const appointmentLetterTemplates = mysqlTable('appointment_letter_templates', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull().default('Standard Corporate Template'),
+  companyName: varchar('company_name', { length: 255 }).notNull().default('Acme Global Technologies Pvt. Ltd.'),
+  companyTagline: text('company_tagline'),
+  companyLogo: text('company_logo'),
+  companyAddress: text('company_address'),
+  companyEmail: varchar('company_email', { length: 255 }),
+  companyPhone: varchar('company_phone', { length: 50 }),
+  companyWebsite: varchar('company_website', { length: 255 }),
+  primaryBrandColor: varchar('primary_brand_color', { length: 20 }).notNull().default('#1E3A5F'),
+  secondaryBrandColor: varchar('secondary_brand_color', { length: 20 }).notNull().default('#0F172A'),
+  accentColor: varchar('accent_color', { length: 20 }).notNull().default('#3B82F6'),
+  fontFamily: varchar('font_family', { length: 100 }).notNull().default('Plus Jakarta Sans'),
+  letterTitle: varchar('letter_title', { length: 255 }).notNull().default('APPOINTMENT LETTER'),
+  referencePrefix: varchar('reference_prefix', { length: 50 }).notNull().default('APPT/2026/'),
+  openingTemplate: text('opening_template'),
+  termsAndConditions: text('terms_and_conditions'), // JSON string array of clauses
+  signatoryName: varchar('signatory_name', { length: 255 }).notNull().default('Rajesh Sharma'),
+  signatoryDesignation: varchar('signatory_designation', { length: 255 }).notNull().default('Head of Human Resources'),
+  signatorySignature: text('signatory_signature'),
+  acceptanceText: text('acceptance_text'),
+  footerText: text('footer_text'),
+  sectionsOrder: text('sections_order'), // JSON string array of section ids
+  sectionsVisibility: text('sections_visibility'), // JSON string map of section visibilities
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Employee Appointment Letters Table - Generated Versioned Official Documents
+ */
+export const employeeAppointmentLetters = mysqlTable('employee_appointment_letters', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }),
+  templateId: varchar('template_id', { length: 36 }),
+  employeeName: varchar('employee_name', { length: 255 }),
+  employeeCode: varchar('employee_code', { length: 50 }),
+  designation: varchar('designation', { length: 150 }),
+  joiningDate: varchar('joining_date', { length: 20 }),
+  acceptanceDate: varchar('acceptance_date', { length: 20 }),
+  referenceNumber: varchar('reference_number', { length: 100 }).notNull(),
+  versionNumber: int('version_number').notNull().default(1),
+  generatedDate: varchar('generated_date', { length: 20 }).notNull(),
+  annualCtc: decimal('annual_ctc', { precision: 12, scale: 2 }),
+  monthlyGross: decimal('monthly_gross', { precision: 12, scale: 2 }),
+  basicSalary: decimal('basic_salary', { precision: 12, scale: 2 }),
+  allowances: decimal('allowances', { precision: 12, scale: 2 }),
+  otherComponents: decimal('other_components', { precision: 12, scale: 2 }),
+  salaryDetailsJson: text('salary_details_json'),
+  companyDetailsJson: text('company_details_json'),
+  hrName: varchar('hr_name', { length: 255 }),
+  hrDesignation: varchar('hr_designation', { length: 255 }),
+  probationPeriod: varchar('probation_period', { length: 50 }),
+  noticePeriod: varchar('notice_period', { length: 50 }),
+  workingHours: varchar('working_hours', { length: 100 }),
+  weeklyOff: varchar('weekly_off', { length: 50 }),
+  workLocation: varchar('work_location', { length: 100 }),
+  status: varchar('status', { length: 20 }).notNull().default('GENERATED'), // 'DRAFT' | 'GENERATED' | 'FINAL' | 'CANCELLED'
+  pdfPath: text('pdf_path'),
+  htmlSnapshot: text('html_snapshot'),
+  generatedBy: varchar('generated_by', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Document Categories Table
+ */
+export const documentCategories = mysqlTable('document_categories', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }),
+  name: varchar('name', { length: 100 }).notNull(),
+  code: varchar('code', { length: 50 }).notNull(),
+  description: text('description'),
+  isSystem: boolean('is_system').notNull().default(true),
+  displayOrder: int('display_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Document Types Table
+ */
+export const documentTypes = mysqlTable('document_types', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }),
+  categoryId: varchar('category_id', { length: 36 }).notNull(),
+  name: varchar('name', { length: 150 }).notNull(),
+  code: varchar('code', { length: 50 }).notNull(),
+  description: text('description'),
+  requiresApproval: boolean('requires_approval').notNull().default(false),
+  requiresSignature: boolean('requires_signature').notNull().default(false),
+  requiresEmployeeAccess: boolean('requires_employee_access').notNull().default(true),
+  approvalChainJson: text('approval_chain_json'),
+  status: varchar('status', { length: 20 }).notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Document Templates Table
+ */
+export const documentTemplates = mysqlTable('document_templates', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }),
+  documentTypeId: varchar('document_type_id', { length: 36 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  currentVersionId: varchar('current_version_id', { length: 36 }),
+  currentVersionNumber: int('current_version_number').notNull().default(1),
+  numberingFormat: varchar('numbering_format', { length: 150 }),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Document Template Versions Table
+ */
+export const documentTemplateVersions = mysqlTable('document_template_versions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  templateId: varchar('template_id', { length: 36 }).notNull(),
+  versionNumber: int('version_number').notNull(),
+  content: text('content').notNull(),
+  cssStyles: text('css_styles'),
+  headerTemplate: text('header_template'),
+  footerTemplate: text('footer_template'),
+  signatoryName: varchar('signatory_name', { length: 255 }),
+  signatoryDesignation: varchar('signatory_designation', { length: 255 }),
+  signatorySignatureUrl: text('signatory_signature_url'),
+  companyLogoUrl: text('company_logo_url'),
+  primaryColor: varchar('primary_color', { length: 20 }),
+  secondaryColor: varchar('secondary_color', { length: 20 }),
+  changeSummary: text('change_summary'),
+  createdBy: varchar('created_by', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Documents Master Table
+ */
+export const documents = mysqlTable('documents', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }).notNull(),
+  employeeId: varchar('employee_id', { length: 36 }).notNull(),
+  documentTypeId: varchar('document_type_id', { length: 36 }).notNull(),
+  templateId: varchar('template_id', { length: 36 }),
+  templateVersionId: varchar('template_version_id', { length: 36 }),
+  templateVersionNumber: int('template_version_number').default(1),
+  referenceNumber: varchar('reference_number', { length: 100 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('DRAFT'),
+  htmlSnapshot: text('html_snapshot'),
+  pdfPath: text('pdf_path'),
+  fileSize: varchar('file_size', { length: 50 }),
+  documentHash: varchar('document_hash', { length: 64 }), // SHA-256
+  metadataJson: text('metadata_json'),
+  generatedBy: varchar('generated_by', { length: 36 }),
+  approvedAt: timestamp('approved_at'),
+  signedAt: timestamp('signed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Document Approvals Table
+ */
+export const documentApprovals = mysqlTable('document_approvals', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  documentId: varchar('document_id', { length: 36 }).notNull(),
+  stepOrder: int('step_order').notNull().default(1),
+  approverRoleId: varchar('approver_role_id', { length: 50 }),
+  approverUserId: varchar('approver_user_id', { length: 36 }),
+  status: varchar('status', { length: 20 }).notNull().default('PENDING'),
+  comments: text('comments'),
+  actionAt: timestamp('action_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Document Signatures Table
+ */
+export const documentSignatures = mysqlTable('document_signatures', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  documentId: varchar('document_id', { length: 36 }).notNull(),
+  signatoryType: varchar('signatory_type', { length: 20 }).notNull(), // 'COMPANY' | 'EMPLOYEE' | 'WITNESS'
+  signatoryName: varchar('signatory_name', { length: 255 }).notNull(),
+  signatoryDesignation: varchar('signatory_designation', { length: 255 }),
+  signatureImage: text('signature_image'),
+  signedAt: timestamp('signed_at').notNull().defaultNow(),
+  ipAddress: varchar('ip_address', { length: 50 }),
+});
+
+/**
+ * User MFA Credentials Table
+ */
+export const userMfaCredentials = mysqlTable('user_mfa_credentials', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull().unique(),
+  mfaEnabled: boolean('mfa_enabled').notNull().default(false),
+  mfaMethod: varchar('mfa_method', { length: 20 }).notNull().default('TOTP'),
+  totpSecret: text('totp_secret'),
+  backupCodesJson: text('backup_codes_json'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Active User Sessions Table
+ */
+export const userSessions = mysqlTable('user_sessions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull(),
+  tokenHash: varchar('token_hash', { length: 255 }).notNull(),
+  deviceInfo: text('device_info'),
+  ipAddress: varchar('ip_address', { length: 50 }),
+  expiresAt: timestamp('expires_at').notNull(),
+  isRevoked: boolean('is_revoked').notNull().default(false),
+  lastActiveAt: timestamp('last_active_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Centralized Security Audit Logs Table
+ */
+export const securityAuditLogs = mysqlTable('security_audit_logs', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }),
+  actorUserId: varchar('actor_user_id', { length: 36 }),
+  actorUserEmail: varchar('actor_user_email', { length: 255 }),
+  actorRole: varchar('actor_role', { length: 20 }),
+  action: varchar('action', { length: 100 }).notNull(),
+  resourceType: varchar('resource_type', { length: 50 }).notNull(),
+  resourceId: varchar('resource_id', { length: 100 }),
+  status: varchar('status', { length: 20 }).notNull().default('SUCCESS'), // 'SUCCESS' | 'FAILURE' | 'DENIED'
+  ipAddress: varchar('ip_address', { length: 50 }),
+  userAgent: text('user_agent'),
+  metadataJson: text('metadata_json'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Generated HR Documents Table - Multi-Document Centralized System
+ */
+export const companyLetterheads = mysqlTable('company_letterheads', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  filePath: varchar('file_path', { length: 500 }).notNull(),
+  fileType: varchar('file_type', { length: 50 }).notNull(), // 'pdf' | 'png' | 'jpeg' | 'jpg'
+  fileSize: int('file_size'),
+  version: int('version').notNull().default(1),
+  isActive: boolean('is_active').notNull().default(true),
+  marginsJson: text('margins_json'), // JSON string: { top: 20, bottom: 20, left: 15, right: 15 } in mm
+  uploadedBy: varchar('uploaded_by', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Company Letterhead Policy Settings Table
+ */
+export const companyLetterheadSettings = mysqlTable('company_letterhead_settings', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }).notNull().unique(),
+  requireLetterhead: boolean('require_letterhead').notNull().default(false),
+  allowHrReplace: boolean('allow_hr_replace').notNull().default(true),
+  allowHrEditCompanyDetails: boolean('allow_hr_edit_company_details').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+/**
+ * Generated HR Documents Table - Multi-Document Centralized System
+ */
+export const generatedHrDocuments = mysqlTable('generated_hr_documents', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  companyId: varchar('company_id', { length: 36 }),
+  letterheadId: varchar('letterhead_id', { length: 36 }),
+  letterheadVersion: int('letterhead_version').default(1),
+  documentType: varchar('document_type', { length: 100 }).notNull(),
+  templateId: varchar('template_id', { length: 36 }),
+  templateVersion: int('template_version').notNull().default(1),
+  userId: varchar('user_id', { length: 36 }),
+  employeeSalutation: varchar('employee_salutation', { length: 10 }),
+  employeeName: varchar('employee_name', { length: 255 }).notNull(),
+  employeeCode: varchar('employee_code', { length: 50 }).notNull(),
+  designation: varchar('designation', { length: 150 }),
+  department: varchar('department', { length: 150 }),
+  documentDate: varchar('document_date', { length: 20 }),
+  joiningDate: varchar('joining_date', { length: 20 }),
+  leavingDate: varchar('leaving_date', { length: 20 }),
+  relievingDate: varchar('relieving_date', { length: 20 }),
+  salaryDetailsJson: text('salary_details_json'),
+  documentDataJson: text('document_data_json'),
+  companyDetailsJson: text('company_details_json'),
+  hrName: varchar('hr_name', { length: 255 }),
+  hrDesignation: varchar('hr_designation', { length: 255 }),
+  filePath: varchar('file_path', { length: 500 }),
+  status: varchar('status', { length: 50 }).notNull().default('GENERATED'),
+  generatedBy: varchar('generated_by', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
 
 

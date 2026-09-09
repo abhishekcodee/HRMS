@@ -8,7 +8,14 @@ import {
   sendLeaveRejectionEmail,
   retryFailedNotification,
 } from '../../services/emailService.js';
-import { calculateEmployeeLeaveSummary, calculateCL, calculatePL, calculateCLPLDuration } from './leaveCalculationService.js';
+import {
+  calculateEmployeeLeaveSummary,
+  calculateCL,
+  calculatePL,
+  calculateCLPLDuration,
+  getFinancialYear,
+  calculatePLEntitlement,
+} from './leaveCalculationService.js';
 import { insertInAppNotification } from '../notifications/notificationsController.js';
 import { logger } from '../../utils/logger.js';
 
@@ -742,11 +749,17 @@ export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response):
       return;
     }
 
+    // 0. Ensure server-side dynamic CL & PL entitlements based on DOJ and PL formula are calculated & synced
+    let summary: any = null;
+    try {
+      summary = await calculateEmployeeLeaveSummary(userId);
+    } catch (_) {}
+
     const defaultTypes = [
-      { name: 'Casual Leave', code: 'CL', defaultAlloc: 12 },
-      { name: 'Sick Leave', code: 'SL', defaultAlloc: 10 },
-      { name: 'Earned Leave', code: 'EL', defaultAlloc: 15 },
-      { name: 'Privilege Leave', code: 'PL', defaultAlloc: 5 },
+      { name: 'Casual Leave', code: 'CL', defaultAlloc: summary ? summary.cl.allocated : 10 },
+      { name: 'Sick Leave', code: 'SL', defaultAlloc: 7 },
+      { name: 'Earned Leave', code: 'EL', defaultAlloc: 14 },
+      { name: 'Privilege Leave', code: 'PL', defaultAlloc: summary ? summary.pl.allocated : 14 },
       { name: 'Paid Leave', code: 'PAID', defaultAlloc: 10 },
       { name: 'Unpaid Leave (LWP)', code: 'LWP', defaultAlloc: 0 },
     ];
@@ -755,13 +768,19 @@ export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response):
     const [balanceRows]: any = await pool.query(
       `SELECT leave_type as leaveType, allocated_days as allocatedDays
        FROM leave_balances
-       WHERE user_id = ? AND leave_year = ?`,
-      [userId, year]
+       WHERE user_id = ?`,
+      [userId]
     );
 
     const allocMap: Record<string, number> = {};
     balanceRows.forEach((r: any) => {
-      allocMap[r.leaveType] = parseFloat(r.allocatedDays);
+      const val = parseFloat(r.allocatedDays);
+      allocMap[r.leaveType] = val;
+      const lt = String(r.leaveType).toUpperCase();
+      if (lt === 'CL' || lt.includes('CASUAL')) allocMap['Casual Leave'] = val;
+      if (lt === 'PL' || lt.includes('PRIVILEGE') || lt.includes('EARNED')) allocMap['Privilege Leave'] = val;
+      if (lt === 'SL' || lt.includes('SICK')) allocMap['Sick Leave'] = val;
+      if (lt === 'EL') allocMap['Earned Leave'] = val;
     });
 
     // 2. Fetch approved used days from leave_requests
@@ -775,7 +794,12 @@ export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response):
 
     const usedMap: Record<string, number> = {};
     usedRows.forEach((r: any) => {
-      usedMap[r.leaveType] = parseFloat(r.totalUsed);
+      const val = parseFloat(r.totalUsed);
+      usedMap[r.leaveType] = val;
+      const lt = String(r.leaveType).toUpperCase();
+      if (lt === 'CL' || lt.includes('CASUAL')) usedMap['Casual Leave'] = val;
+      if (lt === 'PL' || lt.includes('PRIVILEGE') || lt.includes('EARNED')) usedMap['Privilege Leave'] = val;
+      if (lt === 'SL' || lt.includes('SICK')) usedMap['Sick Leave'] = val;
     });
 
     // 3. Fetch pending days from leave_requests
@@ -789,7 +813,12 @@ export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response):
 
     const pendingMap: Record<string, number> = {};
     pendingRows.forEach((r: any) => {
-      pendingMap[r.leaveType] = parseFloat(r.totalPending);
+      const val = parseFloat(r.totalPending);
+      pendingMap[r.leaveType] = val;
+      const lt = String(r.leaveType).toUpperCase();
+      if (lt === 'CL' || lt.includes('CASUAL')) pendingMap['Casual Leave'] = val;
+      if (lt === 'PL' || lt.includes('PRIVILEGE') || lt.includes('EARNED')) pendingMap['Privilege Leave'] = val;
+      if (lt === 'SL' || lt.includes('SICK')) pendingMap['Sick Leave'] = val;
     });
 
     // 4. Construct complete result
@@ -799,10 +828,22 @@ export async function getEmployeeLeaveBalances(req: AuthRequest, res: Response):
     let totalRemaining = 0;
 
     const leaveTypes = defaultTypes.map(t => {
-      const allocated = allocMap[t.name] !== undefined ? allocMap[t.name] : t.defaultAlloc;
-      const used = usedMap[t.name] || 0;
-      const pending = pendingMap[t.name] || 0;
-      const remaining = Math.max(0, allocated - used);
+      let allocated = allocMap[t.code] !== undefined ? allocMap[t.code] : (allocMap[t.name] !== undefined ? allocMap[t.name] : t.defaultAlloc);
+      let used = usedMap[t.code] !== undefined ? usedMap[t.code] : (usedMap[t.name] || 0);
+      let pending = pendingMap[t.code] !== undefined ? pendingMap[t.code] : (pendingMap[t.name] || 0);
+
+      if (t.code === 'CL' && summary) {
+        allocated = summary.cl.allocated;
+        used = summary.cl.used;
+        pending = summary.cl.pending;
+      }
+      if (t.code === 'PL' && summary) {
+        allocated = summary.pl.allocated;
+        used = summary.pl.used;
+        pending = summary.pl.pending;
+      }
+
+      const remaining = Math.max(0, allocated - used - pending);
 
       totalAllocated += allocated;
       totalUsed += used;
@@ -981,6 +1022,32 @@ export async function getCLCalculationDetails(req: AuthRequest, res: Response): 
  */
 export async function getPLCalculationDetails(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const { doj, annualPL, eligibilityMonths, experienceYears, d5 } = req.query;
+
+    const formulaString = 'IF(C5="","", IF(D5>3, IF(EDATE(C5,6)>DATE(2027,3,31), 0, ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,6),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0)), IF(EDATE(C5,8)>DATE(2027,3,31), 0, ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,8),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0))))';
+
+    if (doj && typeof doj === 'string') {
+      const annualPLNum = parseFloat(String(annualPL)) || 14.0;
+      const expYearsNum = parseFloat(String(experienceYears || d5 || '0')) || 0;
+      const eligibilityMonthsNum = eligibilityMonths ? parseInt(String(eligibilityMonths), 10) : (expYearsNum > 3 ? 6 : 8);
+      const fy = getFinancialYear();
+      const calcResult = calculatePLEntitlement(doj, expYearsNum, fy, annualPLNum, eligibilityMonthsNum);
+
+      res.json({
+        success: true,
+        formula: formulaString,
+        parameters: {
+          doj,
+          experienceYears: expYearsNum,
+          annualPL: annualPLNum,
+          eligibilityMonths: eligibilityMonthsNum,
+          financialYear: fy,
+        },
+        data: calcResult,
+      });
+      return;
+    }
+
     const targetUserId = (req.params.userId && req.params.userId !== 'me') ? req.params.userId : req.user?.id;
     if (!targetUserId) {
       res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User authentication required.' } });
@@ -991,7 +1058,7 @@ export async function getPLCalculationDetails(req: AuthRequest, res: Response): 
 
     res.json({
       success: true,
-      formula: 'Output 1 = Financial-Year Joining Month + (Experience >= 4 ? 6 : 0); Output 2 = 12 - Output 1; PL = (14 / 12) * Output 2',
+      formula: formulaString,
       data: plResult,
     });
   } catch (error: any) {

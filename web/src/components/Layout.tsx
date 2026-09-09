@@ -98,7 +98,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/salary-slips', label: 'Salary Slips (Bulk Mail)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/documents', label: 'Documents', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/document-management', label: 'Document Management', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/documents', label: 'Document Uploads', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
     { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
 
     // Employee Self Service Nav
@@ -110,6 +112,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
     // Admin Only System Controls
     { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN] },
+    { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN] },
     { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.ADMIN] },
     { path: '/audit', label: 'Audit Logs', icon: <History size={20} />, roles: [UserRole.ADMIN] }
   ];

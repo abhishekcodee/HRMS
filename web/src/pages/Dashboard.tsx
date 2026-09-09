@@ -117,7 +117,7 @@ export const Dashboard: React.FC = () => {
   // Derived Metrics from Real DB Data (CL & PL Only - Integers Only)
   const casualBal = useMemo(() => {
     const b = leaveBalances.find((item) => item.leaveType === 'CL' || item.leaveType.includes('Casual'));
-    const allocated = b ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 10;
+    const allocated = b && b.allocatedDays !== undefined && b.allocatedDays !== null ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 0;
     const used = b ? calculateCLPLDuration(parseFloat(String(b.usedDays))) : 0;
     const remaining = b?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(b.remainingDays))) : Math.max(0, allocated - used);
     return { allocated, used, remaining };
@@ -125,7 +125,7 @@ export const Dashboard: React.FC = () => {
 
   const privilegeBal = useMemo(() => {
     const b = leaveBalances.find((item) => item.leaveType === 'PL' || item.leaveType.includes('Privilege') || item.leaveType.includes('Earned'));
-    const allocated = b ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 18;
+    const allocated = b && b.allocatedDays !== undefined && b.allocatedDays !== null ? calculateCLPLDuration(parseFloat(String(b.allocatedDays))) : 0;
     const used = b ? calculateCLPLDuration(parseFloat(String(b.usedDays))) : 0;
     const remaining = b?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(b.remainingDays))) : Math.max(0, allocated - used);
     return { allocated, used, remaining };

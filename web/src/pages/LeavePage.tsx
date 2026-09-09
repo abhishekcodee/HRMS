@@ -10,6 +10,7 @@ import {
   employerActionInDb,
   adminActionInDb,
   calculateCLPLDuration,
+  fetchPLCalculationDetails,
   LeaveRecord,
   LeaveBalanceRecord,
   LeaveLedgerRecord,
@@ -48,6 +49,7 @@ import {
   ArrowRight,
   BookOpen,
   ListFilter,
+  Calculator,
 } from 'lucide-react';
 
 export const LeavePage: React.FC = () => {
@@ -67,6 +69,22 @@ export const LeavePage: React.FC = () => {
   const [rejectionRemarks, setRejectionRemarks] = useState('');
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [plFormulaModalOpen, setPlFormulaModalOpen] = useState(false);
+  const [plCalcData, setPlCalcData] = useState<any>(null);
+  const [loadingPlCalc, setLoadingPlCalc] = useState(false);
+
+  const handleOpenPlFormula = async () => {
+    setPlFormulaModalOpen(true);
+    setLoadingPlCalc(true);
+    try {
+      const data = await fetchPLCalculationDetails({ userId: user?.id });
+      if (data) setPlCalcData(data);
+    } catch (err) {
+      console.error('Failed to load PL formula breakdown:', err);
+    } finally {
+      setLoadingPlCalc(false);
+    }
+  };
 
   const [form, setForm] = useState({
     leaveType: 'CL',
@@ -90,20 +108,20 @@ export const LeavePage: React.FC = () => {
   // Compute Dynamic Server-side CL Summary (Strict Integer Values)
   const clSummary = useMemo(() => {
     const item = balances.find((b) => b.leaveType === 'CL' || b.leaveType.includes('Casual'));
-    const allocated = calculateCLPLDuration(parseFloat(String(item?.allocatedDays || '10')));
+    const allocated = item?.allocatedDays !== undefined && item?.allocatedDays !== null ? calculateCLPLDuration(parseFloat(String(item.allocatedDays))) : 0;
     const used = calculateCLPLDuration(parseFloat(String(item?.usedDays || '0')));
     const pending = calculateCLPLDuration(parseFloat(String(item?.pendingDays || '0')));
-    const remaining = item?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
+    const remaining = item?.remainingDays !== undefined && item?.remainingDays !== null ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
     return { allocated, used, pending, remaining: Math.max(0, remaining) };
   }, [balances]);
 
   // Compute Dynamic Server-side PL Summary (Strict Integer Values)
   const plSummary = useMemo(() => {
     const item = balances.find((b) => b.leaveType === 'PL' || b.leaveType.includes('Privilege') || b.leaveType.includes('Earned'));
-    const allocated = calculateCLPLDuration(parseFloat(String(item?.allocatedDays || '18')));
+    const allocated = item?.allocatedDays !== undefined && item?.allocatedDays !== null ? calculateCLPLDuration(parseFloat(String(item.allocatedDays))) : 0;
     const used = calculateCLPLDuration(parseFloat(String(item?.usedDays || '0')));
     const pending = calculateCLPLDuration(parseFloat(String(item?.pendingDays || '0')));
-    const remaining = item?.remainingDays !== undefined ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
+    const remaining = item?.remainingDays !== undefined && item?.remainingDays !== null ? calculateCLPLDuration(parseFloat(String(item.remainingDays))) : Math.max(0, allocated - used - pending);
     return { allocated, used, pending, remaining: Math.max(0, remaining) };
   }, [balances]);
 
@@ -341,7 +359,9 @@ export const LeavePage: React.FC = () => {
                 Privilege Leave (PL)
               </h3>
             </div>
-            <Badge variant={plSummary.remaining > 0 ? 'success' : 'error'}>{plSummary.remaining} Days Remaining</Badge>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Badge variant={plSummary.remaining > 0 ? 'success' : 'error'}>{plSummary.remaining} Days Remaining</Badge>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.6rem', textAlign: 'center' }}>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.65rem 0.5rem', borderRadius: '8px' }}>
@@ -962,6 +982,7 @@ export const LeavePage: React.FC = () => {
           </div>
         </Modal>
       )}
+
     </div>
   );
 };

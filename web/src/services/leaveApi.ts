@@ -378,3 +378,26 @@ export async function fetchEmployeeLeaveHistory(
     return [];
   }
 }
+
+export async function fetchPLCalculationDetails(params?: { userId?: string; doj?: string; annualPL?: number; eligibilityMonths?: number }): Promise<any> {
+  try {
+    const query = new URLSearchParams();
+    if (params?.doj) query.append('doj', params.doj);
+    if (params?.annualPL) query.append('annualPL', params.annualPL.toString());
+    if (params?.eligibilityMonths) query.append('eligibilityMonths', params.eligibilityMonths.toString());
+
+    const url = params?.userId ? `/api/v1/leave/calculate-pl/${params.userId}` : `/api/v1/leave/calculate-pl?${query.toString()}`;
+
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    if (json.success) {
+      return json;
+    }
+    return null;
+  } catch (err) {
+    console.error('Fetch PL calculation details error:', err);
+    return null;
+  }
+}

@@ -19,6 +19,8 @@ import LeavePage from './pages/LeavePage';
 import DocumentsPage from './pages/DocumentsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import AppointmentLetterSettingsPage from './pages/AppointmentLetterSettingsPage';
+import AppointmentLetterTemplatesPage from './pages/AppointmentLetterTemplatesPage';
 import UsersRolesPage from './pages/UsersRolesPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 
@@ -26,6 +28,16 @@ import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
 import BiometricDevicesPage from './pages/BiometricDevicesPage';
 import CalendarPage from './pages/CalendarPage';
 import ChatPage from './pages/ChatPage';
+
+import DocumentDashboardPage from './pages/documentManagement/DocumentDashboardPage';
+import DocumentTypesManagerPage from './pages/documentManagement/DocumentTypesManagerPage';
+import DocumentTemplateBuilderPage from './pages/documentManagement/DocumentTemplateBuilderPage';
+import DocumentGenerationWizardPage from './pages/documentManagement/DocumentGenerationWizardPage';
+import EmployeeLockerPage from './pages/documentManagement/EmployeeLockerPage';
+import AppointmentLetterGeneratorPage from './pages/documentManagement/AppointmentLetterGeneratorPage';
+import MultiDocumentGeneratorStudio from './pages/documentManagement/MultiDocumentGeneratorStudio';
+import SecurityAuditCenterPage from './pages/security/SecurityAuditCenterPage';
+
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
@@ -111,8 +123,19 @@ export function App() {
                           <Route path="/my-calendar" element={<CalendarPage />} />
                           
                           {/* Documents & Vault */}
+                          <Route path="/document-management" element={<DocumentDashboardPage />} />
+                          <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
+                          <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
+                          <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
+                          <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
+                          <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
+                          <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
                           <Route path="/documents" element={<DocumentsPage />} />
-                          <Route path="/my-documents" element={<DocumentsPage />} />
+                          <Route path="/my-documents" element={<EmployeeLockerPage />} />
+                          
+                          {/* Security & Audit Center */}
+                          <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
+
                           
                           {/* Reports & Analytics */}
                           <Route path="/reports" element={<ReportsPage />} />
@@ -124,6 +147,8 @@ export function App() {
                           {/* Admin System Controls */}
                           <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
                           <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
+                          <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
+                          <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
                           <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />
 
                           {/* Fallback */}

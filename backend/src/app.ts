@@ -9,10 +9,15 @@ import { zktecoRouter } from './routes/zkteco.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { AppError } from './utils/app-error.js';
 
+import { setSecurityHeaders } from './security/securityHeaders.js';
+import { csrfProtection } from './security/csrfSecurity.js';
+
 export const app = express();
 
 // Security Middlewares
 app.use(helmet());
+app.use(setSecurityHeaders);
+app.use(csrfProtection);
 app.use(
   cors({
     origin: true, // Allow all origins in development
@@ -30,6 +35,7 @@ app.use('/iclock', zktecoRouter);
 
 // Static Uploads Directory Serving
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 app.use('/uploads', express.static(path.resolve('uploads')));
 app.use('/uploads', express.static(path.join(process.cwd(), 'backend', 'uploads')));
 

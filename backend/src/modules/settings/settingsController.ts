@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS = {
   casualLeave: '10',
   sickLeave: '7',
   earnedLeave: '14',
+  privilegeLeave: '14',
+  plEligibilityMonths: '8',
   pfRate: '12',
   esiRate: '0.75',
   taxYearStart: 'April',

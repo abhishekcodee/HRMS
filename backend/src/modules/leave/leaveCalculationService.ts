@@ -17,6 +17,21 @@ export interface LeaveTypeBalance {
   remaining: number;
 }
 
+export interface PLEntitlementResult {
+  joiningFinancialMonth: number;
+  probationMonths: number;
+  plEligibilityDate: string;
+  accrualStartDate: string;
+  isEligibleInFY: boolean;
+  eligibleMonths: number;
+  monthlyRate: number;
+  annualPL: number;
+  rawPL: number;
+  plEntitlement: number;
+  output1?: number;
+  output2?: number;
+}
+
 export interface EmployeeLeaveSummary {
   userId: string;
   employeeId: string;
@@ -29,7 +44,7 @@ export interface EmployeeLeaveSummary {
     monthlyCL: number;
     annualCL: number;
   };
-  pl: LeaveTypeBalance;
+  pl: LeaveTypeBalance & PLEntitlementResult;
 }
 
 /**
@@ -123,7 +138,7 @@ export function calculateCLPLDuration(rawDays: number, leaveType?: string): numb
 /**
  * Helper to add months (EDATE equivalent)
  */
-function addMonths(date: Date, months: number): Date {
+export function addMonths(date: Date, months: number): Date {
   const res = new Date(date);
   res.setMonth(res.getMonth() + months);
   return res;
@@ -131,8 +146,9 @@ function addMonths(date: Date, months: number): Date {
 
 /**
  * Helper for DATEDIF(start, end, "m") + 1
+ * Includes the starting month in count
  */
-function getEligibleMonthCount(startDate: Date, endDate: Date): number {
+export function getEligibleMonthCount(startDate: Date, endDate: Date): number {
   if (startDate > endDate) return 0;
   const yearDiff = endDate.getFullYear() - startDate.getFullYear();
   const monthDiff = endDate.getMonth() - startDate.getMonth();
@@ -193,36 +209,43 @@ export function calculateCLEntitlement(joiningDateStr: string, fy: FinancialYear
  * Calculate PL (Privilege Leave) Entitlement using exact Excel Formula:
  * =IF(C5="","",
  *   IF(D5>3,
- *     IF(EDATE(C5,6)>DATE(2027,3,31),0,
- *       ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,6),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0)),
- *     IF(EDATE(C5,8)>DATE(2027,3,31),0,
- *       ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,8),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0))))
+ *     IF(EDATE(C5,6)>DATE(2027,3,31), 0, ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,6),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0)),
+ *     IF(EDATE(C5,8)>DATE(2027,3,31), 0, ROUND((14/12)*(DATEDIF(MAX(EDATE(C5,8),DATE(2026,4,1)),DATE(2027,3,31),"m")+1),0))
+ *   )
+ * )
  */
 export function calculatePLEntitlement(
   joiningDateStr: string,
   totalExperienceYears: number = 0,
   fy: FinancialYearInfo,
-  annualPL: number = 14.0
-): {
-  joiningFinancialMonth: number;
-  probationMonths: number;
-  output1: number;
-  output2: number;
-  annualPL: number;
-  plEntitlement: number;
-} {
+  annualPL: number = 14.0,
+  eligibilityMonthsParam?: number
+): PLEntitlementResult {
   const defaultAnnual = annualPL > 0 ? annualPL : 14.0;
-  // D5 > 3 -> 6 months probation, else 8 months probation
-  const probationMonths = totalExperienceYears > 3 ? 6 : 8;
+  // Dynamic eligibility period based on D5 (Experience in Years):
+  // D5 > 3 -> 6 months eligibility (EDATE(C5,6))
+  // D5 <= 3 -> 8 months eligibility (EDATE(C5,8))
+  let eligibilityMonths: number;
+  if (eligibilityMonthsParam && eligibilityMonthsParam > 0) {
+    eligibilityMonths = eligibilityMonthsParam;
+  } else {
+    eligibilityMonths = totalExperienceYears > 3 ? 6 : 8;
+  }
 
   if (!joiningDateStr) {
     return {
       joiningFinancialMonth: 1,
-      probationMonths,
-      output1: 1 + probationMonths,
-      output2: 12,
+      probationMonths: eligibilityMonths,
+      plEligibilityDate: '2026-04-01',
+      accrualStartDate: '2026-04-01',
+      isEligibleInFY: true,
+      eligibleMonths: 12,
+      monthlyRate: defaultAnnual / 12,
       annualPL: defaultAnnual,
+      rawPL: defaultAnnual,
       plEntitlement: Math.round(defaultAnnual),
+      output1: eligibilityMonths,
+      output2: 12,
     };
   }
 
@@ -230,38 +253,53 @@ export function calculatePLEntitlement(
   const fyStart = new Date(fy.fyStartDate);
   const fyEnd = new Date(fy.fyEndDate);
 
-  // EDATE(C5, probationMonths) -> Confirmation Date
-  const confirmationDate = addMonths(joinDate, probationMonths);
+  // EDATE(C5, 8) -> PL Eligibility Date
+  const plEligibilityDate = addMonths(joinDate, eligibilityMonths);
+  const plEligibilityDateStr = plEligibilityDate.toISOString().split('T')[0];
 
-  // IF(EDATE(C5, probationMonths) > FY_END, 0, ...)
-  if (confirmationDate > fyEnd) {
+  // 1. IF(EDATE(C5,8) > FY_END_DATE, 0, ...)
+  if (plEligibilityDate > fyEnd) {
     return {
       joiningFinancialMonth: getFinancialYearMonthNumber(joiningDateStr),
-      probationMonths,
+      probationMonths: eligibilityMonths,
+      plEligibilityDate: plEligibilityDateStr,
+      accrualStartDate: 'N/A',
+      isEligibleInFY: false,
+      eligibleMonths: 0,
+      monthlyRate: defaultAnnual / 12,
+      annualPL: defaultAnnual,
+      rawPL: 0,
+      plEntitlement: 0,
       output1: 0,
       output2: 0,
-      annualPL: defaultAnnual,
-      plEntitlement: 0,
     };
   }
 
-  // MAX(EDATE(C5, probationMonths), FY_START)
-  const effectiveStart = confirmationDate > fyStart ? confirmationDate : fyStart;
+  // 2. MAX(EDATE(C5, 8), FY_START)
+  const accrualStart = plEligibilityDate > fyStart ? plEligibilityDate : fyStart;
+  const accrualStartDateStr = accrualStart.toISOString().split('T')[0];
 
-  // DATEDIF(MAX(...), FY_END, "m") + 1
-  const eligibleMonths = getEligibleMonthCount(effectiveStart, fyEnd);
+  // 3. DATEDIF(MAX(EDATE(C5,8), FY_START), FY_END, "m") + 1
+  const eligibleMonths = getEligibleMonthCount(accrualStart, fyEnd);
 
-  // ROUND((14/12) * eligibleMonths, 0)
-  const rawPl = (defaultAnnual / 12) * eligibleMonths;
-  const plEntitlement = Math.round(rawPl);
+  // 4. ROUND((14/12) * eligibleMonths, 0)
+  const monthlyRate = defaultAnnual / 12;
+  const rawPL = monthlyRate * eligibleMonths;
+  const plEntitlement = Math.round(rawPL);
 
   return {
     joiningFinancialMonth: getFinancialYearMonthNumber(joiningDateStr),
-    probationMonths,
-    output1: probationMonths,
-    output2: eligibleMonths,
+    probationMonths: eligibilityMonths,
+    plEligibilityDate: plEligibilityDateStr,
+    accrualStartDate: accrualStartDateStr,
+    isEligibleInFY: true,
+    eligibleMonths,
+    monthlyRate,
     annualPL: defaultAnnual,
+    rawPL,
     plEntitlement,
+    output1: eligibilityMonths,
+    output2: eligibleMonths,
   };
 }
 
@@ -520,6 +558,7 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
         used: plUsed,
         pending: plPending,
         remaining: plRemaining,
+        ...plCalc,
       },
     };
   } finally {

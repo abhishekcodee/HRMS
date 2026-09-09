@@ -38,7 +38,8 @@ import {
   Select,
   Alert,
 } from '../components/ui';
-import { ArrowLeft, ShieldCheck, Edit3, CheckCircle2, Camera, Upload, SlidersHorizontal, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Edit3, CheckCircle2, Camera, Upload, SlidersHorizontal, Calendar, Clock, CheckCircle, XCircle, FileText, FileCheck, Download, Plus } from 'lucide-react';
+import { AppointmentLetterBuilderModal } from '../components/documents/AppointmentLetterBuilderModal';
 
 export const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,6 +75,30 @@ export const EmployeeDetailPage: React.FC = () => {
   const [attendanceMode, setAttendanceMode] = useState<'weekly' | 'monthly'>('weekly');
   const [attendanceData, setAttendanceData] = useState<EmployeeAttendanceData | null>(null);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+  // Appointment Letters State
+  const [appointmentLetterBuilderOpen, setAppointmentLetterBuilderOpen] = useState(false);
+  const [appointmentLetters, setAppointmentLetters] = useState<any[]>([]);
+  const [loadingApptLetters, setLoadingApptLetters] = useState(false);
+
+  const loadAppointmentLetters = async () => {
+    if (!targetId) return;
+    setLoadingApptLetters(true);
+    try {
+      const token = localStorage.getItem('hrms_token') || localStorage.getItem('token');
+      const res = await fetch(`/api/v1/appointment-letters/employee/${targetId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setAppointmentLetters(json.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading appointment letters:', err);
+    } finally {
+      setLoadingApptLetters(false);
+    }
+  };
 
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -169,6 +194,12 @@ export const EmployeeDetailPage: React.FC = () => {
   useEffect(() => {
     loadAttendance();
   }, [targetId, attendanceMode]);
+
+  useEffect(() => {
+    if (activeTab === 'documents') {
+      loadAppointmentLetters();
+    }
+  }, [targetId, activeTab]);
 
   // Handle Photo File Upload
   const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,7 +433,34 @@ export const EmployeeDetailPage: React.FC = () => {
                     <span style={{ color: 'var(--text-muted)' }}>Phone:</span> <strong>{employee.phone || '—'}</strong>
                   </div>
                   <div>
-                    <span style={{ color: 'var(--text-muted)' }}>Address:</span> <strong>{employee.address || '—'}</strong>
+                    <span style={{ color: 'var(--text-muted)' }}>Gross Salary (Monthly):</span>{' '}
+                    <strong style={{ color: '#10b981' }}>₹{employee.salary ? Number(employee.salary).toLocaleString() : '—'}</strong>
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-color, rgba(255,255,255,0.08))', paddingTop: '0.65rem', marginTop: '0.2rem' }}>
+                    <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase' }}>Residential Address</span>
+                    <div style={{ marginTop: '0.25rem' }}>
+                      <strong>{employee.residentialAddress || employee.address || '—'}</strong>
+                    </div>
+                    {(employee.residentialCity || employee.residentialState || employee.residentialPincode) && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                        {[employee.residentialCity, employee.residentialState, employee.residentialPincode].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-color, rgba(255,255,255,0.08))', paddingTop: '0.65rem' }}>
+                    <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                      Permanent Address {employee.permanentAddressSame ? '(Same as Residential)' : ''}
+                    </span>
+                    <div style={{ marginTop: '0.25rem' }}>
+                      <strong>{employee.permanentAddressSame ? (employee.residentialAddress || employee.address || '—') : (employee.permanentAddress || '—')}</strong>
+                    </div>
+                    {(employee.permanentAddressSame ? (employee.residentialCity || employee.residentialState || employee.residentialPincode) : (employee.permanentCity || employee.permanentState || employee.permanentPincode)) && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                        {employee.permanentAddressSame
+                          ? [employee.residentialCity, employee.residentialState, employee.residentialPincode].filter(Boolean).join(', ')
+                          : [employee.permanentCity, employee.permanentState, employee.permanentPincode].filter(Boolean).join(', ')}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardBody>
@@ -842,25 +900,114 @@ export const EmployeeDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'documents' && (
-        <TableContainer>
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>Document Title</Th>
-                <Th>Category</Th>
-                <Th>Uploaded Date</Th>
-                <Th>Status</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Tr>
-                <Td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                  No uploaded compliance documents found for this employee.
-                </Td>
-              </Tr>
-            </Tbody>
-          </Table>
-        </TableContainer>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Appointment Letter Action Header Card */}
+          <Card>
+            <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-500)' }}>
+                  <FileCheck size={22} />
+                </div>
+                <div>
+                  <CardTitle>Corporate Appointment Letters</CardTitle>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                    Generate, customize, version, and manage official appointment letters for {employee.fullName}
+                  </p>
+                </div>
+              </div>
+
+              {isAdminOrEmployer && (
+                <Button
+                  variant="primary"
+                  icon={<Plus size={16} />}
+                  onClick={() => setAppointmentLetterBuilderOpen(true)}
+                >
+                  + Generate Appointment Letter
+                </Button>
+              )}
+            </CardHeader>
+
+            <CardBody>
+              <TableContainer>
+                <Table>
+                  <Thead>
+                    <Tr>
+                      <Th>Document / Reference</Th>
+                      <Th>Version</Th>
+                      <Th>Generated Date</Th>
+                      <Th>Annual CTC</Th>
+                      <Th>Status</Th>
+                      <Th style={{ textAlign: 'right' }}>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {loadingApptLetters ? (
+                      <Tr>
+                        <Td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                          Loading appointment letter history...
+                        </Td>
+                      </Tr>
+                    ) : appointmentLetters.length === 0 ? (
+                      <Tr>
+                        <Td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                          No appointment letters generated for this employee yet. Click <strong>"+ Generate Appointment Letter"</strong> above to launch the builder.
+                        </Td>
+                      </Tr>
+                    ) : (
+                      appointmentLetters.map((doc) => (
+                        <Tr key={doc.id}>
+                          <Td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <FileText size={18} style={{ color: 'var(--primary-500)' }} />
+                              <div>
+                                <strong style={{ color: 'var(--text-primary)' }}>Official Appointment Letter</strong>
+                                <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                                  Ref: {doc.referenceNumber}
+                                </div>
+                              </div>
+                            </div>
+                          </Td>
+                          <Td>
+                            <Badge variant="info">Version {doc.versionNumber}</Badge>
+                          </Td>
+                          <Td style={{ fontWeight: 500 }}>{doc.generatedDate}</Td>
+                          <Td style={{ fontWeight: 700, color: 'var(--success-text)' }}>
+                            ₹{doc.annualCtc ? Number(doc.annualCtc).toLocaleString('en-IN') : '—'}
+                          </Td>
+                          <Td>
+                            <Badge variant={doc.status === 'SIGNED' ? 'success' : 'neutral'}>
+                              {doc.status || 'GENERATED'}
+                            </Badge>
+                          </Td>
+                          <Td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                icon={<FileText size={14} />}
+                                onClick={() => setAppointmentLetterBuilderOpen(true)}
+                              >
+                                View / Edit
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                icon={<Download size={14} />}
+                                onClick={() => alert(`Downloading Appointment Letter PDF ${doc.referenceNumber}`)}
+                              >
+                                Download
+                              </Button>
+                            </div>
+                          </Td>
+                        </Tr>
+                      ))
+                    )}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </CardBody>
+          </Card>
+        </div>
       )}
 
       {/* Edit Profile & Photo Modal */}
@@ -1038,6 +1185,16 @@ export const EmployeeDetailPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Appointment Letter Builder & Live A4 Preview Modal */}
+      {targetId && (
+        <AppointmentLetterBuilderModal
+          isOpen={appointmentLetterBuilderOpen}
+          onClose={() => setAppointmentLetterBuilderOpen(false)}
+          employeeId={targetId}
+          onSuccess={() => loadAppointmentLetters()}
+        />
+      )}
     </div>
   );
 };

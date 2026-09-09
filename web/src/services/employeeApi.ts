@@ -30,6 +30,15 @@ export interface EmployeeDbRecord {
   gender?: string;
   dob?: string;
   address?: string;
+  residentialAddress?: string;
+  residentialCity?: string;
+  residentialState?: string;
+  residentialPincode?: string;
+  permanentAddress?: string;
+  permanentCity?: string;
+  permanentState?: string;
+  permanentPincode?: string;
+  permanentAddressSame?: boolean | number;
   emergencyContact?: string;
   emergencyPhone?: string;
   managerId?: string;

@@ -5,6 +5,46 @@ import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 
 /**
+ * Automatically insert custom department or designation into master tables if not existing
+ */
+async function ensureMasterDepartmentAndDesignation(departmentName?: string, designationName?: string): Promise<void> {
+  if (departmentName && departmentName.trim()) {
+    const trimmedDept = departmentName.trim();
+    const [existingDept]: any = await pool.query('SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?)', [trimmedDept]);
+    if (existingDept.length === 0) {
+      let code = trimmedDept.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15);
+      if (!code || code.length < 2) code = 'DEPT_' + Math.floor(100 + Math.random() * 900);
+      
+      const [existingCode]: any = await pool.query('SELECT id FROM master_departments WHERE code = ?', [code]);
+      if (existingCode.length > 0) {
+        code = `${code}_${Math.floor(10 + Math.random() * 90)}`;
+      }
+
+      await pool.query(
+        'INSERT INTO master_departments (id, name, code, description) VALUES (?, ?, ?, ?)',
+        [uuidv4(), trimmedDept, code, 'Custom department added during employee management']
+      );
+    }
+  }
+
+  if (designationName && designationName.trim()) {
+    const trimmedDesig = designationName.trim();
+    const [existingDesig]: any = await pool.query('SELECT id FROM master_designations WHERE LOWER(name) = LOWER(?)', [trimmedDesig]);
+    if (existingDesig.length === 0) {
+      let deptId: string | null = null;
+      if (departmentName && departmentName.trim()) {
+        const [depts]: any = await pool.query('SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?)', [departmentName.trim()]);
+        if (depts.length > 0) deptId = depts[0].id;
+      }
+      await pool.query(
+        'INSERT INTO master_designations (id, name, department_id, department_name) VALUES (?, ?, ?, ?)',
+        [uuidv4(), trimmedDesig, deptId, departmentName ? departmentName.trim() : null]
+      );
+    }
+  }
+}
+
+/**
  * List Employees - Database Driven Single Source of Truth
  */
 export async function listEmployees(req: AuthRequest, res: Response): Promise<void> {
@@ -18,8 +58,14 @@ export async function listEmployees(req: AuthRequest, res: Response): Promise<vo
              ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
              ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
              ep.experience_years as experienceYears,
-             ep.salary, ep.gender, ep.dob, ep.address, ep.emergency_contact as emergencyContact,
-             ep.emergency_phone as emergencyPhone, ep.manager_id as managerId, ep.manager_name as managerName
+             ep.salary, ep.gender, ep.dob, ep.address,
+             ep.residential_address as residentialAddress, ep.residential_city as residentialCity,
+             ep.residential_state as residentialState, ep.residential_pincode as residentialPincode,
+             ep.permanent_address as permanentAddress, ep.permanent_city as permanentCity,
+             ep.permanent_state as permanentState, ep.permanent_pincode as permanentPincode,
+             ep.permanent_address_same as permanentAddressSame,
+             ep.emergency_contact as emergencyContact, ep.emergency_phone as emergencyPhone,
+             ep.manager_id as managerId, ep.manager_name as managerName
       FROM users u
       LEFT JOIN employee_profiles ep ON ep.user_id = u.id
       WHERE 1=1
@@ -76,8 +122,14 @@ export async function getEmployeeById(req: AuthRequest, res: Response): Promise<
               ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
               ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
               ep.experience_years as experienceYears,
-              ep.salary, ep.gender, ep.dob, ep.address, ep.emergency_contact as emergencyContact,
-              ep.emergency_phone as emergencyPhone, ep.manager_id as managerId, ep.manager_name as managerName
+              ep.salary, ep.gender, ep.dob, ep.address,
+              ep.residential_address as residentialAddress, ep.residential_city as residentialCity,
+              ep.residential_state as residentialState, ep.residential_pincode as residentialPincode,
+              ep.permanent_address as permanentAddress, ep.permanent_city as permanentCity,
+              ep.permanent_state as permanentState, ep.permanent_pincode as permanentPincode,
+              ep.permanent_address_same as permanentAddressSame,
+              ep.emergency_contact as emergencyContact, ep.emergency_phone as emergencyPhone,
+              ep.manager_id as managerId, ep.manager_name as managerName
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
        WHERE u.id = ? OR u.employee_id = ?`,
@@ -154,6 +206,15 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
       gender,
       dob,
       address,
+      residentialAddress,
+      residentialCity,
+      residentialState,
+      residentialPincode,
+      permanentAddress,
+      permanentCity,
+      permanentState,
+      permanentPincode,
+      permanentAddressSame,
       emergencyContact,
       emergencyPhone,
       managerId,
@@ -207,13 +268,32 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     }
     const validExp = !isNaN(expNum) && expNum >= 0 ? expNum : 0.00;
 
+    // Address fields calculation
+    const isSame = Boolean(permanentAddressSame);
+    const resAddr = residentialAddress ? residentialAddress.trim() : (address ? address.trim() : null);
+    const resCity = residentialCity ? residentialCity.trim() : null;
+    const resState = residentialState ? residentialState.trim() : null;
+    const resPin = residentialPincode ? residentialPincode.trim() : null;
+
+    const permAddr = isSame ? resAddr : (permanentAddress ? permanentAddress.trim() : null);
+    const permCity = isSame ? resCity : (permanentCity ? permanentCity.trim() : null);
+    const permState = isSame ? resState : (permanentState ? permanentState.trim() : null);
+    const permPin = isSame ? resPin : (permanentPincode ? permanentPincode.trim() : null);
+    const permSameVal = isSame ? 1 : 0;
+
+    // Ensure Department & Designation exist in master tables
+    await ensureMasterDepartmentAndDesignation(departmentName, designation);
+
     // Insert profile
     const profileId = uuidv4();
     await pool.query(
       `INSERT INTO employee_profiles (
         id, user_id, department_name, designation, branch_name, shift_name, employment_type,
-        joining_date, experience_years, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        joining_date, experience_years, salary, gender, dob, address,
+        residential_address, residential_city, residential_state, residential_pincode,
+        permanent_address, permanent_city, permanent_state, permanent_pincode, permanent_address_same,
+        emergency_contact, emergency_phone, manager_id, manager_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         profileId,
         userId,
@@ -227,7 +307,16 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
         salary || 50000.00,
         gender || 'Other',
         dob || null,
-        address || null,
+        resAddr,
+        resAddr,
+        resCity,
+        resState,
+        resPin,
+        permAddr,
+        permCity,
+        permState,
+        permPin,
+        permSameVal,
         emergencyContact || null,
         emergencyPhone || null,
         managerId || null,
@@ -293,6 +382,15 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       gender,
       dob,
       address,
+      residentialAddress,
+      residentialCity,
+      residentialState,
+      residentialPincode,
+      permanentAddress,
+      permanentCity,
+      permanentState,
+      permanentPincode,
+      permanentAddressSame,
       emergencyContact,
       emergencyPhone,
       managerId,
@@ -339,18 +437,37 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
     }
     const validExp = !isNaN(expNum) && expNum >= 0 ? expNum : null;
 
+    const isSame = permanentAddressSame !== undefined ? Boolean(permanentAddressSame) : false;
+    const resAddr = residentialAddress !== undefined ? (residentialAddress ? residentialAddress.trim() : null) : (address ? address.trim() : null);
+    const resCity = residentialCity !== undefined ? (residentialCity ? residentialCity.trim() : null) : null;
+    const resState = residentialState !== undefined ? (residentialState ? residentialState.trim() : null) : null;
+    const resPin = residentialPincode !== undefined ? (residentialPincode ? residentialPincode.trim() : null) : null;
+
+    const permAddr = isSame ? resAddr : (permanentAddress !== undefined ? (permanentAddress ? permanentAddress.trim() : null) : null);
+    const permCity = isSame ? resCity : (permanentCity !== undefined ? (permanentCity ? permanentCity.trim() : null) : null);
+    const permState = isSame ? resState : (permanentState !== undefined ? (permanentState ? permanentState.trim() : null) : null);
+    const permPin = isSame ? resPin : (permanentPincode !== undefined ? (permanentPincode ? permanentPincode.trim() : null) : null);
+    const permSameVal = isSame ? 1 : 0;
+
+    // Ensure Department & Designation exist in master tables
+    await ensureMasterDepartmentAndDesignation(departmentName, designation);
+
     // Check if employee profile exists, else create
     const [profiles]: any = await pool.query('SELECT id FROM employee_profiles WHERE user_id = ?', [id]);
     if (profiles.length === 0) {
       await pool.query(
         `INSERT INTO employee_profiles (
           id, user_id, department_name, designation, branch_name, shift_name, employment_type,
-          joining_date, experience_years, salary, gender, dob, address, emergency_contact, emergency_phone, manager_id, manager_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          joining_date, experience_years, salary, gender, dob, address,
+          residential_address, residential_city, residential_state, residential_pincode,
+          permanent_address, permanent_city, permanent_state, permanent_pincode, permanent_address_same,
+          emergency_contact, emergency_phone, manager_id, manager_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           uuidv4(), id, departmentName || null, designation || null, branchName || null, shiftName || null,
           employmentType || null, joiningDate || null, validExp ?? 0.00, salary || null, gender || null,
-          dob || null, address || null, emergencyContact || null, emergencyPhone || null, managerId || null, managerName || null,
+          dob || null, resAddr, resAddr, resCity, resState, resPin, permAddr, permCity, permState, permPin, permSameVal,
+          emergencyContact || null, emergencyPhone || null, managerId || null, managerName || null,
         ]
       );
     } else {
@@ -367,6 +484,15 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
              gender = COALESCE(?, gender),
              dob = COALESCE(?, dob),
              address = COALESCE(?, address),
+             residential_address = COALESCE(?, residential_address),
+             residential_city = COALESCE(?, residential_city),
+             residential_state = COALESCE(?, residential_state),
+             residential_pincode = COALESCE(?, residential_pincode),
+             permanent_address = ?,
+             permanent_city = ?,
+             permanent_state = ?,
+             permanent_pincode = ?,
+             permanent_address_same = ?,
              emergency_contact = COALESCE(?, emergency_contact),
              emergency_phone = COALESCE(?, emergency_phone),
              manager_id = COALESCE(?, manager_id),
@@ -375,7 +501,9 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
         [
           departmentName || null, designation || null, branchName || null, shiftName || null,
           employmentType || null, joiningDate || null, validExp, salary || null, gender || null,
-          dob || null, address || null, emergencyContact || null, emergencyPhone || null,
+          dob || null, resAddr || null, resAddr || null, resCity || null, resState || null, resPin || null,
+          permAddr, permCity, permState, permPin, permSameVal,
+          emergencyContact || null, emergencyPhone || null,
           managerId || null, managerName || null, id,
         ]
       );

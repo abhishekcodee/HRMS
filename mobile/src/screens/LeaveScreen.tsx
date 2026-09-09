@@ -114,9 +114,9 @@ export const LeaveScreen: React.FC<{ role?: UserRole }> = ({ role = UserRole.ADM
         <MobileCard style={{ flex: 1, marginLeft: 6 }}>
           <Text style={styles.balType}>Privilege Leave (PL)</Text>
           <Text style={styles.balCount}>
-            {balances?.privilege?.remaining ?? 12} / {balances?.privilege?.allocated ?? 15}
+            {balances?.privilege?.remaining ?? 14} / {balances?.privilege?.allocated ?? 14}
           </Text>
-          <Text style={styles.balSub}>{balances?.privilege?.used ?? 3} days used</Text>
+          <Text style={styles.balSub}>{balances?.privilege?.used ?? 0} days used</Text>
         </MobileCard>
       </View>
 

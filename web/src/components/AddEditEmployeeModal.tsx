@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Input, Select, Button, FormSection } from './ui';
-import { fetchMasterDepartments, fetchMasterDesignations, MasterDepartment, MasterDesignation } from '../services/masterApi';
+import { fetchMasterDepartments, fetchMasterDesignations, createMasterDepartment, createMasterDesignation, MasterDepartment, MasterDesignation } from '../services/masterApi';
 import { EmployeeDbRecord, fetchNextEmployeeId } from '../services/employeeApi';
 import { Upload, FileText, RefreshCw } from 'lucide-react';
 
@@ -23,6 +23,11 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const [isCustomDept, setIsCustomDept] = useState(false);
+  const [customDeptName, setCustomDeptName] = useState('');
+  const [isCustomDesig, setIsCustomDesig] = useState(false);
+  const [customDesigName, setCustomDesigName] = useState('');
+
   const [formData, setFormData] = useState<any>({
     fullName: employee?.fullName || '',
     employeeId: employee?.employeeId || 'AMPL-00001',
@@ -32,6 +37,15 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     gender: employee?.gender || 'Male',
     dob: employee?.dob || '1995-01-01',
     address: employee?.address || '',
+    residentialAddress: employee?.residentialAddress || employee?.address || '',
+    residentialCity: employee?.residentialCity || '',
+    residentialState: employee?.residentialState || '',
+    residentialPincode: employee?.residentialPincode || '',
+    permanentAddressSame: employee?.permanentAddressSame === 1 || employee?.permanentAddressSame === true || false,
+    permanentAddress: employee?.permanentAddress || '',
+    permanentCity: employee?.permanentCity || '',
+    permanentState: employee?.permanentState || '',
+    permanentPincode: employee?.permanentPincode || '',
     role: employee?.role || 'employee',
     status: employee?.status || 'active',
     departmentName: employee?.departmentName || '',
@@ -48,10 +62,58 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     setFormData((prev: any) => ({ ...prev, employeeId: nextId }));
   };
 
+  const handleResidentialChange = (field: string, value: string) => {
+    setFormData((prev: any) => {
+      const updated = { ...prev, [field]: value };
+      if (updated.permanentAddressSame) {
+        if (field === 'residentialAddress') {
+          updated.permanentAddress = value;
+          updated.address = value;
+        } else if (field === 'residentialCity') {
+          updated.permanentCity = value;
+        } else if (field === 'residentialState') {
+          updated.permanentState = value;
+        } else if (field === 'residentialPincode') {
+          updated.permanentPincode = value;
+        }
+      } else if (field === 'residentialAddress') {
+        updated.address = value;
+      }
+      return updated;
+    });
+  };
+
+  const handleSameAddressToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setFormData((prev: any) => {
+      if (checked) {
+        return {
+          ...prev,
+          permanentAddressSame: true,
+          permanentAddress: prev.residentialAddress,
+          permanentCity: prev.residentialCity,
+          permanentState: prev.residentialState,
+          permanentPincode: prev.residentialPincode,
+        };
+      } else {
+        return {
+          ...prev,
+          permanentAddressSame: false,
+        };
+      }
+    });
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
     if (employee) {
+      const isSame = employee.permanentAddressSame === 1 || employee.permanentAddressSame === true;
+      const resAddr = employee.residentialAddress || employee.address || '';
+      const resCity = employee.residentialCity || '';
+      const resState = employee.residentialState || '';
+      const resPin = employee.residentialPincode || '';
+
       setFormData({
         fullName: employee.fullName || '',
         employeeId: employee.employeeId || '',
@@ -60,7 +122,16 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         phone: employee.phone || '',
         gender: employee.gender || 'Male',
         dob: employee.dob || '1995-01-01',
-        address: employee.address || '',
+        address: resAddr,
+        residentialAddress: resAddr,
+        residentialCity: resCity,
+        residentialState: resState,
+        residentialPincode: resPin,
+        permanentAddressSame: isSame,
+        permanentAddress: isSame ? resAddr : (employee.permanentAddress || ''),
+        permanentCity: isSame ? resCity : (employee.permanentCity || ''),
+        permanentState: isSame ? resState : (employee.permanentState || ''),
+        permanentPincode: isSame ? resPin : (employee.permanentPincode || ''),
         role: employee.role || 'employee',
         status: employee.status || 'active',
         departmentName: employee.departmentName || '',
@@ -74,6 +145,11 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     } else {
       handleGenerateId();
     }
+
+    setIsCustomDept(false);
+    setCustomDeptName('');
+    setIsCustomDesig(false);
+    setCustomDesigName('');
 
     async function loadMasterData() {
       const depts = await fetchMasterDepartments();
@@ -115,9 +191,35 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
       return;
     }
 
+    const finalDept = isCustomDept ? customDeptName.trim() : formData.departmentName;
+    const finalDesig = isCustomDesig ? customDesigName.trim() : formData.designation;
+
+    if (!finalDept) {
+      setErrorMessage('Department is required. Please select or enter a custom department.');
+      return;
+    }
+    if (!finalDesig) {
+      setErrorMessage('Designation is required. Please select or enter a custom designation.');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      departmentName: finalDept,
+      designation: finalDesig,
+    };
+
     setLoading(true);
     try {
-      await onSave(formData);
+      if (isCustomDept && customDeptName.trim()) {
+        const code = customDeptName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15);
+        await createMasterDepartment(customDeptName.trim(), code || 'DEPT_CUSTOM');
+      }
+      if (isCustomDesig && customDesigName.trim()) {
+        await createMasterDesignation(customDesigName.trim(), finalDept);
+      }
+
+      await onSave(payload);
       onClose();
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to save employee in database.');
@@ -226,30 +328,220 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
               onChange={e => setFormData({ ...formData, dob: e.target.value })}
             />
           </div>
-          <Input
-            label="Residential Address"
-            value={formData.address}
-            onChange={e => setFormData({ ...formData, address: e.target.value })}
-          />
+          {/* Residential Address Header & Fields */}
+          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              A. Residential Address
+            </div>
+            <Input
+              label="Residential Address"
+              placeholder="House/Flat No., Building, Street, Area"
+              value={formData.residentialAddress}
+              onChange={e => handleResidentialChange('residentialAddress', e.target.value)}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Input
+                label="Residential City"
+                placeholder="e.g. Mumbai"
+                value={formData.residentialCity}
+                onChange={e => handleResidentialChange('residentialCity', e.target.value)}
+              />
+              <Input
+                label="Residential State"
+                placeholder="e.g. Maharashtra"
+                value={formData.residentialState}
+                onChange={e => handleResidentialChange('residentialState', e.target.value)}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Input
+                label="Residential Pincode"
+                placeholder="e.g. 400001"
+                value={formData.residentialPincode}
+                onChange={e => handleResidentialChange('residentialPincode', e.target.value)}
+              />
+              <div />
+            </div>
+          </div>
+
+          {/* Same Address Checkbox */}
+          <div style={{
+            margin: '0.5rem 0',
+            padding: '0.75rem 1rem',
+            backgroundColor: 'rgba(59, 130, 246, 0.06)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+            borderRadius: 'var(--radius-md, 8px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem'
+          }}>
+            <input
+              type="checkbox"
+              id="permanentAddressSame"
+              checked={Boolean(formData.permanentAddressSame)}
+              onChange={handleSameAddressToggle}
+              style={{
+                width: '16px',
+                height: '16px',
+                accentColor: '#3b82f6',
+                cursor: 'pointer'
+              }}
+            />
+            <label
+              htmlFor="permanentAddressSame"
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}
+            >
+              Permanent Address is same as Residential Address
+            </label>
+          </div>
+
+          {/* Permanent Address Header & Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              B. Permanent Address
+            </div>
+            <Input
+              label="Permanent Address"
+              placeholder="House/Flat No., Building, Street, Area"
+              disabled={Boolean(formData.permanentAddressSame)}
+              value={formData.permanentAddress}
+              onChange={e => setFormData({ ...formData, permanentAddress: e.target.value })}
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Input
+                label="Permanent City"
+                placeholder="e.g. Mumbai"
+                disabled={Boolean(formData.permanentAddressSame)}
+                value={formData.permanentCity}
+                onChange={e => setFormData({ ...formData, permanentCity: e.target.value })}
+              />
+              <Input
+                label="Permanent State"
+                placeholder="e.g. Maharashtra"
+                disabled={Boolean(formData.permanentAddressSame)}
+                value={formData.permanentState}
+                onChange={e => setFormData({ ...formData, permanentState: e.target.value })}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <Input
+                label="Permanent Pincode"
+                placeholder="e.g. 400001"
+                disabled={Boolean(formData.permanentAddressSame)}
+                value={formData.permanentPincode}
+                onChange={e => setFormData({ ...formData, permanentPincode: e.target.value })}
+              />
+              <div />
+            </div>
+          </div>
         </FormSection>
 
         {/* Section 2: Employment Hierarchy (Master Data Driven) */}
         <FormSection title="2. Employment & Master Allocation" description="Dynamic Master Department & Designation dropdowns">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <Select
-              label="Department (From master_departments)"
-              required
-              options={departments.length > 0 ? departments.map(d => ({ value: d.name, label: d.name })) : [{ value: 'Information Technology', label: 'Information Technology' }]}
-              value={formData.departmentName}
-              onChange={e => setFormData({ ...formData, departmentName: e.target.value })}
-            />
-            <Select
-              label="Designation (From master_designations)"
-              required
-              options={designations.length > 0 ? designations.map(d => ({ value: d.name, label: d.name })) : [{ value: 'Senior Software Engineer', label: 'Senior Software Engineer' }]}
-              value={formData.designation}
-              onChange={e => setFormData({ ...formData, designation: e.target.value })}
-            />
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Department (From master_departments) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDept(!isCustomDept);
+                    if (!isCustomDept) setCustomDeptName('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#3b82f6',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isCustomDept ? '← Select List' : '+ Add Custom'}
+                </button>
+              </div>
+              {!isCustomDept ? (
+                <Select
+                  options={[
+                    ...(departments.length > 0 ? departments.map(d => ({ value: d.name, label: d.name })) : [{ value: 'Information Technology', label: 'Information Technology' }]),
+                    { value: '__CUSTOM__', label: '+ Add Custom Department...' }
+                  ]}
+                  value={formData.departmentName}
+                  onChange={e => {
+                    if (e.target.value === '__CUSTOM__') {
+                      setIsCustomDept(true);
+                      setCustomDeptName('');
+                    } else {
+                      setFormData({ ...formData, departmentName: e.target.value });
+                    }
+                  }}
+                />
+              ) : (
+                <Input
+                  placeholder="Enter New Custom Department Name"
+                  required
+                  value={customDeptName}
+                  onChange={e => setCustomDeptName(e.target.value)}
+                />
+              )}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Designation (From master_designations) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDesig(!isCustomDesig);
+                    if (!isCustomDesig) setCustomDesigName('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#3b82f6',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isCustomDesig ? '← Select List' : '+ Add Custom'}
+                </button>
+              </div>
+              {!isCustomDesig ? (
+                <Select
+                  options={[
+                    ...(designations.length > 0 ? designations.map(d => ({ value: d.name, label: d.name })) : [{ value: 'Senior Software Engineer', label: 'Senior Software Engineer' }]),
+                    { value: '__CUSTOM__', label: '+ Add Custom Designation...' }
+                  ]}
+                  value={formData.designation}
+                  onChange={e => {
+                    if (e.target.value === '__CUSTOM__') {
+                      setIsCustomDesig(true);
+                      setCustomDesigName('');
+                    } else {
+                      setFormData({ ...formData, designation: e.target.value });
+                    }
+                  }}
+                />
+              ) : (
+                <Input
+                  placeholder="Enter New Custom Designation Name"
+                  required
+                  value={customDesigName}
+                  onChange={e => setCustomDesigName(e.target.value)}
+                />
+              )}
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Input
@@ -283,7 +575,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <Input
-              label="Monthly Compensation (Salary)"
+              label="Monthly Compensation (Gross Salary)"
               type="number"
               value={formData.salary}
               onChange={e => setFormData({ ...formData, salary: parseFloat(e.target.value) })}

@@ -35,13 +35,32 @@ export async function fetchMobileLeaveBalances(): Promise<any> {
   try {
     const res = await fetch(`${BASE_URL}/leave/balances`);
     const json = await res.json();
-    if (json.success && json.data) {
-      return json.data;
+    if (json.success && json.summary) {
+      return {
+        casual: { allocated: json.summary.cl.allocated, used: json.summary.cl.used, remaining: json.summary.cl.remaining },
+        privilege: { allocated: json.summary.pl.allocated, used: json.summary.pl.used, remaining: json.summary.pl.remaining },
+      };
     }
-    return { casual: { allocated: 12, used: 2, remaining: 10 }, privilege: { allocated: 15, used: 3, remaining: 12 }, sick: { allocated: 7, used: 1, remaining: 6 } };
+    if (json.success && Array.isArray(json.data)) {
+      const cl = json.data.find((b: any) => b.leaveType === 'CL' || b.leaveType === 'Casual Leave') || {};
+      const pl = json.data.find((b: any) => b.leaveType === 'PL' || b.leaveType === 'Privilege Leave') || {};
+      return {
+        casual: {
+          allocated: cl.allocated !== undefined ? cl.allocated : (cl.allocatedDays !== undefined ? cl.allocatedDays : 0),
+          used: cl.used !== undefined ? cl.used : (cl.usedDays !== undefined ? cl.usedDays : 0),
+          remaining: cl.remaining !== undefined ? cl.remaining : (cl.remainingDays !== undefined ? cl.remainingDays : 0),
+        },
+        privilege: {
+          allocated: pl.allocated !== undefined ? pl.allocated : (pl.allocatedDays !== undefined ? pl.allocatedDays : 0),
+          used: pl.used !== undefined ? pl.used : (pl.usedDays !== undefined ? pl.usedDays : 0),
+          remaining: pl.remaining !== undefined ? pl.remaining : (pl.remainingDays !== undefined ? pl.remainingDays : 0),
+        },
+      };
+    }
+    return { casual: { allocated: 10, used: 0, remaining: 10 }, privilege: { allocated: 14, used: 0, remaining: 14 } };
   } catch (err) {
     console.log('[Mobile API] Error fetching leave balances:', err);
-    return { casual: { allocated: 12, used: 2, remaining: 10 }, privilege: { allocated: 15, used: 3, remaining: 12 }, sick: { allocated: 7, used: 1, remaining: 6 } };
+    return { casual: { allocated: 10, used: 0, remaining: 10 }, privilege: { allocated: 14, used: 0, remaining: 14 } };
   }
 }
 
