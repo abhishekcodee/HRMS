@@ -10,7 +10,7 @@ const envSchema = z.object({
   PORT: z.string().transform((val) => parseInt(val, 10)).default('4000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_PREFIX: z.string().default('/api/v1'),
-  CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:5173'),
+  CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:8080'),
   
   // Database Configuration (MySQL / Localhost)
   DB_HOST: z.string().default('localhost'),

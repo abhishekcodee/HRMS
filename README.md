@@ -112,7 +112,7 @@ npm run build
 npm run dev
 ```
 
-- **Web Dashboard Portal**: [http://localhost:8080](http://localhost:8080) (or `http://localhost:5173`)
+- **Web Dashboard Portal**: [http://localhost:8080](http://localhost:8080)
 - **Backend API & Socket Server**: [http://localhost:4000](http://localhost:4000)
 - **API Health Check**: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health)
 

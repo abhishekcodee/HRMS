@@ -259,7 +259,7 @@ export async function sendLeaveAppliedEmail(payload: LeaveEmailPayload): Promise
     return { success: false, notificationId, error: errorMsg };
   }
 
-  const hrmsUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const hrmsUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
   const htmlContent = renderLeaveAppliedTemplate(payload, hrmsUrl);
 
   try {
