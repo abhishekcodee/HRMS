@@ -133,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveRoleView(dbRoleUpper);
 
       localStorage.setItem('hrms_token', result.data.token);
+      localStorage.setItem('token', result.data.token);
       localStorage.setItem('hrms_user', JSON.stringify(userProfile));
       localStorage.setItem('hrms_active_role', dbRoleUpper);
 
@@ -173,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.data?.token) {
         setToken(result.data.token);
         localStorage.setItem('hrms_token', result.data.token);
+        localStorage.setItem('token', result.data.token);
       }
 
       if (result.data?.user) {
@@ -199,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setActiveRoleView(UserRole.ADMIN);
     localStorage.removeItem('hrms_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('hrms_user');
     localStorage.removeItem('hrms_active_role');
     localStorage.clear();

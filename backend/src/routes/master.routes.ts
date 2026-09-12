@@ -13,13 +13,20 @@ import {
   getMasterDesignations,
   createMasterDesignation,
   getMasterBranches,
+  createMasterBranch,
   getMasterShifts,
+  createMasterShift,
   getMasterEmploymentTypes,
+  getMasterGrades,
+  createMasterGrade,
+  deleteMasterGrade,
+  getMasterCostCenters,
+  createMasterCostCenter,
+  deleteMasterCostCenter,
 } from '../modules/master/masterController.js';
 
 export const masterRouter = Router();
 
-// Master Data APIs are accessible to authenticated users
 masterRouter.use(authenticateToken);
 
 masterRouter.get('/departments', getMasterDepartments);
@@ -37,5 +44,17 @@ masterRouter.get('/designations', getMasterDesignations);
 masterRouter.post('/designations', createMasterDesignation);
 
 masterRouter.get('/branches', getMasterBranches);
+masterRouter.post('/branches', createMasterBranch);
+
 masterRouter.get('/shifts', getMasterShifts);
+masterRouter.post('/shifts', createMasterShift);
+
 masterRouter.get('/employment-types', getMasterEmploymentTypes);
+
+masterRouter.get('/grades', getMasterGrades);
+masterRouter.post('/grades', createMasterGrade);
+masterRouter.delete('/grades/:id', deleteMasterGrade);
+
+masterRouter.get('/cost-centers', getMasterCostCenters);
+masterRouter.post('/cost-centers', createMasterCostCenter);
+masterRouter.delete('/cost-centers/:id', deleteMasterCostCenter);

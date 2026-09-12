@@ -89,7 +89,7 @@ export const ReportsPage: React.FC = () => {
   const [recruitmentData, setRecruitmentData] = useState<{ funnel: any[]; conversionRate: string; avgTimeToHireDays: number }>({ funnel: [], conversionRate: '0%', avgTimeToHireDays: 0 });
 
   // Detailed Report Table State
-  const [reportTab, setReportTab] = useState<'employee' | 'attendance' | 'leave' | 'payroll'>('employee');
+  const [reportTab, setReportTab] = useState<'employee' | 'attendance' | 'leave' | 'payroll' | 'pf' | 'esic' | 'pt' | 'tds' | 'bank' | 'ff'>('employee');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [reportRows, setReportRows] = useState<any[]>([]);

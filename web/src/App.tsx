@@ -28,6 +28,12 @@ import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
 import BiometricDevicesPage from './pages/BiometricDevicesPage';
 import CalendarPage from './pages/CalendarPage';
 import ChatPage from './pages/ChatPage';
+import { PayrollProcessingPage } from './pages/PayrollProcessingPage';
+import { SalaryStructuresPage } from './pages/SalaryStructuresPage';
+import { StatutorySettingsPage } from './pages/StatutorySettingsPage';
+import { BankTransferPage } from './pages/BankTransferPage';
+import { FullAndFinalPage } from './pages/FullAndFinalPage';
+import { UpcomingPayrollPage } from './pages/UpcomingPayrollPage';
 
 import DocumentDashboardPage from './pages/documentManagement/DocumentDashboardPage';
 import DocumentTypesManagerPage from './pages/documentManagement/DocumentTypesManagerPage';
@@ -136,7 +142,13 @@ export function App() {
                           {/* Security & Audit Center */}
                           <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
 
-                          {/* Payroll & Salary Slips */}
+                          {/* Production Payroll & Salary Engine */}
+                          <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
+                          <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
+                          <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
+                          <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
+                          <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
+                          <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
                           <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
 
                           {/* Reports & Analytics */}

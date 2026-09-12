@@ -250,6 +250,29 @@ export async function getMasterBranches(req: Request, res: Response): Promise<vo
 }
 
 /**
+ * Create Master Branch
+ */
+export async function createMasterBranch(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { name, code, city, state, country } = req.body;
+    if (!name || !code) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Branch Name and Code are required.' } });
+      return;
+    }
+
+    const branchId = uuidv4();
+    await pool.query(
+      'INSERT INTO master_branches (id, name, code, city, state, country) VALUES (?, ?, ?, ?, ?, ?)',
+      [branchId, name.trim(), code.trim().toUpperCase(), city || null, state || null, country || 'India']
+    );
+
+    res.status(201).json({ success: true, message: 'Branch created successfully.', data: { id: branchId, name, code } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to create branch.' } });
+  }
+}
+
+/**
  * Get All Master Shifts
  */
 export async function getMasterShifts(req: Request, res: Response): Promise<void> {
@@ -262,6 +285,29 @@ export async function getMasterShifts(req: Request, res: Response): Promise<void
 }
 
 /**
+ * Create Master Shift
+ */
+export async function createMasterShift(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { name, startTime, endTime } = req.body;
+    if (!name || !startTime || !endTime) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Shift Name, Start Time, and End Time are required.' } });
+      return;
+    }
+
+    const shiftId = uuidv4();
+    await pool.query(
+      'INSERT INTO master_shifts (id, name, start_time, end_time) VALUES (?, ?, ?, ?)',
+      [shiftId, name.trim(), startTime, endTime]
+    );
+
+    res.status(201).json({ success: true, message: 'Shift created successfully.', data: { id: shiftId, name, startTime, endTime } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to create shift.' } });
+  }
+}
+
+/**
  * Get All Master Employment Types
  */
 export async function getMasterEmploymentTypes(req: Request, res: Response): Promise<void> {
@@ -270,5 +316,101 @@ export async function getMasterEmploymentTypes(req: Request, res: Response): Pro
     res.json({ success: true, data: rows });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch employment types.' } });
+  }
+}
+
+/**
+ * Get All Master Grades
+ */
+export async function getMasterGrades(req: Request, res: Response): Promise<void> {
+  try {
+    const [rows]: any = await pool.query('SELECT id, name, code, level, description FROM master_grades ORDER BY level ASC, name ASC');
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch grades.' } });
+  }
+}
+
+/**
+ * Create Master Grade
+ */
+export async function createMasterGrade(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { name, code, level, description } = req.body;
+    if (!name || !code) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Grade Name and Code are required.' } });
+      return;
+    }
+
+    const gradeId = uuidv4();
+    await pool.query(
+      'INSERT INTO master_grades (id, name, code, level, description) VALUES (?, ?, ?, ?, ?)',
+      [gradeId, name.trim(), code.trim().toUpperCase(), Number(level) || 1, description || null]
+    );
+
+    res.status(201).json({ success: true, message: 'Grade created successfully.', data: { id: gradeId, name, code, level } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to create grade.' } });
+  }
+}
+
+/**
+ * Delete Master Grade
+ */
+export async function deleteMasterGrade(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM master_grades WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Grade deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to delete grade.' } });
+  }
+}
+
+/**
+ * Get All Master Cost Centers
+ */
+export async function getMasterCostCenters(req: Request, res: Response): Promise<void> {
+  try {
+    const [rows]: any = await pool.query('SELECT id, name, code, description FROM master_cost_centers ORDER BY name ASC');
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch cost centers.' } });
+  }
+}
+
+/**
+ * Create Master Cost Center
+ */
+export async function createMasterCostCenter(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { name, code, description } = req.body;
+    if (!name || !code) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Cost Center Name and Code are required.' } });
+      return;
+    }
+
+    const ccId = uuidv4();
+    await pool.query(
+      'INSERT INTO master_cost_centers (id, name, code, description) VALUES (?, ?, ?, ?)',
+      [ccId, name.trim(), code.trim().toUpperCase(), description || null]
+    );
+
+    res.status(201).json({ success: true, message: 'Cost Center created successfully.', data: { id: ccId, name, code } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to create cost center.' } });
+  }
+}
+
+/**
+ * Delete Master Cost Center
+ */
+export async function deleteMasterCostCenter(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM master_cost_centers WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Cost Center deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to delete cost center.' } });
   }
 }

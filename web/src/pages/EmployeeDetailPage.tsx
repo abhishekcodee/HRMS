@@ -400,10 +400,16 @@ export const EmployeeDetailPage: React.FC = () => {
       {/* Tabs */}
       <Tabs
         tabs={[
-          { id: 'overview', label: 'Overview & Personal' },
-          { id: 'attendance', label: 'Attendance Logs' },
-          { id: 'employment', label: 'Employment Details' },
+          { id: 'overview', label: 'Personal Information' },
+          { id: 'employment', label: 'Employment' },
+          { id: 'attendance', label: 'Attendance' },
+          { id: 'leave', label: 'Leave & Balances' },
+          { id: 'salary', label: 'Salary Structure' },
+          { id: 'bank', label: 'Bank Details' },
+          { id: 'statutory', label: 'Statutory Details' },
+          { id: 'payslips', label: 'Payslips' },
           { id: 'documents', label: 'Documents' },
+          { id: 'ff', label: 'Full & Final' },
         ]}
         activeTab={activeTab}
         onChange={setActiveTab}
