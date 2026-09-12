@@ -33,6 +33,8 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Determine current display employee profile from auth state
+  const effectiveRole = (activeRoleView === 'SUPER_ADMIN' ? UserRole.ADMIN : activeRoleView) as UserRole;
+
   const currentUser: EmployeeMock = user
     ? {
         id: user.id,
@@ -44,8 +46,8 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         gender: 'Male',
         dob: '1990-01-01',
         address: 'Enterprise HQ, India',
-        role: activeRoleView,
-        designation: user.role === UserRole.ADMIN ? 'Chief Administrator' : user.role === UserRole.EMPLOYER ? 'Enterprise Employer' : 'Full Stack Engineer',
+        role: effectiveRole,
+        designation: user.role === UserRole.ADMIN || user.role === 'SUPER_ADMIN' ? 'Chief Administrator' : user.role === UserRole.EMPLOYER ? 'Enterprise Employer' : 'Full Stack Engineer',
         departmentId: 'dept-1',
         departmentName: 'Operations',
         teamId: 'team-1',
@@ -66,7 +68,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
         gender: 'Male',
         dob: '1990-01-01',
         address: '',
-        role: activeRoleView,
+        role: effectiveRole,
         designation: 'User',
         departmentId: 'dept-1',
         departmentName: 'General',
@@ -82,7 +84,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <RoleContext.Provider
       value={{
-        role: activeRoleView,
+        role: effectiveRole,
         setRole,
         theme,
         toggleTheme,

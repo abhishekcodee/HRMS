@@ -6,14 +6,18 @@ import { pool } from '../database/index.js';
 export interface AuthRequest extends Request {
   user?: {
     id: string;
+    companyId?: string | null;
+    isSuperAdmin: boolean;
     employeeId: string;
     fullName: string;
     email: string;
-    role: 'admin' | 'employer' | 'employee';
+    role: 'super_admin' | 'admin' | 'employer' | 'employee';
     status: 'active' | 'inactive' | 'suspended';
     mustChangePassword: boolean;
     profilePhoto?: string;
   };
+  tenantId?: string | null;
+  isSuperAdmin?: boolean;
 }
 
 export async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -39,7 +43,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     const decoded = jwt.verify(token, env.JWT_SECRET) as any;
 
     const [rows]: any = await pool.query(
-      'SELECT id, employee_id, full_name, email, role, status, profile_photo, must_change_password FROM users WHERE id = ?',
+      'SELECT id, company_id, employee_id, full_name, email, role, status, profile_photo, must_change_password FROM users WHERE id = ?',
       [decoded.id]
     );
 
@@ -67,8 +71,13 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       return;
     }
 
+    const isSuper = user.role === 'super_admin';
+    const headerTenantId = req.headers['x-tenant-id'] as string;
+
     req.user = {
       id: user.id,
+      companyId: user.company_id || null,
+      isSuperAdmin: isSuper,
       employeeId: user.employee_id,
       fullName: user.full_name,
       email: user.email,
@@ -77,6 +86,9 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       profilePhoto: user.profile_photo || undefined,
       mustChangePassword: user.must_change_password === 1 || user.must_change_password === true,
     };
+
+    req.isSuperAdmin = isSuper;
+    req.tenantId = isSuper ? (headerTenantId || user.company_id || null) : (user.company_id || 'c1000000-0000-0000-0000-000000000001');
 
     next();
   } catch (err) {
@@ -90,7 +102,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
   }
 }
 
-export function requireRole(allowedRoles: Array<'admin' | 'employer' | 'employee'>) {
+export function requireRole(allowedRoles: Array<'super_admin' | 'admin' | 'employer' | 'employee'>) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
@@ -121,7 +133,9 @@ export function requireRole(allowedRoles: Array<'admin' | 'employer' | 'employee
       }
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    // Super admin has permission for all admin and employer routes
+    const isSuper = req.user.role === 'super_admin';
+    if (!isSuper && !allowedRoles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
         error: {

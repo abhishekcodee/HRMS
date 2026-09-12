@@ -26,7 +26,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     const trimmedIdentifier = rawIdentifier.trim();
 
     const [rows]: any = await pool.query(
-      `SELECT id, employee_id, full_name, email, phone, password_hash, role, status, profile_photo, must_change_password
+      `SELECT id, company_id, employee_id, full_name, email, phone, password_hash, role, status, profile_photo, must_change_password
        FROM users
        WHERE LOWER(email) = LOWER(?) OR LOWER(employee_id) = LOWER(?)`,
       [trimmedIdentifier, trimmedIdentifier]
@@ -56,13 +56,36 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Check company status if user is tied to a company
+    let companyInfo: any = null;
+    if (user.company_id) {
+      const [cRows]: any = await pool.query(
+        'SELECT id, name, code, status, logo_url, brand_color, custom_domain FROM companies WHERE id = ?',
+        [user.company_id]
+      );
+      if (cRows.length > 0) {
+        companyInfo = cRows[0];
+        if (companyInfo.status === 'suspended' || companyInfo.status === 'inactive') {
+          res.status(403).json({
+            success: false,
+            error: {
+              code: 'COMPANY_SUSPENDED',
+              message: `Your company (${companyInfo.name}) subscription is currently ${companyInfo.status.toUpperCase()}. Please contact Platform Support.`,
+            },
+          });
+          return;
+        }
+      }
+    }
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       await pool.query(
-        `INSERT INTO audit_logs (id, user_id, user_email, role, action, details, ip_address)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details, ip_address)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           uuidv4(),
+          user.company_id || null,
           user.id,
           user.email,
           user.role,
@@ -86,13 +109,15 @@ export async function login(req: Request, res: Response): Promise<void> {
     await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
 
     const mustChangePassword = user.must_change_password === 1 || user.must_change_password === true;
+    const isSuperAdmin = user.role === 'super_admin';
 
     // Record audit log
     await pool.query(
-      `INSERT INTO audit_logs (id, user_id, user_email, role, action, details, ip_address)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         uuidv4(),
+        user.company_id || null,
         user.id,
         user.email,
         user.role,
@@ -105,6 +130,8 @@ export async function login(req: Request, res: Response): Promise<void> {
     // Sign JWT token
     const tokenPayload = {
       id: user.id,
+      companyId: user.company_id || null,
+      isSuperAdmin,
       employeeId: user.employee_id,
       email: user.email,
       role: user.role,
@@ -119,6 +146,9 @@ export async function login(req: Request, res: Response): Promise<void> {
         token,
         user: {
           id: user.id,
+          companyId: user.company_id || null,
+          isSuperAdmin,
+          company: companyInfo,
           employeeId: user.employee_id,
           fullName: user.full_name,
           email: user.email,

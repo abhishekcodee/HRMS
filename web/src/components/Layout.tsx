@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRole } from '../context/RoleContext';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 import { UserRole } from '@hrms/shared';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { NotificationDrawer } from './NotificationDrawer';
@@ -32,7 +33,9 @@ import {
   LogOut,
   ChevronDown,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Globe,
+  Palette,
 } from 'lucide-react';
 import { fetchTotalUnreadChatCount } from '../services/chatApi';
 
@@ -40,13 +43,14 @@ interface NavItemConfig {
   path: string;
   label: string;
   icon: React.ReactNode;
-  roles: UserRole[];
+  roles: (UserRole | string)[];
   badge?: string;
 }
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, setRole, theme, toggleTheme, currentUser, unreadNotificationCount } = useRole();
   const { user, logout } = useAuth();
+  const { branding, activeTenantId } = useTenant();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -77,37 +81,44 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const isSuper = user?.isSuperAdmin || user?.role === 'SUPER_ADMIN';
+
   const navItems: NavItemConfig[] = [
-    { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE] },
+    // Super Admin Platform Control
+    ...(isSuper
+      ? [{ path: '/super-admin', label: 'Platform SaaS Control', icon: <Globe size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }]
+      : []),
+
+    { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] },
     
     // Shared Internal Chat Module for All Roles
     {
       path: '/chat',
       label: 'Chat',
       icon: <MessageSquare size={20} />,
-      roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE],
+      roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'],
       badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined
     },
 
     // Admin & Employer Shared Management
-    { path: '/employees', label: 'Employees', icon: <Users size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/departments', label: 'Departments', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/teams', label: 'Teams', icon: <Users2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/bank-transfer', label: 'Bank Transfer Advice', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/payroll/ff-settlement', label: 'Full & Final (F&F)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/document-management', label: 'Document Management', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/documents', label: 'Document Uploads', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
-    { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER] },
+    { path: '/employees', label: 'Employees', icon: <Users size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/departments', label: 'Departments', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/teams', label: 'Teams', icon: <Users2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/bank-transfer', label: 'Bank Transfer Advice', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/payroll/ff-settlement', label: 'Full & Final (F&F)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/document-management', label: 'Document Management', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/documents', label: 'Document Uploads', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
 
     // Employee Self Service Nav
     { path: '/my-profile', label: 'My Profile', icon: <User size={20} />, roles: [UserRole.EMPLOYEE] },
@@ -116,14 +127,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-documents', label: 'My Documents', icon: <FileText size={20} />, roles: [UserRole.EMPLOYEE] },
 
-    // Admin Only System Controls
-    { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN] },
-    { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN] },
-    { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.ADMIN] },
-    { path: '/audit', label: 'Audit Logs', icon: <History size={20} />, roles: [UserRole.ADMIN] }
+    // Admin Only System Controls & White Labeling
+    { path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+    { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+    { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+    { path: '/audit', label: 'Audit Logs', icon: <History size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] }
   ];
 
-  const visibleNav = navItems.filter(item => item.roles.includes(role));
+  const visibleNav = navItems.filter(item => item.roles.includes(role as any));
 
   const handleRoleSwitch = async (targetRole: UserRole) => {
     setRoleSwitchError(null);

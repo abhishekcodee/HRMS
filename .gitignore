@@ -42,3 +42,14 @@ scratch/
 # Testing coverage
 coverage/
 .nyc_output/
+
+# Flutter / Mobile SDK & builds
+flutter_sdk/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+*.apk
+*.aab
+

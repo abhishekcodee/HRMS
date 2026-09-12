@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { TenantProvider } from './context/TenantContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { RoleProvider } from './context/RoleContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -43,6 +44,8 @@ import EmployeeLockerPage from './pages/documentManagement/EmployeeLockerPage';
 import AppointmentLetterGeneratorPage from './pages/documentManagement/AppointmentLetterGeneratorPage';
 import MultiDocumentGeneratorStudio from './pages/documentManagement/MultiDocumentGeneratorStudio';
 import SecurityAuditCenterPage from './pages/security/SecurityAuditCenterPage';
+import { SuperAdminDashboardPage } from './pages/superAdmin/SuperAdminDashboardPage';
+import { CompanyBrandingPage } from './pages/CompanyBrandingPage';
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
@@ -66,7 +69,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
     return <Navigate to="/change-password" replace />;
   }
 
-  if (adminOnly && activeRoleView !== 'ADMIN') {
+  if (adminOnly && activeRoleView !== 'ADMIN' && !user?.isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
@@ -77,35 +80,38 @@ export function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <NotificationProvider>
-          <RoleProvider>
-            <ToastProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Unauthenticated Login Route */}
-                <Route path="/login" element={<LoginPage />} />
+        <TenantProvider>
+          <NotificationProvider>
+            <RoleProvider>
+              <ToastProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Unauthenticated Login Route */}
+                  <Route path="/login" element={<LoginPage />} />
 
-                {/* Mandatory First-Time Password Change Route */}
-                <Route
-                  path="/change-password"
-                  element={
-                    <ProtectedRoute>
-                      <ChangePasswordPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Mandatory First-Time Password Change Route */}
+                  <Route
+                    path="/change-password"
+                    element={
+                      <ProtectedRoute>
+                        <ChangePasswordPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Protected Application Routes inside Layout */}
-                <Route
-                  path="/*"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <Routes>
-                          <Route path="/" element={<Dashboard />} />
-                          
-                          {/* HRMS Internal Communication Platform */}
-                          <Route path="/chat" element={<ChatPage />} />
+                  {/* Protected Application Routes inside Layout */}
+                  <Route
+                    path="/*"
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
+                            <Route path="/company-branding" element={<CompanyBrandingPage />} />
+                            
+                            {/* HRMS Internal Communication Platform */}
+                            <Route path="/chat" element={<ChatPage />} />
                           
                           {/* Employee Management */}
                           <Route path="/employees" element={<EmployeesPage />} />
@@ -177,8 +183,9 @@ export function App() {
           </ToastProvider>
         </RoleProvider>
       </NotificationProvider>
-    </AuthProvider>
-    </ErrorBoundary>
+    </TenantProvider>
+  </AuthProvider>
+</ErrorBoundary>
   );
 }
 

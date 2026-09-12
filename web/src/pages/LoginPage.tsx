@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTenant } from '../context/TenantContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
@@ -9,6 +10,7 @@ import { Modal } from '../components/ui/Modal';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
+  const { branding } = useTenant();
   const navigate = useNavigate();
 
   const [identifier, setIdentifier] = useState('');
@@ -92,33 +94,41 @@ export const LoginPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 1))',
+        background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 1))',
         padding: '2rem 1rem',
       }}
     >
       <div style={{ width: '100%', maxWidth: '440px' }}>
-        {/* HRMS Branding Header */}
+        {/* Dynamic HRMS Tenant Branding Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, var(--primary, #3b82f6), #1d4ed8)',
-              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
-              marginBottom: '1rem',
-            }}
-          >
-            <ShieldCheck size={32} color="#ffffff" />
-          </div>
+          {branding.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt={branding.name}
+              style={{ maxHeight: '60px', marginBottom: '1rem', objectFit: 'contain' }}
+            />
+          ) : (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '56px',
+                height: '56px',
+                borderRadius: '16px',
+                background: branding.brand_color ? branding.brand_color : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                marginBottom: '1rem',
+              }}
+            >
+              <ShieldCheck size={32} color="#ffffff" />
+            </div>
+          )}
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
-            HRMS Portal
+            {branding.name || 'HRMS Portal'}
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-            Enterprise Resource & Workforce Management System
+            Multi-Tenant Enterprise HRMS & Payroll System
           </p>
         </div>
 

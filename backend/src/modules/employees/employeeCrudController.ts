@@ -3,56 +3,70 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
 
 /**
  * Automatically insert custom department or designation into master tables if not existing
  */
-async function ensureMasterDepartmentAndDesignation(departmentName?: string, designationName?: string): Promise<void> {
+async function ensureMasterDepartmentAndDesignation(departmentName?: string, designationName?: string, companyId?: string): Promise<void> {
   if (departmentName && departmentName.trim()) {
     const trimmedDept = departmentName.trim();
-    const [existingDept]: any = await pool.query('SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?)', [trimmedDept]);
+    const [existingDept]: any = await pool.query(
+      'SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?) AND (company_id = ? OR company_id IS NULL)',
+      [trimmedDept, companyId || null]
+    );
     if (existingDept.length === 0) {
       let code = trimmedDept.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15);
       if (!code || code.length < 2) code = 'DEPT_' + Math.floor(100 + Math.random() * 900);
       
-      const [existingCode]: any = await pool.query('SELECT id FROM master_departments WHERE code = ?', [code]);
+      const [existingCode]: any = await pool.query(
+        'SELECT id FROM master_departments WHERE code = ? AND (company_id = ? OR company_id IS NULL)',
+        [code, companyId || null]
+      );
       if (existingCode.length > 0) {
         code = `${code}_${Math.floor(10 + Math.random() * 90)}`;
       }
 
       await pool.query(
-        'INSERT INTO master_departments (id, name, code, description) VALUES (?, ?, ?, ?)',
-        [uuidv4(), trimmedDept, code, 'Custom department added during employee management']
+        'INSERT INTO master_departments (id, company_id, name, code, description) VALUES (?, ?, ?, ?, ?)',
+        [uuidv4(), companyId || null, trimmedDept, code, 'Custom department added during employee management']
       );
     }
   }
 
   if (designationName && designationName.trim()) {
     const trimmedDesig = designationName.trim();
-    const [existingDesig]: any = await pool.query('SELECT id FROM master_designations WHERE LOWER(name) = LOWER(?)', [trimmedDesig]);
+    const [existingDesig]: any = await pool.query(
+      'SELECT id FROM master_designations WHERE LOWER(name) = LOWER(?) AND (company_id = ? OR company_id IS NULL)',
+      [trimmedDesig, companyId || null]
+    );
     if (existingDesig.length === 0) {
       let deptId: string | null = null;
       if (departmentName && departmentName.trim()) {
-        const [depts]: any = await pool.query('SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?)', [departmentName.trim()]);
+        const [depts]: any = await pool.query(
+          'SELECT id FROM master_departments WHERE LOWER(name) = LOWER(?) AND (company_id = ? OR company_id IS NULL)',
+          [departmentName.trim(), companyId || null]
+        );
         if (depts.length > 0) deptId = depts[0].id;
       }
       await pool.query(
-        'INSERT INTO master_designations (id, name, department_id, department_name) VALUES (?, ?, ?, ?)',
-        [uuidv4(), trimmedDesig, deptId, departmentName ? departmentName.trim() : null]
+        'INSERT INTO master_designations (id, company_id, name, department_id, department_name) VALUES (?, ?, ?, ?, ?)',
+        [uuidv4(), companyId || null, trimmedDesig, deptId, departmentName ? departmentName.trim() : null]
       );
     }
   }
 }
 
 /**
- * List Employees - Database Driven Single Source of Truth
+ * List Employees - Database Driven Single Source of Truth with Multi-Tenant Isolation
  */
 export async function listEmployees(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { search, department, status, role } = req.query;
+    const companyId = getTenantId(req);
 
     let query = `
-      SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.email, u.phone,
+      SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.email, u.phone,
              u.role, u.status, u.profile_photo as profilePhoto, u.last_login_at as lastLoginAt,
              u.created_at as createdAt,
              ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
@@ -72,10 +86,10 @@ export async function listEmployees(req: AuthRequest, res: Response): Promise<vo
              ep.manager_id as managerId, ep.manager_name as managerName
       FROM users u
       LEFT JOIN employee_profiles ep ON ep.user_id = u.id
-      WHERE 1=1
+      WHERE u.company_id = ?
     `;
 
-    const params: any[] = [];
+    const params: any[] = [companyId];
 
     if (search) {
       query += ` AND (LOWER(u.full_name) LIKE LOWER(?) OR LOWER(u.employee_id) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?))`;
@@ -240,16 +254,18 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     const trimmedEmpId = employeeId.trim();
     const trimmedEmail = email.trim();
 
-    // Check duplicate
+    const companyId = getTenantId(req);
+
+    // Check duplicate within company
     const [existing]: any = await pool.query(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(employee_id) = LOWER(?)',
-      [trimmedEmail, trimmedEmpId]
+      'SELECT id FROM users WHERE (LOWER(email) = LOWER(?) OR LOWER(employee_id) = LOWER(?)) AND company_id = ?',
+      [trimmedEmail, trimmedEmpId, companyId]
     );
 
     if (existing.length > 0) {
       res.status(409).json({
         success: false,
-        error: { code: 'CONFLICT', message: 'An employee with this Email or Employee ID already exists in the database.' },
+        error: { code: 'CONFLICT', message: 'An employee with this Email or Employee ID already exists in the company database.' },
       });
       return;
     }
@@ -261,9 +277,9 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
 
     // Insert user
     await pool.query(
-      `INSERT INTO users (id, employee_id, full_name, email, phone, password_hash, role, status, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [userId, trimmedEmpId, fullName.trim(), trimmedEmail, phone ? phone.trim() : null, passwordHash, userRole, userStatus]
+      `INSERT INTO users (id, company_id, employee_id, full_name, email, phone, password_hash, role, status, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [userId, companyId, trimmedEmpId, fullName.trim(), trimmedEmail, phone ? phone.trim() : null, passwordHash, userRole, userStatus]
     );
 
     const expNum = parseFloat(req.body.experienceYears);
@@ -289,21 +305,22 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     const permPin = isSame ? resPin : (permanentPincode ? permanentPincode.trim() : null);
     const permSameVal = isSame ? 1 : 0;
 
-    // Ensure Department & Designation exist in master tables
-    await ensureMasterDepartmentAndDesignation(departmentName, designation);
+    // Ensure Department & Designation exist in master tables for company
+    await ensureMasterDepartmentAndDesignation(departmentName, designation, companyId);
 
     // Insert profile
     const profileId = uuidv4();
     await pool.query(
       `INSERT INTO employee_profiles (
-        id, user_id, department_name, designation, branch_name, shift_name, employment_type,
+        id, company_id, user_id, department_name, designation, branch_name, shift_name, employment_type,
         joining_date, experience_years, salary, gender, dob, address,
         residential_address, residential_city, residential_state, residential_pincode,
         permanent_address, permanent_city, permanent_state, permanent_pincode, permanent_address_same,
         emergency_contact, emergency_phone, manager_id, manager_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         profileId,
+        companyId,
         userId,
         departmentName || 'General',
         designation || 'Employee',
@@ -334,15 +351,16 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
 
     // Audit log
     await pool.query(
-      `INSERT INTO audit_logs (id, user_id, user_email, role, action, details, ip_address)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         uuidv4(),
+        companyId,
         req.user?.id || null,
         req.user?.email || 'admin@hrms.com',
         req.user?.role || 'admin',
         'EMPLOYEE_CREATED',
-        `Created employee record for ${fullName} (${trimmedEmpId}) in MySQL database`,
+        `Created employee record for ${fullName} (${trimmedEmpId}) in company ${companyId}`,
         req.ip || '127.0.0.1',
       ]
     );

@@ -4,11 +4,14 @@ import { API_BASE_URL } from '../config/api';
 
 export interface UserAuthProfile {
   id: string;
+  companyId?: string | null;
+  isSuperAdmin?: boolean;
+  company?: any;
   employeeId: string;
   fullName: string;
   email: string;
   phone?: string;
-  role: UserRole; // Actual system role assigned in database ('ADMIN' | 'EMPLOYER' | 'EMPLOYEE')
+  role: UserRole | 'SUPER_ADMIN'; // Actual system role assigned in database
   status: 'active' | 'inactive' | 'suspended';
   mustChangePassword?: boolean;
   profilePhoto?: string;
@@ -17,13 +20,13 @@ export interface UserAuthProfile {
 interface AuthContextType {
   user: UserAuthProfile | null;
   token: string | null;
-  activeRoleView: UserRole;
+  activeRoleView: UserRole | 'SUPER_ADMIN';
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }>;
   changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  switchRoleView: (targetRole: UserRole) => Promise<{ success: boolean; error?: string }>;
+  switchRoleView: (targetRole: UserRole | 'SUPER_ADMIN') => Promise<{ success: boolean; error?: string }>;
   updateUserProfileInState: (partial: Partial<UserAuthProfile>) => void;
 }
 
@@ -35,9 +38,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cached ? JSON.parse(cached) : null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('hrms_token'));
-  const [activeRoleView, setActiveRoleView] = useState<UserRole>(() => {
-    const cachedRole = localStorage.getItem('hrms_active_role') as UserRole;
-    if (cachedRole && Object.values(UserRole).includes(cachedRole)) {
+  const [activeRoleView, setActiveRoleView] = useState<UserRole | 'SUPER_ADMIN'>(() => {
+    const cachedRole = localStorage.getItem('hrms_active_role') as any;
+    if (cachedRole) {
       return cachedRole;
     }
     const cachedUser = localStorage.getItem('hrms_user');
@@ -68,9 +71,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            const dbRoleUpper = data.data.role.toUpperCase() as UserRole;
+            const dbRoleUpper = data.data.role.toUpperCase();
             const updatedProfile: UserAuthProfile = {
               id: data.data.id,
+              companyId: data.data.companyId || null,
+              isSuperAdmin: !!data.data.isSuperAdmin,
               employeeId: data.data.employeeId,
               fullName: data.data.fullName,
               email: data.data.email,
@@ -114,10 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      const dbRoleUpper = result.data.user.role.toUpperCase() as UserRole;
+      const dbRoleUpper = result.data.user.role.toUpperCase();
       const mustChangePassword = !!result.data.user.mustChangePassword;
       const userProfile: UserAuthProfile = {
         id: result.data.user.id,
+        companyId: result.data.user.companyId || null,
+        isSuperAdmin: !!result.data.user.isSuperAdmin,
+        company: result.data.user.company,
         employeeId: result.data.user.employeeId,
         fullName: result.data.user.fullName,
         email: result.data.user.email,
@@ -208,7 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sessionStorage.clear();
   };
 
-  const switchRoleView = async (targetRole: UserRole): Promise<{ success: boolean; error?: string }> => {
+  const switchRoleView = async (targetRole: UserRole | 'SUPER_ADMIN'): Promise<{ success: boolean; error?: string }> => {
     if (!user || !token) {
       return { success: false, error: 'Not authenticated.' };
     }
