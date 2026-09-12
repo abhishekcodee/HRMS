@@ -26,15 +26,16 @@ export const StatutorySettingsPage: React.FC = () => {
   const [ptSlabs, setPtSlabs] = useState<any[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
 
-  const token = localStorage.getItem('token');
+  const getToken = () => localStorage.getItem('hrms_token') || localStorage.getItem('token');
 
   const fetchConfigs = async () => {
     try {
+      const currentToken = getToken();
       const [pfRes, esicRes, ptRes, loanRes] = await Promise.all([
-        fetch('/api/v1/payroll/statutory/pf', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/v1/payroll/statutory/esic', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/v1/payroll/statutory/pt', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/v1/payroll/loans', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/v1/payroll/statutory/pf', { headers: { Authorization: `Bearer ${currentToken}` } }),
+        fetch('/api/v1/payroll/statutory/esic', { headers: { Authorization: `Bearer ${currentToken}` } }),
+        fetch('/api/v1/payroll/statutory/pt', { headers: { Authorization: `Bearer ${currentToken}` } }),
+        fetch('/api/v1/payroll/loans', { headers: { Authorization: `Bearer ${currentToken}` } }),
       ]);
 
       const [pfJson, esicJson, ptJson, loanJson] = await Promise.all([
@@ -56,9 +57,10 @@ export const StatutorySettingsPage: React.FC = () => {
 
   const handleSavePf = async () => {
     try {
+      const currentToken = getToken();
       const res = await fetch('/api/v1/payroll/statutory/pf', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
         body: JSON.stringify(pfConfig),
       });
       const json = await res.json();
@@ -70,9 +72,10 @@ export const StatutorySettingsPage: React.FC = () => {
 
   const handleSaveEsic = async () => {
     try {
+      const currentToken = getToken();
       const res = await fetch('/api/v1/payroll/statutory/esic', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
         body: JSON.stringify(esicConfig),
       });
       const json = await res.json();
