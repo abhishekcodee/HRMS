@@ -39,7 +39,7 @@ interface Plan {
 
 export const SuperAdminDashboardPage: React.FC = () => {
   const { token, user } = useAuth();
-  const { setActiveTenantId } = useTenant();
+  const { setActiveTenantId, reloadBranding } = useTenant();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'companies' | 'plans'>('overview');
   const [stats, setStats] = useState<PlatformStats | null>(null);
@@ -147,10 +147,14 @@ export const SuperAdminDashboardPage: React.FC = () => {
 
       const data = await res.json();
       if (data.success) {
-        setFeedback({ type: 'success', message: data.message });
+        setFeedback({ type: 'success', message: data.message || 'Company onboarded successfully!' });
         setShowOnboardModal(false);
         fetchStats();
         fetchCompanies();
+        if (data.data?.id) {
+          setActiveTenantId(data.data.id);
+          await reloadBranding();
+        }
         // Reset form
         setOnboardForm({
           name: '',
@@ -209,9 +213,10 @@ export const SuperAdminDashboardPage: React.FC = () => {
     }
   };
 
-  const handleImpersonateTenant = (companyId: string, companyName: string) => {
+  const handleImpersonateTenant = async (companyId: string, companyName: string) => {
     setActiveTenantId(companyId);
-    alert(`Switched Platform View Context to Company: ${companyName}. All portal pages will now reflect this tenant's data.`);
+    await reloadBranding();
+    setFeedback({ type: 'success', message: `Active tenant switched to '${companyName}'. Portal theme & branding reloaded.` });
   };
 
   return (

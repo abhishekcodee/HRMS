@@ -2,10 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
 import { API_BASE_URL } from '../config/api';
+import { safeFetchJson } from '../utils/safeFetch';
 
 export const CompanyBrandingPage: React.FC = () => {
   const { token, user } = useAuth();
   const { branding, reloadBranding } = useTenant();
+
+  if (user?.email?.toLowerCase() !== 'amanupadhyay2030@gmail.com') {
+    return (
+      <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-primary)', maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 12px 0' }}>Access Restricted</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6 }}>
+          White-Label Branding configuration is strictly restricted to Lead Super Administrator (<strong>amanupadhyay2030@gmail.com</strong>).
+        </p>
+      </div>
+    );
+  }
 
   const [form, setForm] = useState({
     name: branding.name || '',
@@ -42,7 +55,7 @@ export const CompanyBrandingPage: React.FC = () => {
     setFeedback(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/company/branding`, {
+      const res = await safeFetchJson(`${API_BASE_URL}/company/branding`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -51,12 +64,12 @@ export const CompanyBrandingPage: React.FC = () => {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
-      if (data.success) {
+      if (res.ok && res.data?.success) {
         setFeedback({ type: 'success', message: 'White-Label Branding updated successfully!' });
         await reloadBranding();
+        window.dispatchEvent(new Event('tenant-changed'));
       } else {
-        setFeedback({ type: 'error', message: data.error?.message || 'Failed to update branding.' });
+        setFeedback({ type: 'error', message: res.error || res.data?.error?.message || 'Failed to update branding.' });
       }
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Server connection error.' });
@@ -65,11 +78,31 @@ export const CompanyBrandingPage: React.FC = () => {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-color)',
+    background: 'var(--bg-app)',
+    color: 'var(--text-primary)',
+    outline: 'none',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+    marginBottom: '6px',
+  };
+
   return (
     <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ margin: 0, fontSize: '24px' }}>Company Branding & White-Label Customization</h1>
-        <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>
+        <h1 style={{ margin: 0, fontSize: '24px', color: 'var(--text-primary)' }}>
+          Company Branding & White-Label Customization
+        </h1>
+        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '14px' }}>
           Personalize your HRMS portal logo, primary brand colors, custom domain, and corporate identity.
         </p>
       </div>
@@ -80,9 +113,9 @@ export const CompanyBrandingPage: React.FC = () => {
             padding: '12px 16px',
             borderRadius: '8px',
             marginBottom: '20px',
-            background: feedback.type === 'success' ? '#dcfce7' : '#fee2e2',
-            color: feedback.type === 'success' ? '#15803d' : '#b91c1c',
-            border: `1px solid ${feedback.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+            background: feedback.type === 'success' ? 'var(--success-bg)' : 'var(--error-bg)',
+            color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--error-text)',
+            border: `1px solid ${feedback.type === 'success' ? 'var(--success-border)' : 'var(--error-border)'}`,
           }}
         >
           {feedback.message}
@@ -91,102 +124,107 @@ export const CompanyBrandingPage: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
         {/* Form Column */}
-        <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '24px',
+          }}
+        >
+          <h3
+            style={{
+              marginTop: 0,
+              marginBottom: '16px',
+              fontSize: '16px',
+              color: 'var(--text-primary)',
+              borderBottom: '1px solid var(--border-color)',
+              paddingBottom: '8px',
+            }}
+          >
             Brand Identity Settings
           </h3>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Display Company Name *
-            </label>
+            <label style={labelStyle}>Display Company Name *</label>
             <input
               type="text"
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={inputStyle}
             />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Primary Theme Color
-              </label>
+              <label style={labelStyle}>Primary Theme Color</label>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <input
                   type="color"
                   value={form.brandColor}
                   onChange={(e) => setForm({ ...form, brandColor: e.target.value })}
-                  style={{ width: '40px', height: '40px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ width: '40px', height: '40px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent' }}
                 />
                 <input
                   type="text"
                   value={form.brandColor}
                   onChange={(e) => setForm({ ...form, brandColor: e.target.value })}
-                  style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  style={{ ...inputStyle, flex: 1 }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Secondary Accent Color
-              </label>
+              <label style={labelStyle}>Secondary Accent Color</label>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <input
                   type="color"
                   value={form.secondaryBrandColor}
                   onChange={(e) => setForm({ ...form, secondaryBrandColor: e.target.value })}
-                  style={{ width: '40px', height: '40px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ width: '40px', height: '40px', border: 'none', borderRadius: '6px', cursor: 'pointer', background: 'transparent' }}
                 />
                 <input
                   type="text"
                   value={form.secondaryBrandColor}
                   onChange={(e) => setForm({ ...form, secondaryBrandColor: e.target.value })}
-                  style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  style={{ ...inputStyle, flex: 1 }}
                 />
               </div>
             </div>
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Company Logo Image URL
-            </label>
+            <label style={labelStyle}>Company Logo Image URL</label>
             <input
               type="text"
               placeholder="https://example.com/logo.png"
               value={form.logoUrl}
               onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={inputStyle}
             />
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Favicon Icon URL
-            </label>
+            <label style={labelStyle}>Favicon Icon URL</label>
             <input
               type="text"
               placeholder="https://example.com/favicon.ico"
               value={form.faviconUrl}
               onChange={(e) => setForm({ ...form, faviconUrl: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={inputStyle}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Custom Subdomain / Host Alias
-            </label>
+            <label style={labelStyle}>Custom Subdomain / Host Alias</label>
             <input
               type="text"
               placeholder="portal.mycompany.com"
               value={form.customDomain}
               onChange={(e) => setForm({ ...form, customDomain: e.target.value })}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={inputStyle}
             />
           </div>
 
@@ -194,7 +232,7 @@ export const CompanyBrandingPage: React.FC = () => {
             type="submit"
             disabled={saving}
             style={{
-              background: form.brandColor || '#1e293b',
+              background: form.brandColor || 'var(--primary-500)',
               color: '#fff',
               border: 'none',
               padding: '12px 24px',
@@ -202,6 +240,8 @@ export const CompanyBrandingPage: React.FC = () => {
               fontWeight: 600,
               cursor: 'pointer',
               width: '100%',
+              transition: 'opacity 0.2s ease',
+              opacity: saving ? 0.7 : 1,
             }}
           >
             {saving ? 'Saving Branding...' : 'Save & Apply White-Label Theme'}
@@ -209,17 +249,33 @@ export const CompanyBrandingPage: React.FC = () => {
         </form>
 
         {/* Live Preview Column */}
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '24px',
+          }}
+        >
+          <h3
+            style={{
+              marginTop: 0,
+              marginBottom: '16px',
+              fontSize: '16px',
+              color: 'var(--text-primary)',
+              borderBottom: '1px solid var(--border-color)',
+              paddingBottom: '8px',
+            }}
+          >
             Live Portal Theme Preview
           </h3>
 
           <div
             style={{
               borderRadius: '8px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border-color)',
               overflow: 'hidden',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
             {/* Header Preview */}
@@ -239,9 +295,9 @@ export const CompanyBrandingPage: React.FC = () => {
                 <div style={{ marginBottom: '8px' }}>Employees</div>
                 <div style={{ marginBottom: '8px' }}>Payroll</div>
               </div>
-              <div style={{ flex: 1, padding: '16px', background: '#f8fafc' }}>
-                <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>HRMS Portal Active</span>
+              <div style={{ flex: 1, padding: '16px', background: 'var(--bg-app)' }}>
+                <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>HRMS Portal Active</span>
                   <div style={{ fontWeight: 700, color: form.brandColor, fontSize: '14px', marginTop: '4px' }}>
                     Welcome to {form.name || 'Company Portal'}
                   </div>

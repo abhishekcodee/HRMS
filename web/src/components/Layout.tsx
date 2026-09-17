@@ -7,6 +7,8 @@ import { UserRole } from '@hrms/shared';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { NotificationDrawer } from './NotificationDrawer';
 import { Tooltip, Avatar, Badge, Dropdown, Button, Modal } from './ui';
+import { API_BASE_URL } from '../config/api';
+import { safeFetchJson } from '../utils/safeFetch';
 import {
   LayoutDashboard,
   Users,
@@ -50,15 +52,29 @@ interface NavItemConfig {
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, setRole, theme, toggleTheme, currentUser, unreadNotificationCount } = useRole();
   const { user, logout } = useAuth();
-  const { branding, activeTenantId } = useTenant();
+  const { branding, activeTenantId, setActiveTenantId, reloadBranding } = useTenant();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [roleSwitchError, setRoleSwitchError] = useState<string | null>(null);
   const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+  const [companiesList, setCompaniesList] = useState<{ id: string; name: string; code: string }[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const isSuper = user?.isSuperAdmin || user?.role === 'SUPER_ADMIN';
+
+  // Load companies for Super Admin Selector
+  useEffect(() => {
+    if (isSuper) {
+      safeFetchJson<{ success: boolean; data: any[] }>(`${API_BASE_URL}/super-admin/companies`).then(res => {
+        if (res.ok && res.data?.success && Array.isArray(res.data.data)) {
+          setCompaniesList(res.data.data.map(c => ({ id: c.id, name: c.name, code: c.code })));
+        }
+      });
+    }
+  }, [isSuper]);
 
   // Load chat unread count
   useEffect(() => {
@@ -80,8 +96,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const isSuper = user?.isSuperAdmin || user?.role === 'SUPER_ADMIN';
 
   const navItems: NavItemConfig[] = [
     // Super Admin Platform Control
@@ -127,8 +141,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.EMPLOYEE] },
     { path: '/my-documents', label: 'My Documents', icon: <FileText size={20} />, roles: [UserRole.EMPLOYEE] },
 
-    // Admin Only System Controls & White Labeling
-    { path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+    // White-Label Branding (Exclusively restricted to amanupadhyay2030@gmail.com)
+    ...(user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com'
+      ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }]
+      : []),
+
+    // Admin System Controls
     { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
     { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
     { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
@@ -175,17 +193,35 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Sidebar */}
       <aside className={`hrms-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <Link to="/" className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <img
-              src="/hrms-brand.png"
-              alt="HRMS Brand"
-              style={{
-                height: collapsed ? '32px' : '44px',
-                maxWidth: collapsed ? '32px' : '175px',
-                objectFit: 'contain',
-                transition: 'all 0.2s ease',
-              }}
-            />
+          <Link to="/" className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '8px' }}>
+            {branding.logo_url ? (
+              <img
+                src={branding.logo_url}
+                alt={branding.name || 'HRMS Brand'}
+                style={{
+                  height: collapsed ? '32px' : '40px',
+                  maxWidth: collapsed ? '32px' : '175px',
+                  objectFit: 'contain',
+                  transition: 'all 0.2s ease',
+                }}
+              />
+            ) : branding.name && branding.name !== 'Default Enterprise' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 700, fontSize: '16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '20px' }}>🏢</span>
+                {!collapsed && <span>{branding.name}</span>}
+              </div>
+            ) : (
+              <img
+                src="/hrms-brand.png"
+                alt="HRMS Brand"
+                style={{
+                  height: collapsed ? '32px' : '44px',
+                  maxWidth: collapsed ? '32px' : '175px',
+                  objectFit: 'contain',
+                  transition: 'all 0.2s ease',
+                }}
+              />
+            )}
           </Link>
           <button
             className="sidebar-toggle-btn"
@@ -295,6 +331,55 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
 
           <div className="header-right">
+            {/* Super Admin Multi-Tenant Company Scope Selector */}
+            {isSuper && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '20px',
+                  backgroundColor: 'var(--bg-surface-hover)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                }}
+              >
+                <Building2 size={15} style={{ color: 'var(--primary-500)' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Scope:</span>
+                <select
+                  aria-label="Select Company Scope"
+                  value={activeTenantId || ''}
+                  onChange={async (e) => {
+                    const selectedVal = e.target.value || null;
+                    setActiveTenantId(selectedVal);
+                    await reloadBranding();
+                    window.dispatchEvent(new Event('tenant-changed'));
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    maxWidth: '180px',
+                  }}
+                >
+                  <option value="" style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
+                    🌐 All Companies (Global View)
+                  </option>
+                  {companiesList.map((c) => (
+                    <option key={c.id} value={c.id} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
+                      🏢 {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Header Role Display / Switcher based on User Role */}
             {user?.role === UserRole.EMPLOYEE ? (
               <div

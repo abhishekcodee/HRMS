@@ -1010,6 +1010,18 @@ export async function seedDatabase() {
     // 2. Seed Distinct Individual Test Accounts
     const defaultAccounts = [
       {
+        employeeId: 'SUPER001',
+        fullName: 'Global Super Administrator',
+        email: 'superadmin@hrms.com',
+        phone: '+91 98765 00000',
+        passwordRaw: 'SuperAdmin@123',
+        role: 'super_admin',
+        status: 'active',
+        mustChangePassword: 0,
+        department: 'Executive Board',
+        designation: 'Global Super Admin',
+      },
+      {
         employeeId: 'ADMIN001',
         fullName: 'Chief System Administrator',
         email: 'admin@hrms.com',
@@ -1027,11 +1039,11 @@ export async function seedDatabase() {
         email: 'amanupadhyay2030@gmail.com',
         phone: '+91 98765 99999',
         passwordRaw: 'Amanupa10@',
-        role: 'admin',
+        role: 'super_admin',
         status: 'active',
         mustChangePassword: 0,
         department: 'Information Technology',
-        designation: 'Lead Architect & Administrator',
+        designation: 'Lead Architect & Super Administrator',
       },
       {
         employeeId: 'ER001',

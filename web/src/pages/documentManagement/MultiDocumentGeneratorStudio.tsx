@@ -1137,8 +1137,6 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
     { type: 'PAYSLIP', name: 'Pay Slip (Salary Slip)', icon: <DollarSign size={18} />, color: '#059669' },
     { type: 'LEAVING_CERTIFICATE', name: 'Leaving Certificate', icon: <LogOut size={18} />, color: '#EF4444' },
     { type: 'EXPERIENCE_CERTIFICATE', name: 'Experience Certificate', icon: <Award size={18} />, color: '#10B981' },
-    { type: 'RELIEVING_LETTER', name: 'Relieving Letter', icon: <FileCheck size={18} />, color: '#F59E0B' },
-    { type: 'SALARY_CERTIFICATE', name: 'Salary Certificate', icon: <DollarSign size={18} />, color: '#8B5CF6' },
     { type: 'WARNING_LETTER', name: 'Warning / Show Cause', icon: <AlertTriangle size={18} />, color: '#DC2626' },
   ];
 
@@ -1152,10 +1150,12 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
           alignItems: 'center',
           marginBottom: '24px',
           padding: '24px',
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          borderRadius: '16px',
-          color: '#FFFFFF',
-          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)',
+          background: 'linear-gradient(135deg, var(--glass-surface-2) 0%, var(--bg-overlay) 100%)',
+          borderRadius: 'var(--radius-xl)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border-color)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
         <div>
@@ -1164,41 +1164,42 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
               style={{
                 width: '44px',
                 height: '44px',
-                borderRadius: '12px',
-                background: 'rgba(59, 130, 246, 0.2)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--primary-glow)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid rgba(59, 130, 246, 0.4)',
+                border: '1px solid var(--border-accent)',
               }}
             >
-              <Layers style={{ width: '24px', height: '24px', color: '#60A5FA' }} />
+              <Layers style={{ width: '24px', height: '24px', color: 'var(--primary-500)' }} />
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
               Multi-Document Generator Studio
             </h1>
           </div>
-          <p style={{ margin: '6px 0 0 56px', color: '#94A3B8', fontSize: '14px' }}>
+          <p style={{ margin: '6px 0 0 56px', color: 'var(--text-secondary)', fontSize: '14px' }}>
             Generate official, print-ready HR letters & certificates with live preview, version control, and template engine integration.
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.1)', padding: '6px', borderRadius: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-surface)', padding: '6px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
           <button
             onClick={() => setActiveMainTab('create')}
             style={{
               padding: '8px 16px',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              background: activeMainTab === 'create' ? '#3B82F6' : 'transparent',
-              color: '#FFF',
+              background: activeMainTab === 'create' ? 'var(--primary-500)' : 'transparent',
+              color: activeMainTab === 'create' ? 'var(--text-on-primary)' : 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.2s ease',
             }}
           >
             <PlusCircle style={{ width: '16px', height: '16px' }} /> Generate Document
@@ -1208,16 +1209,17 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
             onClick={() => setActiveMainTab('history')}
             style={{
               padding: '8px 16px',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              background: activeMainTab === 'history' ? '#3B82F6' : 'transparent',
-              color: '#FFF',
+              background: activeMainTab === 'history' ? 'var(--primary-500)' : 'transparent',
+              color: activeMainTab === 'history' ? 'var(--text-on-primary)' : 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.2s ease',
             }}
           >
             <History style={{ width: '16px', height: '16px' }} /> Document History ({historyList.length})
@@ -1227,16 +1229,17 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
             onClick={() => setActiveMainTab('templates')}
             style={{
               padding: '8px 16px',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              background: activeMainTab === 'templates' ? '#3B82F6' : 'transparent',
-              color: '#FFF',
+              background: activeMainTab === 'templates' ? 'var(--primary-500)' : 'transparent',
+              color: activeMainTab === 'templates' ? 'var(--text-on-primary)' : 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.2s ease',
             }}
           >
             <Settings style={{ width: '16px', height: '16px' }} /> Document Settings
@@ -1259,17 +1262,17 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
       {activeMainTab === 'create' && (
         <div>
           {/* Document Type Selector Dropdown */}
-          <Card style={{ marginBottom: '24px', borderLeft: '4px solid #3B82F6' }}>
+          <Card style={{ marginBottom: '24px', borderLeft: '4px solid var(--primary-500)' }}>
             <CardBody style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-md)', background: 'var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-500)' }}>
                   <FileText style={{ width: '22px', height: '22px' }} />
                 </div>
                 <div>
-                  <label htmlFor="doc-type-select" style={{ fontSize: '14px', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                  <label htmlFor="doc-type-select" style={{ fontSize: '14px', fontWeight: 700, display: 'block', marginBottom: '2px', color: 'var(--text-primary)' }}>
                     Select HR Document Type:
                   </label>
-                  <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Choose document format to configure form fields & load live preview
                   </span>
                 </div>
@@ -1280,17 +1283,18 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                   id="doc-type-select"
                   value={selectedDocType}
                   onChange={(e) => handleDocTypeChange(e.target.value)}
+                  className="select"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #3B82F6',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1.5px solid var(--primary-500)',
                     fontSize: '14px',
                     fontWeight: 600,
-                    color: '#0F172A',
-                    backgroundColor: '#F8FAFC',
+                    color: 'var(--text-primary)',
+                    backgroundColor: 'var(--bg-surface)',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                    boxShadow: 'var(--shadow-sm)',
                   }}
                 >
                   {docTypeOptions.map((opt) => (
@@ -1304,15 +1308,15 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
           </Card>
 
           {/* Direct Inline Company Letterhead Upload & Active Status Bar */}
-          <Card style={{ marginBottom: '24px', borderLeft: '4px solid #10B981', background: 'rgba(16, 185, 129, 0.05)' }}>
+          <Card style={{ marginBottom: '24px', borderLeft: '4px solid var(--success-text)', background: 'var(--success-bg)' }}>
             <CardBody style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: activeLetterhead ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeLetterhead ? '#10B981' : '#EF4444' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-md)', background: activeLetterhead ? 'var(--success-bg)' : 'var(--error-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeLetterhead ? 'var(--success-text)' : 'var(--error-text)' }}>
                   <FileText style={{ width: '22px', height: '22px' }} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <strong style={{ fontSize: '14px', fontWeight: 700 }}>
+                    <strong style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {activeLetterhead ? `Active Company Letterhead: ${activeLetterhead.fileName}` : 'No Company Letterhead Uploaded'}
                     </strong>
                     {activeLetterhead ? (
@@ -1321,7 +1325,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       <Badge variant="warning">NOT UPLOADED</Badge>
                     )}
                   </div>
-                  <span style={{ fontSize: '12px', opacity: 0.8, display: 'block', marginTop: '2px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
                     {activeLetterhead
                       ? 'Applied automatically as official background layer across all generated HR documents & live preview'
                       : 'Upload your official company letterhead (A4 PDF or PNG/JPG) right here to apply to all documents.'}
@@ -1336,7 +1340,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                   id="inline-letterhead-file-input"
                   accept=".pdf,.png,.jpg,.jpeg"
                   onChange={(e) => setLetterheadFile(e.target.files?.[0] || null)}
-                  style={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A' }}
+                  style={{ fontSize: '12px', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                 />
                 <Button
                   variant="primary"
@@ -1356,16 +1360,16 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
             {/* Left Column Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Option: Select Existing Employee / Filling Mode */}
-              <Card style={{ borderLeft: '4px solid #3B82F6', overflow: 'hidden' }}>
+              <Card style={{ borderLeft: '4px solid var(--primary-500)', overflow: 'hidden' }}>
                 <CardBody style={{ padding: '20px' }}>
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <UserCheck style={{ width: '18px', height: '18px', color: '#3B82F6' }} />
-                      <strong style={{ fontSize: '15px', color: '#0F172A' }}>
+                      <UserCheck style={{ width: '18px', height: '18px', color: 'var(--primary-500)' }} />
+                      <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                         How would you like to create this document?
                       </strong>
                     </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
                       Choose how you want to prepare information for this document.
                     </p>
                   </div>
@@ -1376,34 +1380,34 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     <div
                       onClick={() => handleSetInputMode('autofill')}
                       style={{
-                        border: inputMode === 'autofill' ? '2px solid #3B82F6' : '1px solid #E2E8F0',
-                        background: inputMode === 'autofill' ? '#EFF6FF' : '#FFFFFF',
-                        borderRadius: '10px',
+                        border: inputMode === 'autofill' ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
+                        background: inputMode === 'autofill' ? 'var(--bg-surface-active)' : 'var(--bg-surface)',
+                        borderRadius: 'var(--radius-lg)',
                         padding: '14px',
                         cursor: 'pointer',
                         position: 'relative',
-                        boxShadow: inputMode === 'autofill' ? '0 2px 8px rgba(59,130,246,0.15)' : 'none',
-                        transition: 'all 0.15s ease',
+                        boxShadow: inputMode === 'autofill' ? '0 0 16px var(--primary-glow)' : 'none',
+                        transition: 'all 0.2s ease',
                       }}
                     >
                       <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                         <span style={{
-                          background: '#10B981',
+                          background: 'var(--success-text)',
                           color: '#FFFFFF',
                           fontSize: '10px',
                           fontWeight: 700,
                           padding: '2px 7px',
-                          borderRadius: '12px',
+                          borderRadius: 'var(--radius-full)',
                           letterSpacing: '0.02em',
                         }}>
                           Recommended
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <Sparkles style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
-                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>Edit & Fill</strong>
+                        <Sparkles style={{ width: '16px', height: '16px', color: 'var(--primary-500)' }} />
+                        <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Edit & Fill</strong>
                       </div>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                         Automatically fill information from existing employee/company records.
                       </p>
                     </div>
@@ -1412,20 +1416,20 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     <div
                       onClick={() => handleSetInputMode('manual')}
                       style={{
-                        border: inputMode === 'manual' ? '2px solid #3B82F6' : '1px solid #E2E8F0',
-                        background: inputMode === 'manual' ? '#EFF6FF' : '#FFFFFF',
-                        borderRadius: '10px',
+                        border: inputMode === 'manual' ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
+                        background: inputMode === 'manual' ? 'var(--bg-surface-active)' : 'var(--bg-surface)',
+                        borderRadius: 'var(--radius-lg)',
                         padding: '14px',
                         cursor: 'pointer',
-                        boxShadow: inputMode === 'manual' ? '0 2px 8px rgba(59,130,246,0.15)' : 'none',
-                        transition: 'all 0.15s ease',
+                        boxShadow: inputMode === 'manual' ? '0 0 16px var(--primary-glow)' : 'none',
+                        transition: 'all 0.2s ease',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <Edit3 style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
-                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>Manual Entry</strong>
+                        <Edit3 style={{ width: '16px', height: '16px', color: 'var(--primary-500)' }} />
+                        <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Manual Entry</strong>
                       </div>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
+                      <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                         Enter the information yourself without loading employee records.
                       </p>
                     </div>
@@ -1434,24 +1438,26 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                   {/* Employee Search & Selection (Edit & Fill Mode) */}
                   {inputMode === 'autofill' ? (
                     <div>
-                      <label htmlFor="employee-search-input" style={{ fontSize: '12px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                      <label htmlFor="employee-search-input" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                         Select Employee
                       </label>
                       <div style={{ position: 'relative', marginBottom: '8px' }}>
-                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#94A3B8' }} />
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'var(--text-muted)' }} />
                         <input
                           id="employee-search-input"
                           type="text"
                           value={employeeSearchQuery}
                           onChange={(e) => setEmployeeSearchQuery(e.target.value)}
                           placeholder="Search employee by name, ID or email..."
+                          className="input"
                           style={{
                             width: '100%',
                             padding: '8px 12px 8px 32px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-color)',
                             fontSize: '13px',
-                            background: '#FFFFFF',
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text-primary)',
                             boxSizing: 'border-box',
                           }}
                         />
@@ -1461,7 +1467,8 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         id="employee-autofill-select"
                         value={selectedEmployeeId}
                         onChange={(e) => handleSelectExistingEmployee(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FFFFFF' }}
+                        className="select"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '13px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                       >
                         <option value="">-- Choose an employee to automatically fill available information --</option>
                         {filteredEmployeesList.map((emp) => (
@@ -1471,7 +1478,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         ))}
                       </select>
 
-                      <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '6px' }}>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '6px' }}>
                         Choose an employee to automatically fill available information. Don't see the information you need? You can enter it manually.
                       </div>
 
@@ -1481,10 +1488,10 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                           style={{
                             marginTop: '14px',
                             padding: '12px 16px',
-                            background: '#F8FAFC',
-                            borderRadius: '10px',
-                            border: '1px solid #CBD5E1',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            background: 'var(--bg-surface-hover)',
+                            borderRadius: 'var(--radius-lg)',
+                            border: '1px solid var(--border-color)',
+                            boxShadow: 'var(--shadow-sm)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1493,8 +1500,8 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                                 width: '38px',
                                 height: '38px',
                                 borderRadius: '50%',
-                                background: '#DBEAFE',
-                                color: '#1D4ED8',
+                                background: 'var(--primary-glow)',
+                                color: 'var(--primary-500)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1505,10 +1512,10 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                               👤
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>
+                              <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
                                 {selectedEmployee.fullName || selectedEmployee.name || employeeName}
                               </div>
-                              <div style={{ fontSize: '12px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
                                 <span><strong>Employee ID:</strong> {selectedEmployee.employeeId || employeeCode || 'EMP'}</span>
                                 <span><strong>Designation:</strong> {selectedEmployee.designation || designation || 'Staff'}</span>
                                 <span><strong>Department:</strong> {selectedEmployee.department || department || 'General'}</span>
@@ -1519,12 +1526,12 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                             style={{
                               marginTop: '10px',
                               paddingTop: '8px',
-                              borderTop: '1px dashed #CBD5E1',
+                              borderTop: '1px dashed var(--border-color)',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '6px',
                               fontSize: '12px',
-                              color: '#16A34A',
+                              color: 'var(--success-text)',
                               fontWeight: 600,
                             }}
                           >
@@ -1535,7 +1542,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: '8px', border: '1px dashed #CBD5E1', fontSize: '12.5px', color: '#334155' }}>
+                    <div style={{ padding: '12px 14px', background: 'var(--bg-surface-hover)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                       ✍️ <strong>Manual Entry Mode Active:</strong> You can enter all details yourself in the fields below. Values you type will remain intact and will not be overwritten automatically.
                     </div>
                   )}
@@ -1576,15 +1583,16 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         <select
                           value={salutation}
                           onChange={(e) => setSalutation(e.target.value)}
+                          className="select"
                           style={{
                             width: '100%',
                             padding: '8px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-color)',
                             fontSize: '13px',
                             fontWeight: 500,
-                            backgroundColor: '#FFF',
-                            color: '#0F172A',
+                            backgroundColor: 'var(--bg-surface)',
+                            color: 'var(--text-primary)',
                           }}
                         >
                           <option value="Mr.">Mr.</option>
@@ -2535,7 +2543,6 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       size="sm"
                       onClick={handleSaveCurrentTemplate}
                       disabled={generating}
-                      style={{ background: '#0F172A', color: '#FFF', borderColor: '#334155' }}
                     >
                       Save Master Template
                     </Button>
@@ -2544,13 +2551,13 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardBody style={{ background: '#F8FAFC', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <CardBody style={{ background: 'var(--bg-surface-hover)', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <span>
-                      Target PDF File: <code>{selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf</code>
+                      Target PDF File: <code style={{ color: 'var(--primary-500)', background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>{selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf</code>
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Zoom: {Math.round(previewScale * 100)}%</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Zoom: {Math.round(previewScale * 100)}%</span>
                       <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.max(0.35, Number((s - 0.05).toFixed(2))))}>Zoom -</Button>
                       <Button variant="secondary" size="sm" onClick={() => setPreviewScale(0.65)}>Fit Width</Button>
                       <Button variant="secondary" size="sm" onClick={() => setPreviewScale(1.0)}>100%</Button>

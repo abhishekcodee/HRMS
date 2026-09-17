@@ -123,58 +123,42 @@ export function calculateCLPLDuration(rawDays: number, leaveType?: string): numb
   return wholePart + 1;
 }
 
+import { safeFetchJson } from '../utils/safeFetch';
+
 export async function fetchLeaveBalances(): Promise<LeaveBalanceRecord[]> {
-  try {
-    const res = await fetch('/api/v1/leave/balances', {
-      headers: getAuthHeaders(),
-    });
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) {
-      return json.data;
-    }
-    return [];
-  } catch (err) {
-    console.error('Fetch leave balances error:', err);
-    return [];
+  const result = await safeFetchJson<{ success: boolean; data: LeaveBalanceRecord[] }>('/api/v1/leave/balances', {
+    headers: getAuthHeaders(),
+  });
+  if (result.ok && result.data?.success && Array.isArray(result.data.data)) {
+    return result.data.data;
   }
+  return [];
 }
 
 export async function fetchLeaveLedger(): Promise<LeaveLedgerRecord[]> {
-  try {
-    const res = await fetch('/api/v1/leave/ledger', {
-      headers: getAuthHeaders(),
-    });
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) {
-      return json.data;
-    }
-    return [];
-  } catch (err) {
-    console.error('Fetch leave ledger error:', err);
-    return [];
+  const result = await safeFetchJson<{ success: boolean; data: LeaveLedgerRecord[] }>('/api/v1/leave/ledger', {
+    headers: getAuthHeaders(),
+  });
+  if (result.ok && result.data?.success && Array.isArray(result.data.data)) {
+    return result.data.data;
   }
+  return [];
 }
 
 export async function fetchLeaveRequests(params?: { status?: string; leaveType?: string; search?: string; view?: string }): Promise<LeaveRecord[]> {
-  try {
-    const query = new URLSearchParams();
-    if (params?.status) query.append('status', params.status);
-    if (params?.leaveType) query.append('leaveType', params.leaveType);
-    if (params?.search) query.append('search', params.search);
-    if (params?.view) query.append('view', params.view);
+  const query = new URLSearchParams();
+  if (params?.status) query.append('status', params.status);
+  if (params?.leaveType) query.append('leaveType', params.leaveType);
+  if (params?.search) query.append('search', params.search);
+  if (params?.view) query.append('view', params.view);
 
-    const res = await fetch(`/api/v1/leave?${query.toString()}`, {
-      headers: getAuthHeaders(),
-    });
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) {
-      return json.data;
-    }
-    return [];
-  } catch (err) {
-    console.error('Fetch leave requests error:', err);
-    return [];
+  const result = await safeFetchJson<{ success: boolean; data: LeaveRecord[] }>(`/api/v1/leave?${query.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  if (result.ok && result.data?.success && Array.isArray(result.data.data)) {
+    return result.data.data;
   }
+  return [];
 }
 
 export async function applyLeaveInDb(data: {
@@ -185,20 +169,15 @@ export async function applyLeaveInDb(data: {
   reason?: string;
   attachment?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    const res = await fetch('/api/v1/leave', {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      return { success: false, error: json.error?.message || 'Failed to submit leave request.' };
-    }
-    return { success: true, message: json.message };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error submitting leave request.' };
+  const result = await safeFetchJson<{ success: boolean; message?: string; error?: { message?: string } }>('/api/v1/leave', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (result.ok && result.data?.success) {
+    return { success: true, message: result.data.message };
   }
+  return { success: false, error: result.data?.error?.message || result.error || 'Failed to submit leave request.' };
 }
 
 export async function employerActionInDb(
@@ -206,20 +185,15 @@ export async function employerActionInDb(
   action: 'APPROVE' | 'REJECT',
   remarks?: string
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    const res = await fetch(`/api/v1/leave/${id}/employer-action`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ action, remarks }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      return { success: false, error: json.error?.message || `Failed to ${action.toLowerCase()} leave as Employer.` };
-    }
-    return { success: true, message: json.message };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error recording employer action.' };
+  const result = await safeFetchJson<{ success: boolean; message?: string; error?: { message?: string } }>(`/api/v1/leave/${id}/employer-action`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ action, remarks }),
+  });
+  if (result.ok && result.data?.success) {
+    return { success: true, message: result.data.message };
   }
+  return { success: false, error: result.data?.error?.message || result.error || `Failed to ${action.toLowerCase()} leave as Employer.` };
 }
 
 export async function adminActionInDb(
@@ -227,20 +201,15 @@ export async function adminActionInDb(
   action: 'APPROVE' | 'REJECT',
   remarks?: string
 ): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    const res = await fetch(`/api/v1/leave/${id}/admin-action`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ action, remarks }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      return { success: false, error: json.error?.message || `Failed to ${action.toLowerCase()} leave as Admin.` };
-    }
-    return { success: true, message: json.message };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error recording admin action.' };
+  const result = await safeFetchJson<{ success: boolean; message?: string; error?: { message?: string } }>(`/api/v1/leave/${id}/admin-action`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ action, remarks }),
+  });
+  if (result.ok && result.data?.success) {
+    return { success: true, message: result.data.message };
   }
+  return { success: false, error: result.data?.error?.message || result.error || `Failed to ${action.toLowerCase()} leave as Admin.` };
 }
 
 export async function approveLeaveInDb(id: string): Promise<{ success: boolean; message?: string; error?: string }> {

@@ -61,9 +61,11 @@ import {
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTenant } from '../context/TenantContext';
 
 export const Dashboard: React.FC = () => {
   const { user, activeRoleView } = useAuth();
+  const { branding } = useTenant();
   const navigate = useNavigate();
 
   const [applyLeaveModalOpen, setApplyLeaveModalOpen] = useState(false);
@@ -247,28 +249,43 @@ export const Dashboard: React.FC = () => {
             border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-xl)',
             padding: '1.75rem 2rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem',
           }}
         >
-          <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-              Welcome back, {user?.fullName?.split(' ')[0] || 'Employee'}! 👋
-            </h1>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Official HRMS ID: <strong>{user?.employeeId || 'EMP'}</strong> • HRMS Enterprise Sync Active
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setApplyLeaveModalOpen(true)}>
-              Apply Leave
-            </Button>
-            <Button variant="outline" icon={<CalendarDays size={16} />} onClick={() => navigate('/my-attendance')}>
-              My Attendance
-            </Button>
+          {/* Welcome Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {branding.logo_url && (
+                <img
+                  src={branding.logo_url}
+                  alt={branding.name}
+                  style={{ height: '44px', maxWidth: '140px', objectFit: 'contain', borderRadius: '6px' }}
+                />
+              )}
+              <div>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                  Welcome to {branding.name && branding.name !== 'Default Enterprise' ? branding.name : 'HRMS Portal'}, {user?.fullName?.split(' ')[0] || 'Employee'}! 👋
+                </h1>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  Official HRMS ID: <strong>{user?.employeeId || 'EMP'}</strong> • Corporate Tenant: {branding.name || 'Default Enterprise'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setApplyLeaveModalOpen(true)}>
+                Apply Leave
+              </Button>
+              <Button variant="outline" icon={<CalendarDays size={16} />} onClick={() => navigate('/my-attendance')}>
+                My Attendance
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -541,12 +558,23 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">HRMS Executive Operations Command</h1>
-          <p className="page-subtitle">
-            Enterprise Operations • {activeRoleView} Command Center
-          </p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {branding.logo_url && (
+            <img
+              src={branding.logo_url}
+              alt={branding.name}
+              style={{ height: '48px', maxWidth: '160px', objectFit: 'contain', borderRadius: '6px' }}
+            />
+          )}
+          <div>
+            <h1 className="page-title">
+              {branding.name && branding.name !== 'Default Enterprise' ? `${branding.name} Operations` : 'HRMS Executive Operations Command'}
+            </h1>
+            <p className="page-subtitle">
+              Enterprise Operations • {activeRoleView} Command Center • Active Corporate Tenant: {branding.name || 'Default Enterprise'}
+            </p>
+          </div>
         </div>
         <div className="page-actions">
           <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => navigate('/employees')}>

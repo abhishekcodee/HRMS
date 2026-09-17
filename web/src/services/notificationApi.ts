@@ -37,7 +37,21 @@ export function saveLocalNotifications(notifications: NotificationMock[]): void 
 export async function fetchNotifications(): Promise<NotificationMock[]> {
   try {
     const res = await fetch(API_BASE_URL, { headers: getAuthHeaders() });
-    const json = await res.json();
+    if (!res.ok) {
+      console.warn(`Backend notification fetch returned status ${res.status}`);
+      return getLocalNotifications();
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      console.warn(`Backend notification fetch returned non-JSON content type: ${contentType}`);
+      return getLocalNotifications();
+    }
+    const text = await res.text();
+    if (!text || text.trim() === '') {
+      console.warn('Backend notification fetch returned empty response body');
+      return getLocalNotifications();
+    }
+    const json = JSON.parse(text);
     if (json.success && Array.isArray(json.data)) {
       saveLocalNotifications(json.data);
       return json.data;
@@ -54,11 +68,14 @@ export async function markNotificationReadApi(id?: string): Promise<Notification
   saveLocalNotifications(updated);
 
   try {
-    await fetch(`${API_BASE_URL}/mark-read`, {
+    const res = await fetch(`${API_BASE_URL}/mark-read`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ id }),
     });
+    if (!res.ok) {
+      console.warn(`Backend mark notification read status ${res.status}`);
+    }
   } catch (err) {
     console.warn('Backend mark notification read failed:', err);
   }
@@ -79,11 +96,14 @@ export async function createNotificationApi(
   saveLocalNotifications(updated);
 
   try {
-    await fetch(API_BASE_URL, {
+    const res = await fetch(API_BASE_URL, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(newNotif),
     });
+    if (!res.ok) {
+      console.warn(`Backend notification creation status ${res.status}`);
+    }
   } catch (err) {
     console.warn('Backend notification creation failed:', err);
   }
@@ -96,10 +116,13 @@ export async function deleteNotificationApi(id: string): Promise<NotificationMoc
   saveLocalNotifications(updated);
 
   try {
-    await fetch(`${API_BASE_URL}/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
+    if (!res.ok) {
+      console.warn(`Backend notification deletion status ${res.status}`);
+    }
   } catch (err) {
     console.warn('Backend notification deletion failed:', err);
   }
@@ -109,10 +132,13 @@ export async function deleteNotificationApi(id: string): Promise<NotificationMoc
 export async function clearAllNotificationsApi(): Promise<NotificationMock[]> {
   saveLocalNotifications([]);
   try {
-    await fetch(`${API_BASE_URL}/all`, {
+    const res = await fetch(`${API_BASE_URL}/all`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
+    if (!res.ok) {
+      console.warn(`Backend clear all notifications status ${res.status}`);
+    }
   } catch (err) {
     console.warn('Backend clear all notifications failed:', err);
   }

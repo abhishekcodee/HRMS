@@ -1,8 +1,10 @@
+/* SuperAdmin Dashboard SaaS Control Styling */
 .superadmin-container {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
   font-family: inherit;
+  color: var(--text-primary);
 }
 
 .superadmin-header {
@@ -16,19 +18,19 @@
   margin: 0;
   font-size: 26px;
   font-weight: 700;
-  color: var(--text-color, #0f172a);
+  color: var(--text-primary);
 }
 
 .superadmin-subtitle {
   margin: 4px 0 0 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .superadmin-tabs {
   display: flex;
   gap: 12px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--border-color);
   margin-bottom: 24px;
 }
 
@@ -37,15 +39,16 @@
   border: none;
   background: none;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
+  transition: all 0.2s ease;
 }
 
 .tab-btn.active {
-  color: var(--primary-color, #1e293b);
-  border-bottom-color: var(--primary-color, #1e293b);
+  color: var(--primary-500);
+  border-bottom-color: var(--primary-500);
 }
 
 .metrics-grid {
@@ -56,21 +59,24 @@
 }
 
 .metric-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .metric-icon {
   font-size: 32px;
-  background: #f1f5f9;
+  background: var(--bg-surface-hover);
   padding: 12px;
   border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .metric-details {
@@ -80,27 +86,27 @@
 
 .metric-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .metric-value {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .metric-sub {
   font-size: 12px;
-  color: #10b981;
+  color: var(--success-text);
   font-weight: 500;
 }
 
 .section-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-bar {
@@ -112,14 +118,20 @@
 .search-input {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-primary);
   border-radius: 8px;
+  outline: none;
 }
 
 .select-filter {
   padding: 10px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-primary);
   border-radius: 8px;
+  outline: none;
 }
 
 .data-table {
@@ -131,12 +143,12 @@
 .data-table td {
   padding: 12px 14px;
   text-align: left;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .data-table th {
-  background: #f8fafc;
-  color: #475569;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
 }
@@ -161,9 +173,9 @@
   font-weight: 600;
 }
 
-.badge-success { background: #dcfce7; color: #15803d; }
-.badge-danger { background: #fee2e2; color: #b91c1c; }
-.badge-info { background: #e0f2fe; color: #0369a1; }
+.badge-success { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+.badge-danger { background: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-border); }
+.badge-info { background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
 
 .action-buttons {
   display: flex;
@@ -171,19 +183,24 @@
 }
 
 .btn-primary {
-  background: var(--primary-color, #1e293b);
+  background: var(--primary-500);
   color: #fff;
   border: none;
   padding: 10px 18px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--primary-600);
 }
 
 .btn-secondary {
-  background: #e2e8f0;
-  color: #334155;
-  border: none;
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   padding: 10px 18px;
   border-radius: 8px;
   font-weight: 600;
@@ -201,28 +218,31 @@
 
 .btn-outline {
   background: transparent;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .btn-danger {
-  background: #ef4444;
-  color: #fff;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
 }
 
 .btn-success {
-  background: #10b981;
-  color: #fff;
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
 }
 
-/* Modal */
+/* Modal Styling with Design Tokens */
 .modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,18 +250,20 @@
 }
 
 .modal-container {
-  background: #ffffff;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   border-radius: 12px;
   width: 90%;
   max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
   padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -250,6 +272,7 @@
 .modal-header h2 {
   margin: 0;
   font-size: 20px;
+  color: var(--text-primary);
 }
 
 .close-btn {
@@ -257,7 +280,7 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .modal-body {
@@ -272,8 +295,8 @@
   margin-top: 0;
   margin-bottom: 12px;
   font-size: 15px;
-  color: #1e293b;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 6px;
 }
 
@@ -292,22 +315,33 @@
 .form-group label {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .form-group input,
 .form-group select {
   padding: 9px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-primary);
   border-radius: 6px;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--primary-500);
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  background: var(--bg-surface-hover);
+  border-top: 1px solid var(--border-color);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .alert-banner {
@@ -319,8 +353,8 @@
   align-items: center;
 }
 
-.alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.alert-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.alert-success { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+.alert-error { background: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-border); }
 
 .plans-grid {
   display: grid;
@@ -329,15 +363,15 @@
 }
 
 .plan-card {
-  background: #ffffff;
-  border: 2px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .plan-header {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 16px;
   margin-bottom: 16px;
 }
@@ -345,7 +379,7 @@
 .plan-price {
   font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .plan-features {
@@ -357,5 +391,5 @@
 .plan-features li {
   padding: 6px 0;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
 }

@@ -37,6 +37,28 @@ function formatTimeAgo(dateInput?: string | Date): string {
 }
 
 /**
+ * Ensure in_app_notifications table exists in MySQL database
+ */
+async function ensureNotificationTable(): Promise<void> {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS in_app_notifications (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id VARCHAR(36) NULL,
+        type VARCHAR(50) NOT NULL DEFAULT 'SYSTEM',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(255) NULL,
+        is_read TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (err: any) {
+    logger.warn('Ensure notification table failed:', { message: err.message });
+  }
+}
+
+/**
  * Helper to insert real notification into MySQL database
  */
 export async function insertInAppNotification(data: {
@@ -49,6 +71,7 @@ export async function insertInAppNotification(data: {
   const notifId = uuidv4();
   userCleared = false; // Reset cleared flag on new notification
   try {
+    await ensureNotificationTable();
     await pool.query(
       `INSERT INTO in_app_notifications (id, user_id, type, title, message, link, is_read, created_at)
        VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
@@ -65,6 +88,7 @@ export async function insertInAppNotification(data: {
  */
 async function seedInitialNotificationsIfEmpty(userId?: string): Promise<void> {
   try {
+    await ensureNotificationTable();
     const [checkRows]: any = await pool.query('SELECT COUNT(*) as count FROM in_app_notifications');
     if (checkRows && checkRows[0]?.count > 0) {
       return; // Already seeded / populated

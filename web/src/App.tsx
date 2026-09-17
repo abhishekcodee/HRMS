@@ -48,7 +48,7 @@ import { SuperAdminDashboardPage } from './pages/superAdmin/SuperAdminDashboardP
 import { CompanyBrandingPage } from './pages/CompanyBrandingPage';
 
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
   const location = useLocation();
 
@@ -67,6 +67,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
   // Force Password Change Route Lock
   if (user?.mustChangePassword && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
+  }
+
+  if (superAdminOnly && !user?.isSuperAdmin && user?.role !== 'SUPER_ADMIN') {
+    return <Navigate to="/" replace />;
   }
 
   if (adminOnly && activeRoleView !== 'ADMIN' && !user?.isSuperAdmin) {
@@ -108,7 +112,7 @@ export function App() {
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
-                            <Route path="/company-branding" element={<CompanyBrandingPage />} />
+                            <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
                             
                             {/* HRMS Internal Communication Platform */}
                             <Route path="/chat" element={<ChatPage />} />

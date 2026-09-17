@@ -39,6 +39,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (brand.brand_color) {
       document.documentElement.style.setProperty('--primary-color', brand.brand_color);
       document.documentElement.style.setProperty('--brand-primary', brand.brand_color);
+      document.documentElement.style.setProperty('--primary-500', brand.brand_color);
+      document.documentElement.style.setProperty('--primary-600', brand.brand_color);
+      document.documentElement.style.setProperty('--primary-700', brand.brand_color);
+      document.documentElement.style.setProperty('--primary-glow', `${brand.brand_color}40`);
     }
     if (brand.secondary_brand_color) {
       document.documentElement.style.setProperty('--secondary-color', brand.secondary_brand_color);

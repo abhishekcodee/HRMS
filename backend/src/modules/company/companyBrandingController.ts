@@ -18,11 +18,11 @@ export async function getPublicBranding(req: Request, res: Response): Promise<vo
     } else if (code) {
       sql += ' AND LOWER(code) = LOWER(?)';
       params.push(code);
-    } else if (domain) {
+    } else if (domain && !domain.includes('localhost') && !domain.includes('127.0.0.1')) {
       sql += ' AND (LOWER(custom_domain) = LOWER(?) OR custom_domain LIKE ?)';
       params.push(domain, `%${domain}%`);
     } else {
-      sql += ' ORDER BY created_at ASC LIMIT 1';
+      sql += ' AND (id = "c1000000-0000-0000-0000-000000000001" OR LOWER(code) = "default_emp")';
     }
 
     const [rows]: any = await pool.query(sql, params);
@@ -32,7 +32,7 @@ export async function getPublicBranding(req: Request, res: Response): Promise<vo
     // Fallback to Default Enterprise if specified tenant not found
     if (!branding) {
       const [fallback]: any = await pool.query(
-        'SELECT id, name, code, logo_url, favicon_url, brand_color, secondary_brand_color, custom_domain FROM companies ORDER BY created_at ASC LIMIT 1'
+        'SELECT id, name, code, logo_url, favicon_url, brand_color, secondary_brand_color, custom_domain FROM companies ORDER BY created_at DESC LIMIT 1'
       );
       branding = fallback[0];
     }
@@ -52,6 +52,17 @@ export async function getPublicBranding(req: Request, res: Response): Promise<vo
 
 export async function updateCompanyBranding(req: AuthRequest, res: Response): Promise<void> {
   try {
+    if (req.user?.email?.toLowerCase() !== 'amanupadhyay2030@gmail.com') {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'White-Label Branding configuration is restricted exclusively to Lead Super Administrator (amanupadhyay2030@gmail.com).',
+        },
+      });
+      return;
+    }
+
     const companyId = getTenantId(req);
     const { name, logoUrl, faviconUrl, brandColor, secondaryBrandColor, customDomain, email, phone, address } = req.body;
 
