@@ -38,6 +38,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         <button
           type="button"
           onClick={onClear}
+          aria-label="Clear search"
           style={{
             position: 'absolute',
             right: '8px',

@@ -79,9 +79,12 @@ export const LoginPage: React.FC = () => {
         body: JSON.stringify({ email: forgotEmail.trim() }),
       });
       const data = await response.json();
-      setForgotSuccessMessage(data.message || 'Password reset request generated successfully.');
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.message || 'Unable to send password reset request.');
+      }
+      setForgotSuccessMessage(data.message || 'If the account exists, reset instructions will be sent shortly.');
     } catch (err) {
-      setForgotSuccessMessage('Unable to send password reset request.');
+      setForgotSuccessMessage(err instanceof Error ? err.message : 'Unable to send password reset request.');
     } finally {
       setForgotSubmitting(false);
     }
@@ -232,6 +235,8 @@ export const LoginPage: React.FC = () => {
                     padding: 0,
                   }}
                   title={showPassword ? 'Hide Password' : 'Show Password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

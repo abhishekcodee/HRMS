@@ -1,6 +1,6 @@
 # HRMS UI/UX Design System Specification
 
-This document details the single-company HRMS design system, component architecture, color tokens, layout hierarchy, role-aware routing, and web-mobile relationship.
+This document details the HRMS design system, component architecture, color tokens, layout hierarchy, role-aware routing, and web-mobile relationship. The current web client is React 19 + Vite; it is not a Next.js application.
 
 ---
 
@@ -16,7 +16,7 @@ actor "Manager User" as ManagerUser
 actor "Employee User" as EmployeeUser
 
 node "Client Tier (Web & Mobile Shells)" {
-  package "Web App (Next.js/React + Vite)" {
+  package "Web App (React + Vite)" {
     [Role-Aware Layout Shell\n(Sidebar + Topbar)] as WebShell
     [25 Design System Components\n(Button, Card, Table, Modal, etc.)] as WebDesignSystem
     [Role Switcher Context\n(Admin/HR/Manager/Employee)] as RoleContext
@@ -35,7 +35,7 @@ node "Domain Data & Types" {
   [Realistic Indian HRMS Mock Dataset] as MockDataset
 }
 
-node "Future Backend Integration Tier" {
+node "Backend Integration Tier" {
   [REST API Gateway (/api/v1)] as APIGateway
   [Core & Operational Modules] as BackendModules
 }
@@ -55,8 +55,8 @@ MobileScreens --> SharedPkg
 
 SharedPkg --> MockDataset
 
-WebShell ..> APIGateway : Future Phase API Binding
-MobileShell ..> APIGateway : Future Phase API Binding
+WebShell ..> APIGateway : REST API binding
+MobileShell ..> APIGateway : REST API binding
 
 @enduml
 ```
@@ -65,7 +65,7 @@ MobileShell ..> APIGateway : Future Phase API Binding
 
 ## 2. Design Principles
 
-1. **Clean & Enterprise Minimalist**: Serious enterprise aesthetic designed for high data readability, uncluttered forms, and consistent tables. Avoids glassmorphism overload, excessive gradients, or playful non-standard UI patterns.
+1. **Readable Enterprise UI**: Serious enterprise aesthetic designed for high data readability, uncluttered forms, and consistent tables. The current web theme uses restrained glass surfaces with cyan/violet accents; new screens should avoid adding stronger blur or decorative gradients.
 2. **Role-Aware Context**: The UI automatically morphs and filters navigation options based on the active user role (`Admin`, `HR`, `Manager`, `Employee`).
 3. **Responsive & Mobile-First**: Mobile drawer layouts and compact React Native screens deliver native touch interactions without simple screen scaling.
 4. **Accessible & High-Contrast**: Form inputs feature clear labels, required markers (`*`), error messages, keyboard navigation outlines (`Ctrl+K` global search), and ARIA landmark compliance.
@@ -81,7 +81,7 @@ Design tokens are centralized in CSS variables ([index.css](file:///c:/HRMS/web/
 | `--bg-app` | `#0b0f19` | `#f8fafc` | Main application backdrop |
 | `--bg-surface` | `#111827` | `#ffffff` | Card, Table, & Modal surfaces |
 | `--border-color` | `rgba(255,255,255,0.08)` | `#e2e8f0` | Dividers & container borders |
-| `--primary-500` | `#6366f1` | `#4f46e5` | Primary brand accent (Indigo) |
+| `--primary-500` | `#06b6d4` | `#0891b2` | Primary brand accent (Cyan; tenant branding may override it) |
 | `--text-primary` | `#f9fafb` | `#0f172a` | Primary text headings |
 | `--success-text` | `#34d399` | `#047857` | Present status / Paid payroll |
 | `--warning-text` | `#fbbf24` | `#b45309` | Late punch / Pending leave |
@@ -125,10 +125,13 @@ The design system provides 25 core components under `web/src/components/ui/`:
 
 ### Role Navigation Matrix
 
-- **Admin**: Full access (Dashboard, Employees, Departments, Teams, Attendance, Leave, Payroll, Documents, Reports, Users & Roles, Settings, Audit Logs).
-- **HR**: Operational access (Dashboard, Employees, Departments, Teams, Attendance, Leave, Payroll, Documents, Reports, Settings).
-- **Manager**: Team scope (Dashboard, My Team, Team Attendance, Leave Requests, Reports, My Profile).
-- **Employee**: Self-service scope (Dashboard, My Profile, My Attendance, My Leave, My Documents, My Payslips).
+- **ADMIN**: Full access (Dashboard, Employees, Departments, Teams, Attendance, Leave, Payroll, Documents, Reports, Users & Roles, Settings, Audit Logs).
+- **EMPLOYER**: Operational and company administration access (Dashboard, Employees, Departments, Teams, Attendance, Leave, Payroll, Documents, Reports, Settings).
+- **EMPLOYEE**: Self-service access (Dashboard, My Profile, My Attendance, My Leave, My Documents, My Payslips).
+
+The current layout does not expose a separate `HR` or `Manager` runtime role; if
+those roles are introduced, update `AuthContext`, `RoleContext`, route guards,
+and this matrix together.
 
 ---
 

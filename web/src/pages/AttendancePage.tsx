@@ -34,14 +34,17 @@ export const AttendancePage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [logs, setLogs] = useState<BiometricPunchLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadLogs = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchRawBiometricLogs();
       setLogs(data);
     } catch (err) {
       console.error('Failed to load biometric logs:', err);
+      setError('Attendance logs could not be loaded. Check the connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -70,7 +73,11 @@ export const AttendancePage: React.FC = () => {
     const matchesDate =
       !selectedDate || att.punchTime.startsWith(selectedDate);
 
-    return matchesSearch && matchesDate;
+    const isCheckIn = String(att.punchState ?? '0') === '0';
+    const matchesStatus =
+      !statusFilter || (statusFilter === 'CHECK_IN' ? isCheckIn : !isCheckIn);
+
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   return (
@@ -131,6 +138,12 @@ export const AttendancePage: React.FC = () => {
         </>
       )}
 
+      {error && (
+        <Alert variant="error" title="Unable to load attendance" onClose={() => setError(null)}>
+          {error} <Button variant="outline" size="sm" onClick={loadLogs}>Try again</Button>
+        </Alert>
+      )}
+
       {/* Filter Toolbar */}
       <Card padding="1rem">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'center' }}>
@@ -185,7 +198,11 @@ export const AttendancePage: React.FC = () => {
                   <Td style={{ fontWeight: 600 }}>{new Date(att.punchTime).toLocaleString()}</Td>
                   <Td>{att.verifyType || 'Fingerprint / Face ID'}</Td>
                   <Td>
-                    <Badge variant="success">IN PUNCH</Badge>
+                    {String(att.punchState ?? '0') === '0' ? (
+                      <Badge variant="success">CHECK IN</Badge>
+                    ) : (
+                      <Badge variant="warning">CHECK OUT</Badge>
+                    )}
                   </Td>
                 </Tr>
               ))

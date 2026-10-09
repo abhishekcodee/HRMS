@@ -38,6 +38,8 @@ export const Alert: React.FC<AlertProps> = ({
 
   return (
     <div
+      role={actualVariant === 'error' ? 'alert' : 'status'}
+      aria-live={actualVariant === 'error' ? 'assertive' : 'polite'}
       style={{
         backgroundColor: bg,
         border: `1px solid ${border}`,
@@ -62,6 +64,7 @@ export const Alert: React.FC<AlertProps> = ({
       {onClose && (
         <button
           onClick={onClose}
+          aria-label="Dismiss alert"
           style={{
             background: 'transparent',
             border: 'none',

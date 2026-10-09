@@ -175,8 +175,10 @@ v1Router.use('/organization', authenticateToken, tenantMiddleware, organizationM
 v1Router.use('/employees', authenticateToken, tenantMiddleware, employeesModule.router);
 v1Router.use('/master', authenticateToken, tenantMiddleware, masterRouter);
 v1Router.use('/attendance', authenticateToken, tenantMiddleware, attendanceModule.router);
-v1Router.use('/zkteco', authenticateToken, tenantMiddleware, zktecoRouter);
-v1Router.use('/essl', authenticateToken, tenantMiddleware, zktecoRouter);
+// The ADMS heartbeat/punch endpoints are public because devices cannot send JWTs.
+// Management endpoints keep their own authentication and role guards in zkteco.routes.ts.
+v1Router.use('/zkteco', tenantMiddleware, zktecoRouter);
+v1Router.use('/essl', tenantMiddleware, zktecoRouter);
 v1Router.use('/leave', authenticateToken, tenantMiddleware, leaveModule.router);
 v1Router.use('/payroll', authenticateToken, tenantMiddleware, payrollRouter);
 v1Router.use('/documents', authenticateToken, tenantMiddleware, documentsModule.router);
@@ -196,5 +198,4 @@ v1Router.use('/security', authenticateToken, tenantMiddleware, securityRouter);
 
 import { mobileRouter } from './mobile.routes.js';
 v1Router.use('/mobile', mobileRouter);
-
 

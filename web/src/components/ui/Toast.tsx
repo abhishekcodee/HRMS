@@ -45,6 +45,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         {toasts.map(toast => (
           <div
             key={toast.id}
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -60,12 +62,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           >
             {toast.type === 'success' ? (
               <CheckCircle2 size={18} color="var(--success-text)" />
+            ) : toast.type === 'info' ? (
+              <span aria-hidden="true">ⓘ</span>
             ) : (
               <AlertCircle size={18} color="var(--error-text)" />
             )}
             <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
+              aria-label="Dismiss notification"
               style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: '6px' }}
             >
               <X size={14} />
