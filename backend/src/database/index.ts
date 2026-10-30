@@ -25,20 +25,24 @@ export const pool = mysql.createPool(poolOptions);
 // Drizzle ORM Instance for MySQL
 export const db = drizzle(pool);
 
+export let lastDbError: string | null = null;
+
 /**
  * Health check function for MySQL database connection.
  */
-export async function checkDatabaseHealth(): Promise<{ status: 'CONNECTED' | 'DISCONNECTED'; error?: string }> {
+export async function checkDatabaseHealth(): Promise<'CONNECTED' | 'DISCONNECTED'> {
   try {
     const connection = await pool.getConnection();
     try {
       await connection.query('SELECT 1');
-      return { status: 'CONNECTED' };
+      lastDbError = null;
+      return 'CONNECTED';
     } finally {
       connection.release();
     }
   } catch (error: any) {
-    logger.warn('MySQL Database health check failed:', { error: error?.message });
-    return { status: 'DISCONNECTED', error: error?.message || String(error) };
+    lastDbError = error?.message || String(error);
+    logger.warn('MySQL Database health check failed:', { error: lastDbError });
+    return 'DISCONNECTED';
   }
 }

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ApiResponse, HealthStatusData, ReadinessStatusData } from '@hrms/shared';
-import { checkDatabaseHealth } from '../database/index.js';
+import { checkDatabaseHealth, lastDbError } from '../database/index.js';
 import { env } from '../config/env.js';
 
 const router = Router();
@@ -42,14 +42,14 @@ router.get('/ready', async (_req: Request, res: Response<any>) => {
   const memory = process.memoryUsage();
   const uptime = Math.floor((Date.now() - startTime) / 1000);
 
-  const isReady = dbHealth.status === 'CONNECTED';
+  const isReady = dbHealth === 'CONNECTED';
   const statusCode = isReady ? 200 : 503;
 
   const response = {
     success: isReady,
     message: isReady
       ? 'HRMS Backend is fully ready to accept incoming traffic.'
-      : `HRMS Backend readiness check degraded: ${dbHealth.error || 'Database connection unavailable.'}`,
+      : `HRMS Backend readiness check degraded: ${lastDbError || 'Database connection unavailable.'}`,
     data: {
       service: 'HRMS-Backend-API',
       status: isReady ? 'UP' : 'DEGRADED',
@@ -58,8 +58,8 @@ router.get('/ready', async (_req: Request, res: Response<any>) => {
       version: '1.0.0',
       environment: env.NODE_ENV,
       checks: {
-        database: dbHealth.status,
-        databaseError: dbHealth.error,
+        database: dbHealth,
+        databaseError: lastDbError,
         memoryUsage: {
           rssMB: Math.round(memory.rss / (1024 * 1024)),
           heapTotalMB: Math.round(memory.heapTotal / (1024 * 1024)),
