@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@hrms/shared': path.resolve(__dirname, '../packages/shared/src/index.ts'),
+      '@hrms/shared': path.resolve(__dirname, 'src/@hrms/shared/index.ts'),
     },
   },
   server: {
