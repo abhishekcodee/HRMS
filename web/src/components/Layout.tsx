@@ -439,7 +439,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   color: 'var(--success-text)',
                 }}
               >
-                <User size={14} /> Employee: {user.employeeId}
+                <User size={14} /> Employee: {user?.employeeId}
               </div>
             ) : user?.role === UserRole.EMPLOYER ? (
               <Badge variant="warning">Role: EMPLOYER</Badge>
