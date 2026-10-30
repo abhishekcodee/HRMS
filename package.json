@@ -12,6 +12,9 @@
   "scripts": {
     "setup": "npm install --workspaces",
     "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=packages/shared && npm run build --workspace=backend",
+    "build:web": "npm run build --workspace=packages/shared && npm run build --workspace=web",
+    "start:backend": "npm run start --workspace=backend",
     "test": "npm run test --workspaces --if-present",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
     "dev:backend": "npm run dev --workspace=backend",

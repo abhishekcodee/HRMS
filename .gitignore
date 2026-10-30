@@ -32,6 +32,7 @@ yarn-error.log*
 *.db
 .vscode/
 .idea/
+.opencode/
 .DS_Store
 
 # Uploads

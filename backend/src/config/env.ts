@@ -7,21 +7,22 @@ dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config();
 
 const envSchema = z.object({
-  PORT: z.string().transform((val) => parseInt(val, 10)).default('4000'),
+  PORT: z.union([z.string(), z.number()]).transform((val) => (typeof val === 'number' ? val : parseInt(val, 10))).default('4000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_PREFIX: z.string().default('/api/v1'),
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:8080'),
   
   // Database Configuration (MySQL / Localhost)
   DB_HOST: z.string().default('localhost'),
-  DB_PORT: z.string().transform((val) => parseInt(val, 10)).default('3306'),
+  DB_PORT: z.union([z.string(), z.number()]).transform((val) => (typeof val === 'number' ? val : parseInt(val, 10))).default('3306'),
   DB_NAME: z.string().default('hrms_db'),
   DB_DATABASE: z.string().optional().default('hrms_db'),
   DB_USER: z.string().default('root'),
   DB_USERNAME: z.string().optional().default('root'),
   DB_PASSWORD: z.string().default(''),
   DATABASE_URL: z.string().default('mysql://root:@localhost:3306/hrms_db'),
-  DB_MAX_CONNECTIONS: z.string().transform((val) => parseInt(val, 10)).default('20'),
+  DB_SSL: z.union([z.boolean(), z.string()]).optional().default(false).transform((val) => (typeof val === 'boolean' ? val : val === 'true' || val === '1')),
+  DB_MAX_CONNECTIONS: z.union([z.string(), z.number()]).transform((val) => (typeof val === 'number' ? val : parseInt(val, 10))).default('20'),
   
   // Logging Configuration
   LOG_LEVEL: z.string().default('info'),

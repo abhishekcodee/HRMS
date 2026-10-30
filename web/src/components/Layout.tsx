@@ -34,6 +34,7 @@ import {
   X,
   LogOut,
   ChevronDown,
+  ChevronUp,
   Calendar,
   MessageSquare,
   Globe,
@@ -49,6 +50,13 @@ interface NavItemConfig {
   badge?: string;
 }
 
+interface NavGroupConfig {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  items: NavItemConfig[];
+}
+
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, setRole, theme, toggleTheme, currentUser, unreadNotificationCount } = useRole();
   const { user, logout } = useAuth();
@@ -60,6 +68,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [roleSwitchError, setRoleSwitchError] = useState<string | null>(null);
   const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
   const [companiesList, setCompaniesList] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(() => localStorage.getItem('hrms_nav_group'));
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -97,63 +106,93 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const navItems: NavItemConfig[] = [
-    // Super Admin Platform Control
-    ...(isSuper
-      ? [{ path: '/super-admin', label: 'Platform SaaS Control', icon: <Globe size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }]
-      : []),
-
-    { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] },
-    
-    // Shared Internal Chat Module for All Roles
+  const allGroups: NavGroupConfig[] = [
     {
-      path: '/chat',
-      label: 'Chat',
-      icon: <MessageSquare size={20} />,
-      roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'],
-      badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined
+      id: 'main', label: 'Main Navigation', icon: <LayoutDashboard size={18} />, items: [
+        ...(isSuper ? [{ path: '/super-admin', label: 'Platform SaaS Control', icon: <Globe size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
+        { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] },
+        { path: '/chat', label: 'Chat', icon: <MessageSquare size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'], badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined },
+      ]
     },
-
-    // Admin & Employer Shared Management
-    { path: '/employees', label: 'Employees', icon: <Users size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/departments', label: 'Departments', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/teams', label: 'Teams', icon: <Users2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/leave', label: 'Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/bank-transfer', label: 'Bank Transfer Advice', icon: <Building2 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/payroll/ff-settlement', label: 'Full & Final (F&F)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/document-management', label: 'Document Management', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/documents', label: 'Document Uploads', icon: <FileText size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-    { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-
-    // Employee Self Service Nav
-    { path: '/my-profile', label: 'My Profile', icon: <User size={20} />, roles: [UserRole.EMPLOYEE] },
-    { path: '/my-attendance', label: 'My Attendance', icon: <CalendarDays size={20} />, roles: [UserRole.EMPLOYEE] },
-    { path: '/my-leave', label: 'My Leave', icon: <FileCheck2 size={20} />, roles: [UserRole.EMPLOYEE] },
-    { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={20} />, roles: [UserRole.EMPLOYEE] },
-    { path: '/my-documents', label: 'My Documents', icon: <FileText size={20} />, roles: [UserRole.EMPLOYEE] },
-
-    // White-Label Branding (Exclusively restricted to amanupadhyay2030@gmail.com)
-    ...(user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com'
-      ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={20} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }]
-      : []),
-
-    // Admin System Controls
-    { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
-    { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
-    { path: '/settings', label: 'Settings', icon: <Settings size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
-    { path: '/audit', label: 'Audit Logs', icon: <History size={20} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] }
+    {
+      id: 'people', label: 'People Management', icon: <Users size={18} />, items: [
+        { path: '/employees', label: 'Employees', icon: <Users size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/departments', label: 'Departments', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/teams', label: 'Teams', icon: <Users2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+        { path: '/my-profile', label: 'My Profile', icon: <User size={18} />, roles: [UserRole.EMPLOYEE] },
+      ]
+    },
+    {
+      id: 'time', label: 'Time & Attendance', icon: <CalendarDays size={18} />, items: [
+        { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/my-attendance', label: 'My Attendance', icon: <CalendarDays size={18} />, roles: [UserRole.EMPLOYEE] },
+        { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/leave', label: 'Leave', icon: <FileCheck2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/my-leave', label: 'My Leave', icon: <FileCheck2 size={18} />, roles: [UserRole.EMPLOYEE] },
+        { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={18} />, roles: [UserRole.EMPLOYEE] },
+      ]
+    },
+    {
+      id: 'payroll', label: 'Payroll & Finance', icon: <Receipt size={18} />, items: [
+        { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/bank-transfer', label: 'Bank Transfer Advice', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/ff-settlement', label: 'Full & Final (F&F)', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+      ]
+    },
+    {
+      id: 'documents', label: 'Document Center', icon: <FileText size={18} />, items: [
+        { path: '/document-management', label: 'Document Management', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/documents', label: 'Document Uploads', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/my-documents', label: 'My Documents', icon: <FileText size={18} />, roles: [UserRole.EMPLOYEE] },
+      ]
+    },
+    {
+      id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 size={18} />, items: [
+        { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+      ]
+    },
+    {
+      id: 'security', label: 'Security & Compliance', icon: <ShieldCheck size={18} />, items: [
+        { path: '/security-center', label: 'Security & Audit Center', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+        { path: '/audit', label: 'Audit Logs', icon: <History size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+      ]
+    },
+    {
+      id: 'settings', label: 'Settings', icon: <Settings size={18} />, items: [
+        { path: '/settings', label: 'Settings', icon: <Settings size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+        ...(user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com' ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
+      ]
+    },
   ];
 
-  const visibleNav = navItems.filter(item => item.roles.includes(role as any));
+  const visibleGroups = allGroups
+    .map(group => ({ ...group, items: group.items.filter(item => item.roles.includes(role as any)) }))
+    .filter(group => group.items.length > 0);
+
+  const pathMatches = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(`${path}/`));
+  const activeGroup = visibleGroups.find(group => group.items.some(item => pathMatches(item.path)))?.id;
+
+  useEffect(() => {
+    if (activeGroup && activeGroup !== expandedGroup) {
+      setExpandedGroup(activeGroup);
+      localStorage.setItem('hrms_nav_group', activeGroup);
+    }
+  }, [activeGroup, expandedGroup]);
+
+  const toggleGroup = (groupId: string) => {
+    if (collapsed) setCollapsed(false);
+    const next = expandedGroup === groupId ? null : groupId;
+    setExpandedGroup(next);
+    if (next) localStorage.setItem('hrms_nav_group', next);
+    else localStorage.removeItem('hrms_nav_group');
+  };
 
   const handleRoleSwitch = async (targetRole: UserRole) => {
     setRoleSwitchError(null);
@@ -233,44 +272,48 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
 
         <nav className="sidebar-nav">
-          {!collapsed && <div className="nav-section-title">Navigation</div>}
-          {visibleNav.map(item => {
-            const isActive = location.pathname === item.path;
-            const linkContent = (
-              <Link
-                to={item.path}
-                className={`nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => setMobileOpen(false)}
+          {!collapsed && <div className="nav-section-title">Workspace</div>}
+          {visibleGroups.map(group => {
+            const isGroupActive = group.id === activeGroup;
+            const isExpanded = expandedGroup === group.id && !collapsed;
+            const groupButton = (
+              <button
+                type="button"
+                className={`nav-group-trigger ${isGroupActive ? 'has-active-child' : ''}`}
+                onClick={() => toggleGroup(group.id)}
+                aria-expanded={isExpanded}
+                aria-controls={`nav-group-${group.id}`}
+                aria-label={collapsed ? group.label : undefined}
               >
-                <span className="nav-icon">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
-                {!collapsed && item.badge && (
-                  <span
-                    style={{
-                      marginLeft: 'auto',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      backgroundColor: 'var(--primary-glow)',
-                      color: 'var(--primary-500)',
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: 'var(--radius-full)'
-                    }}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
+                <span className="nav-icon">{group.icon}</span>
+                {!collapsed && <span className="nav-group-label">{group.label}</span>}
+                {!collapsed && (isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />)}
+              </button>
             );
 
             return (
-              <div key={item.path}>
-                {collapsed ? (
-                  <Tooltip content={item.label} position="right">
-                    {linkContent}
-                  </Tooltip>
-                ) : (
-                  linkContent
-                )}
+              <div className={`nav-group ${isExpanded ? 'open' : ''}`} key={group.id}>
+                {collapsed ? <Tooltip content={group.label} position="right">{groupButton}</Tooltip> : groupButton}
+                <div className="nav-group-items" id={`nav-group-${group.id}`} aria-hidden={!isExpanded}>
+                  {group.items.map(item => {
+                    const isActive = pathMatches(item.path);
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`nav-link nav-child-link ${isActive ? 'active' : ''}`}
+                        onClick={() => setMobileOpen(false)}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <span className="nav-icon">{item.icon}</span>
+                        <span className="nav-link-label">{item.label}</span>
+                        {item.badge && (
+                          <span className="nav-badge">{item.badge}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}

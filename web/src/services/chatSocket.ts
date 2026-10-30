@@ -1,6 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = `${window.location.protocol}//${window.location.hostname}:4000`;
+const SOCKET_URL =
+  (import.meta.env.VITE_SOCKET_URL as string | undefined) ||
+  ((import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/api\/v1\/?$/, '')) ||
+  `${window.location.protocol}//${window.location.hostname}:4000`;
 
 let socket: Socket | null = null;
 

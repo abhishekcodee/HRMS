@@ -6,7 +6,7 @@ import { pool } from './database/index.js';
 import { seedDatabase } from './database/seed.js';
 import { setupChatSockets } from './modules/chat/chatSocket.js';
 
-const server = app.listen(env.PORT, async () => {
+const server = app.listen(env.PORT, '0.0.0.0', async () => {
   logger.info(`🚀 HRMS Backend API Server started on port ${env.PORT}`);
   logger.info(`📍 API Health Endpoint: http://localhost:${env.PORT}${env.API_PREFIX}/health`);
   logger.info(`📍 API Readiness Endpoint: http://localhost:${env.PORT}${env.API_PREFIX}/ready`);
@@ -19,9 +19,13 @@ const server = app.listen(env.PORT, async () => {
 });
 
 // Initialize Socket.IO Real-Time Chat Engine
+const corsOrigins = env.CORS_ORIGIN.includes('*')
+  ? '*'
+  : env.CORS_ORIGIN.split(',').map((s) => s.trim());
+
 const io = new SocketIOServer(server, {
   cors: {
-    origin: env.CORS_ORIGIN.split(','),
+    origin: corsOrigins,
     credentials: true,
   },
 });
