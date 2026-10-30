@@ -37,19 +37,19 @@ router.get('/health', (_req: Request, res: Response<ApiResponse<HealthStatusData
  * GET /api/v1/ready
  * Deep Readiness Probe Endpoint (checks PostgreSQL connection & memory status)
  */
-router.get('/ready', async (_req: Request, res: Response<ApiResponse<ReadinessStatusData>>) => {
+router.get('/ready', async (_req: Request, res: Response<any>) => {
   const dbHealth = await checkDatabaseHealth();
   const memory = process.memoryUsage();
   const uptime = Math.floor((Date.now() - startTime) / 1000);
 
-  const isReady = dbHealth === 'CONNECTED';
+  const isReady = dbHealth.status === 'CONNECTED';
   const statusCode = isReady ? 200 : 503;
 
-  const response: ApiResponse<ReadinessStatusData> = {
+  const response = {
     success: isReady,
     message: isReady
       ? 'HRMS Backend is fully ready to accept incoming traffic.'
-      : 'HRMS Backend readiness check degraded: Database connection unavailable.',
+      : `HRMS Backend readiness check degraded: ${dbHealth.error || 'Database connection unavailable.'}`,
     data: {
       service: 'HRMS-Backend-API',
       status: isReady ? 'UP' : 'DEGRADED',
@@ -58,7 +58,8 @@ router.get('/ready', async (_req: Request, res: Response<ApiResponse<ReadinessSt
       version: '1.0.0',
       environment: env.NODE_ENV,
       checks: {
-        database: dbHealth,
+        database: dbHealth.status,
+        databaseError: dbHealth.error,
         memoryUsage: {
           rssMB: Math.round(memory.rss / (1024 * 1024)),
           heapTotalMB: Math.round(memory.heapTotal / (1024 * 1024)),
