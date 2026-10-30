@@ -3,11 +3,13 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
+const dbUsername = env.DB_USER && env.DB_USER !== 'root' ? env.DB_USER : (env.DB_USERNAME || env.DB_USER || 'root');
+
 // MySQL Connection Pool configuration (XAMPP / AWS RDS / TiDB Cloud compatible)
 const poolOptions: mysql.PoolOptions = {
   host: env.DB_HOST,
   port: env.DB_PORT,
-  user: env.DB_USERNAME || env.DB_USER || 'root',
+  user: dbUsername,
   password: env.DB_PASSWORD || '',
   database: env.DB_DATABASE || env.DB_NAME || 'hrms_db',
   waitForConnections: true,

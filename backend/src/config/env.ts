@@ -18,7 +18,7 @@ const envSchema = z.object({
   DB_NAME: z.string().default('hrms_db'),
   DB_DATABASE: z.string().optional().default('hrms_db'),
   DB_USER: z.string().default('root'),
-  DB_USERNAME: z.string().optional().default('root'),
+  DB_USERNAME: z.string().optional(),
   DB_PASSWORD: z.string().default(''),
   DATABASE_URL: z.string().default('mysql://root:@localhost:3306/hrms_db'),
   DB_SSL: z.union([z.boolean(), z.string()]).optional().default(false).transform((val) => (typeof val === 'boolean' ? val : val === 'true' || val === '1')),
