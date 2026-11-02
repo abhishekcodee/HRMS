@@ -8,13 +8,14 @@ export const CompanyBrandingPage: React.FC = () => {
   const { token, user } = useAuth();
   const { branding, reloadBranding } = useTenant();
 
-  if (user?.email?.toLowerCase() !== 'amanupadhyay2030@gmail.com') {
+  const isAllowed = user?.role === 'ADMIN' || user?.isSuperAdmin || user?.role === 'SUPER_ADMIN' || user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com';
+  if (!isAllowed) {
     return (
       <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-primary)', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
         <h2 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 12px 0' }}>Access Restricted</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6 }}>
-          White-Label Branding configuration is strictly restricted to Lead Super Administrator (<strong>amanupadhyay2030@gmail.com</strong>).
+          White-Label Branding configuration requires administrator permissions.
         </p>
       </div>
     );

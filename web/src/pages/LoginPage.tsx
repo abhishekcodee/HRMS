@@ -104,34 +104,16 @@ export const LoginPage: React.FC = () => {
       <div style={{ width: '100%', maxWidth: '440px' }}>
         {/* Dynamic HRMS Tenant Branding Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          {branding.logo_url ? (
-            <img
-              src={branding.logo_url}
-              alt={branding.name}
-              style={{ maxHeight: '60px', marginBottom: '1rem', objectFit: 'contain' }}
-            />
-          ) : (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '56px',
-                height: '56px',
-                borderRadius: '16px',
-                background: branding.brand_color ? branding.brand_color : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-                marginBottom: '1rem',
-              }}
-            >
-              <ShieldCheck size={32} color="#ffffff" />
-            </div>
-          )}
+          <img
+            src={branding.logo_url || '/logo.png'}
+            alt={branding.name || 'Wokhman'}
+            style={{ maxHeight: '76px', maxWidth: '260px', marginBottom: '1rem', objectFit: 'contain' }}
+          />
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
-            {branding.name || 'HRMS Portal'}
+            {branding.name || 'Wokhman'}
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-            Multi-Tenant Enterprise HRMS & Payroll System
+            Work Meets Human. Enterprise HRMS Platform
           </p>
         </div>
 

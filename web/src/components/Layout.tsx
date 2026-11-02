@@ -233,34 +233,16 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
       <aside className={`hrms-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/" className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '8px' }}>
-            {branding.logo_url ? (
-              <img
-                src={branding.logo_url}
-                alt={branding.name || 'HRMS Brand'}
-                style={{
-                  height: collapsed ? '32px' : '40px',
-                  maxWidth: collapsed ? '32px' : '175px',
-                  objectFit: 'contain',
-                  transition: 'all 0.2s ease',
-                }}
-              />
-            ) : branding.name && branding.name !== 'Default Enterprise' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 700, fontSize: '16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                <span style={{ fontSize: '20px' }}>🏢</span>
-                {!collapsed && <span>{branding.name}</span>}
-              </div>
-            ) : (
-              <img
-                src="/hrms-brand.png"
-                alt="HRMS Brand"
-                style={{
-                  height: collapsed ? '32px' : '44px',
-                  maxWidth: collapsed ? '32px' : '175px',
-                  objectFit: 'contain',
-                  transition: 'all 0.2s ease',
-                }}
-              />
-            )}
+            <img
+              src={branding.logo_url || '/logo.png'}
+              alt={branding.name || 'Wokhman'}
+              style={{
+                height: collapsed ? '32px' : '42px',
+                maxWidth: collapsed ? '32px' : '180px',
+                objectFit: 'contain',
+                transition: 'all 0.2s ease',
+              }}
+            />
           </Link>
           <button
             className="sidebar-toggle-btn"

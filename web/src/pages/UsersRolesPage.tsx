@@ -25,7 +25,7 @@ export const UsersRolesPage: React.FC = () => {
     status: 'active',
     departmentName: 'Software Engineering',
     designation: 'Software Developer',
-    companyName: 'Enterprise HRMS Inc.',
+    companyName: 'Wokhman Inc.',
     taxId: '',
   });
 
@@ -111,7 +111,7 @@ export const UsersRolesPage: React.FC = () => {
             status: 'active',
             departmentName: 'Software Engineering',
             designation: 'Software Developer',
-            companyName: 'Enterprise HRMS Inc.',
+            companyName: 'Wokhman Inc.',
             taxId: '',
           });
         }, 1200);

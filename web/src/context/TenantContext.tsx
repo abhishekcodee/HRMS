@@ -22,10 +22,12 @@ interface TenantContextType {
 
 const DEFAULT_BRANDING: CompanyBranding = {
   id: 'c1000000-0000-0000-0000-000000000001',
-  name: 'Default Enterprise',
-  code: 'DEFAULT',
-  brand_color: '#1e293b',
-  secondary_brand_color: '#0f172a',
+  name: 'Wokhman',
+  code: 'WOKHMAN',
+  logo_url: '/logo.png',
+  favicon_url: '/favicon.png',
+  brand_color: '#4f46e5',
+  secondary_brand_color: '#0066ff',
 };
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
