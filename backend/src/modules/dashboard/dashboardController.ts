@@ -64,3 +64,4 @@ export async function getDashboardStats(req: AuthRequest, res: Response): Promis
     });
   }
 }
+

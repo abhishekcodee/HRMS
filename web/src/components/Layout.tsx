@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useRole } from '../context/RoleContext';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
@@ -57,7 +57,7 @@ interface NavGroupConfig {
   items: NavItemConfig[];
 }
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { role, setRole, theme, toggleTheme, currentUser, unreadNotificationCount } = useRole();
   const { user, logout } = useAuth();
   const { branding, activeTenantId, setActiveTenantId, reloadBranding } = useTenant();
@@ -167,7 +167,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     {
       id: 'settings', label: 'Settings', icon: <Settings size={18} />, items: [
         { path: '/settings', label: 'Settings', icon: <Settings size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
-        ...(user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com' ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
+        ...(role === UserRole.ADMIN || isSuper || user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com' ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
       ]
     },
   ];
@@ -520,7 +520,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </header>
 
         {/* Content Body */}
-        <main className={`hrms-content ${location.pathname === '/chat' ? 'chat-page-content' : ''}`}>{children}</main>
+        <main className={`hrms-content ${location.pathname === '/chat' ? 'chat-page-content' : ''}`}>{children || <Outlet />}</main>
 
         {/* Senior Design System: Floating Glassmorphic Mobile Bottom Navigation Bar */}
         <nav className="mobile-bottom-nav">

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TenantProvider } from './context/TenantContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -9,11 +9,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
-// Eagerly loaded primary routes
+// Eagerly loaded primary auth routes
 import { LoginPage } from './pages/LoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 
-// Lazy loaded feature routes for lightning-fast page transitions
+// Lazy loaded feature modules
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const EmployeeDetailPage = lazy(() => import('./pages/EmployeeDetailPage'));
@@ -54,7 +54,7 @@ const PageFallback = () => (
   </div>
 );
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
+const ProtectedRoute: React.FC<{ children?: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
   const location = useLocation();
 
@@ -83,7 +83,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean;
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export function App() {
@@ -109,87 +109,86 @@ export function App() {
                       }
                     />
 
-                    {/* Protected Application Routes inside Layout */}
+                    {/* Protected Application Layout Route */}
                     <Route
-                      path="/*"
                       element={
                         <ProtectedRoute>
                           <Layout>
                             <Suspense fallback={<PageFallback />}>
-                              <Routes>
-                                <Route path="/" element={<Dashboard />} />
-                                <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
-                                <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
-                                
-                                {/* HRMS Internal Communication Platform */}
-                                <Route path="/chat" element={<ChatPage />} />
-                              
-                                {/* Employee Management */}
-                                <Route path="/employees" element={<EmployeesPage />} />
-                                <Route path="/employees/:id" element={<EmployeeDetailPage />} />
-                                
-                                {/* Organization Hierarchy */}
-                                <Route path="/departments" element={<DepartmentsTeamsPage />} />
-                                <Route path="/teams" element={<DepartmentsTeamsPage />} />
-                                
-                                {/* Attendance & Biometric Machine Integration */}
-                                <Route path="/attendance" element={<AttendancePage />} />
-                                <Route path="/my-attendance" element={<AttendancePage />} />
-                                <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
-                                
-                                {/* Leave Management */}
-                                <Route path="/leave" element={<LeavePage />} />
-                                <Route path="/my-leave" element={<LeavePage />} />
-
-                                {/* Calendar & Company Events */}
-                                <Route path="/calendar" element={<CalendarPage />} />
-                                <Route path="/my-calendar" element={<CalendarPage />} />
-                                
-                                {/* Documents & Vault */}
-                                <Route path="/document-management" element={<DocumentDashboardPage />} />
-                                <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
-                                <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
-                                <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
-                                <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
-                                <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
-                                <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
-                                <Route path="/documents" element={<DocumentsPage />} />
-                                <Route path="/my-documents" element={<EmployeeLockerPage />} />
-                                
-                                {/* Security & Audit Center */}
-                                <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
-
-                                {/* Production Payroll & Salary Engine */}
-                                <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
-                                <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
-                                <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
-                                <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
-                                <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
-                                <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
-                                <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
-
-                                {/* Reports & Analytics */}
-                                <Route path="/reports" element={<ReportsPage />} />
-                                <Route path="/reports-analytics" element={<ReportsPage />} />
-                                
-                                {/* Employee Self Service */}
-                                <Route path="/my-profile" element={<EmployeeDetailPage />} />
-                                
-                                {/* Admin System Controls */}
-                                <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
-                                <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
-                                <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
-                                <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
-                                <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />
-
-                                {/* Fallback */}
-                                <Route path="*" element={<Navigate to="/" replace />} />
-                              </Routes>
+                              <Outlet />
                             </Suspense>
                           </Layout>
                         </ProtectedRoute>
                       }
-                    />
+                    >
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
+                      <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
+                      
+                      {/* HRMS Internal Communication Platform */}
+                      <Route path="/chat" element={<ChatPage />} />
+                    
+                      {/* Employee Management */}
+                      <Route path="/employees" element={<EmployeesPage />} />
+                      <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+                      
+                      {/* Organization Hierarchy */}
+                      <Route path="/departments" element={<DepartmentsTeamsPage />} />
+                      <Route path="/teams" element={<DepartmentsTeamsPage />} />
+                      
+                      {/* Attendance & Biometric Machine Integration */}
+                      <Route path="/attendance" element={<AttendancePage />} />
+                      <Route path="/my-attendance" element={<AttendancePage />} />
+                      <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
+                      
+                      {/* Leave Management */}
+                      <Route path="/leave" element={<LeavePage />} />
+                      <Route path="/my-leave" element={<LeavePage />} />
+
+                      {/* Calendar & Company Events */}
+                      <Route path="/calendar" element={<CalendarPage />} />
+                      <Route path="/my-calendar" element={<CalendarPage />} />
+                      
+                      {/* Documents & Vault */}
+                      <Route path="/document-management" element={<DocumentDashboardPage />} />
+                      <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
+                      <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
+                      <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
+                      <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
+                      <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
+                      <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
+                      <Route path="/documents" element={<DocumentsPage />} />
+                      <Route path="/my-documents" element={<EmployeeLockerPage />} />
+                      
+                      {/* Security & Audit Center */}
+                      <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
+
+                      {/* Production Payroll & Salary Engine */}
+                      <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
+                      <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
+                      <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
+                      <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
+                      <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
+                      <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
+                      <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
+
+                      {/* Reports & Analytics */}
+                      <Route path="/reports" element={<ReportsPage />} />
+                      <Route path="/reports-analytics" element={<ReportsPage />} />
+                      
+                      {/* Employee Self Service */}
+                      <Route path="/my-profile" element={<EmployeeDetailPage />} />
+                      
+                      {/* Admin System Controls */}
+                      <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
+                      <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
+                      <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
+                      <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />
+
+                      {/* Fallback to Dashboard */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Route>
                   </Routes>
                 </BrowserRouter>
               </ToastProvider>
