@@ -52,12 +52,14 @@ export async function getPublicBranding(req: Request, res: Response): Promise<vo
 
 export async function updateCompanyBranding(req: AuthRequest, res: Response): Promise<void> {
   try {
-    if (req.user?.email?.toLowerCase() !== 'amanupadhyay2030@gmail.com') {
+    const userRole = req.user?.role;
+    const isAuthorized = userRole === 'super_admin' || userRole === 'admin' || userRole === 'employer' || req.user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com';
+    if (!isAuthorized) {
       res.status(403).json({
         success: false,
         error: {
           code: 'FORBIDDEN',
-          message: 'White-Label Branding configuration is restricted exclusively to Lead Super Administrator (amanupadhyay2030@gmail.com).',
+          message: 'White-Label Branding configuration requires administrator permissions.',
         },
       });
       return;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { healthRouter } from './health.routes.js';
 import { employeeRouter } from './employee.routes.js';
+import { getDashboardStats } from '../modules/dashboard/dashboardController.js';
 import { authModule } from '../modules/auth/index.js';
 import { usersModule } from '../modules/users/index.js';
 import { rolesModule } from '../modules/roles/index.js';
@@ -102,6 +103,9 @@ export const v1Router = Router();
 
 // Health & Readiness Routes
 v1Router.use('/', healthRouter);
+
+// High-Performance Consolidated Dashboard Stats Endpoint
+v1Router.get('/dashboard/stats', authenticateToken, tenantMiddleware, getDashboardStats);
 
 // Employee Self Service Isolated Routes
 v1Router.use('/employee', employeeRouter);

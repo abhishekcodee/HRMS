@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TenantProvider } from './context/TenantContext';
@@ -9,44 +9,50 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
+// Eagerly loaded primary routes
 import { LoginPage } from './pages/LoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
-import Dashboard from './pages/Dashboard';
-import EmployeesPage from './pages/EmployeesPage';
-import EmployeeDetailPage from './pages/EmployeeDetailPage';
-import DepartmentsTeamsPage from './pages/DepartmentsTeamsPage';
-import AttendancePage from './pages/AttendancePage';
-import LeavePage from './pages/LeavePage';
-import DocumentsPage from './pages/DocumentsPage';
-import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
-import AppointmentLetterSettingsPage from './pages/AppointmentLetterSettingsPage';
-import AppointmentLetterTemplatesPage from './pages/AppointmentLetterTemplatesPage';
-import UsersRolesPage from './pages/UsersRolesPage';
-import AuditLogsPage from './pages/AuditLogsPage';
 
-import SalarySlipBulkPage from './pages/SalarySlipBulkPage';
-import BiometricDevicesPage from './pages/BiometricDevicesPage';
-import CalendarPage from './pages/CalendarPage';
-import ChatPage from './pages/ChatPage';
-import { PayrollProcessingPage } from './pages/PayrollProcessingPage';
-import { SalaryStructuresPage } from './pages/SalaryStructuresPage';
-import { StatutorySettingsPage } from './pages/StatutorySettingsPage';
-import { BankTransferPage } from './pages/BankTransferPage';
-import { FullAndFinalPage } from './pages/FullAndFinalPage';
-import { UpcomingPayrollPage } from './pages/UpcomingPayrollPage';
+// Lazy loaded feature routes for lightning-fast page transitions
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
+const EmployeeDetailPage = lazy(() => import('./pages/EmployeeDetailPage'));
+const DepartmentsTeamsPage = lazy(() => import('./pages/DepartmentsTeamsPage'));
+const AttendancePage = lazy(() => import('./pages/AttendancePage'));
+const LeavePage = lazy(() => import('./pages/LeavePage'));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AppointmentLetterSettingsPage = lazy(() => import('./pages/AppointmentLetterSettingsPage'));
+const AppointmentLetterTemplatesPage = lazy(() => import('./pages/AppointmentLetterTemplatesPage'));
+const UsersRolesPage = lazy(() => import('./pages/UsersRolesPage'));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
 
-import DocumentDashboardPage from './pages/documentManagement/DocumentDashboardPage';
-import DocumentTypesManagerPage from './pages/documentManagement/DocumentTypesManagerPage';
-import DocumentTemplateBuilderPage from './pages/documentManagement/DocumentTemplateBuilderPage';
-import DocumentGenerationWizardPage from './pages/documentManagement/DocumentGenerationWizardPage';
-import EmployeeLockerPage from './pages/documentManagement/EmployeeLockerPage';
-import AppointmentLetterGeneratorPage from './pages/documentManagement/AppointmentLetterGeneratorPage';
-import MultiDocumentGeneratorStudio from './pages/documentManagement/MultiDocumentGeneratorStudio';
-import SecurityAuditCenterPage from './pages/security/SecurityAuditCenterPage';
-import { SuperAdminDashboardPage } from './pages/superAdmin/SuperAdminDashboardPage';
-import { CompanyBrandingPage } from './pages/CompanyBrandingPage';
+const SalarySlipBulkPage = lazy(() => import('./pages/SalarySlipBulkPage'));
+const BiometricDevicesPage = lazy(() => import('./pages/BiometricDevicesPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const PayrollProcessingPage = lazy(() => import('./pages/PayrollProcessingPage').then(m => ({ default: m.PayrollProcessingPage })));
+const SalaryStructuresPage = lazy(() => import('./pages/SalaryStructuresPage').then(m => ({ default: m.SalaryStructuresPage })));
+const StatutorySettingsPage = lazy(() => import('./pages/StatutorySettingsPage').then(m => ({ default: m.StatutorySettingsPage })));
+const BankTransferPage = lazy(() => import('./pages/BankTransferPage').then(m => ({ default: m.BankTransferPage })));
+const FullAndFinalPage = lazy(() => import('./pages/FullAndFinalPage').then(m => ({ default: m.FullAndFinalPage })));
+const UpcomingPayrollPage = lazy(() => import('./pages/UpcomingPayrollPage').then(m => ({ default: m.UpcomingPayrollPage })));
 
+const DocumentDashboardPage = lazy(() => import('./pages/documentManagement/DocumentDashboardPage'));
+const DocumentTypesManagerPage = lazy(() => import('./pages/documentManagement/DocumentTypesManagerPage'));
+const DocumentTemplateBuilderPage = lazy(() => import('./pages/documentManagement/DocumentTemplateBuilderPage'));
+const MultiDocumentGeneratorStudio = lazy(() => import('./pages/documentManagement/MultiDocumentGeneratorStudio'));
+const EmployeeLockerPage = lazy(() => import('./pages/documentManagement/EmployeeLockerPage'));
+const SecurityAuditCenterPage = lazy(() => import('./pages/security/SecurityAuditCenterPage'));
+const SuperAdminDashboardPage = lazy(() => import('./pages/superAdmin/SuperAdminDashboardPage').then(m => ({ default: m.SuperAdminDashboardPage })));
+const CompanyBrandingPage = lazy(() => import('./pages/CompanyBrandingPage').then(m => ({ default: m.CompanyBrandingPage })));
+
+const PageFallback = () => (
+  <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <LoadingSpinner size="md" text="Loading module..." />
+  </div>
+);
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
@@ -88,108 +94,110 @@ export function App() {
           <NotificationProvider>
             <RoleProvider>
               <ToastProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* Unauthenticated Login Route */}
-                  <Route path="/login" element={<LoginPage />} />
+                <BrowserRouter>
+                  <Routes>
+                    {/* Unauthenticated Login Route */}
+                    <Route path="/login" element={<LoginPage />} />
 
-                  {/* Mandatory First-Time Password Change Route */}
-                  <Route
-                    path="/change-password"
-                    element={
-                      <ProtectedRoute>
-                        <ChangePasswordPage />
-                      </ProtectedRoute>
-                    }
-                  />
+                    {/* Mandatory First-Time Password Change Route */}
+                    <Route
+                      path="/change-password"
+                      element={
+                        <ProtectedRoute>
+                          <ChangePasswordPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                  {/* Protected Application Routes inside Layout */}
-                  <Route
-                    path="/*"
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Routes>
-                            <Route path="/" element={<Dashboard />} />
-                            <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
-                            <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
-                            
-                            {/* HRMS Internal Communication Platform */}
-                            <Route path="/chat" element={<ChatPage />} />
-                          
-                          {/* Employee Management */}
-                          <Route path="/employees" element={<EmployeesPage />} />
-                          <Route path="/employees/:id" element={<EmployeeDetailPage />} />
-                          
-                          {/* Organization Hierarchy */}
-                          <Route path="/departments" element={<DepartmentsTeamsPage />} />
-                          <Route path="/teams" element={<DepartmentsTeamsPage />} />
-                          
-                          {/* Attendance & Biometric Machine Integration */}
-                          <Route path="/attendance" element={<AttendancePage />} />
-                          <Route path="/my-attendance" element={<AttendancePage />} />
-                          <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
-                          
-                          {/* Leave Management */}
-                          <Route path="/leave" element={<LeavePage />} />
-                          <Route path="/my-leave" element={<LeavePage />} />
+                    {/* Protected Application Routes inside Layout */}
+                    <Route
+                      path="/*"
+                      element={
+                        <ProtectedRoute>
+                          <Layout>
+                            <Suspense fallback={<PageFallback />}>
+                              <Routes>
+                                <Route path="/" element={<Dashboard />} />
+                                <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
+                                <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
+                                
+                                {/* HRMS Internal Communication Platform */}
+                                <Route path="/chat" element={<ChatPage />} />
+                              
+                                {/* Employee Management */}
+                                <Route path="/employees" element={<EmployeesPage />} />
+                                <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+                                
+                                {/* Organization Hierarchy */}
+                                <Route path="/departments" element={<DepartmentsTeamsPage />} />
+                                <Route path="/teams" element={<DepartmentsTeamsPage />} />
+                                
+                                {/* Attendance & Biometric Machine Integration */}
+                                <Route path="/attendance" element={<AttendancePage />} />
+                                <Route path="/my-attendance" element={<AttendancePage />} />
+                                <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
+                                
+                                {/* Leave Management */}
+                                <Route path="/leave" element={<LeavePage />} />
+                                <Route path="/my-leave" element={<LeavePage />} />
 
-                          {/* Calendar & Company Events */}
-                          <Route path="/calendar" element={<CalendarPage />} />
-                          <Route path="/my-calendar" element={<CalendarPage />} />
-                          
-                          {/* Documents & Vault */}
-                          <Route path="/document-management" element={<DocumentDashboardPage />} />
-                          <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
-                          <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
-                          <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
-                          <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
-                          <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
-                          <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
-                          <Route path="/documents" element={<DocumentsPage />} />
-                          <Route path="/my-documents" element={<EmployeeLockerPage />} />
-                          
-                          {/* Security & Audit Center */}
-                          <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
+                                {/* Calendar & Company Events */}
+                                <Route path="/calendar" element={<CalendarPage />} />
+                                <Route path="/my-calendar" element={<CalendarPage />} />
+                                
+                                {/* Documents & Vault */}
+                                <Route path="/document-management" element={<DocumentDashboardPage />} />
+                                <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
+                                <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
+                                <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
+                                <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
+                                <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
+                                <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
+                                <Route path="/documents" element={<DocumentsPage />} />
+                                <Route path="/my-documents" element={<EmployeeLockerPage />} />
+                                
+                                {/* Security & Audit Center */}
+                                <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
 
-                          {/* Production Payroll & Salary Engine */}
-                          <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
-                          <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
-                          <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
-                          <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
-                          <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
-                          <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
-                          <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
+                                {/* Production Payroll & Salary Engine */}
+                                <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
+                                <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
+                                <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
+                                <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
+                                <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
+                                <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
+                                <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
 
-                          {/* Reports & Analytics */}
-                          <Route path="/reports" element={<ReportsPage />} />
-                          <Route path="/reports-analytics" element={<ReportsPage />} />
-                          
-                          {/* Employee Self Service */}
-                          <Route path="/my-profile" element={<EmployeeDetailPage />} />
-                          
-                          {/* Admin System Controls */}
-                          <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
-                          <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
-                          <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
-                          <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
-                          <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />
+                                {/* Reports & Analytics */}
+                                <Route path="/reports" element={<ReportsPage />} />
+                                <Route path="/reports-analytics" element={<ReportsPage />} />
+                                
+                                {/* Employee Self Service */}
+                                <Route path="/my-profile" element={<EmployeeDetailPage />} />
+                                
+                                {/* Admin System Controls */}
+                                <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
+                                <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
+                                <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
+                                <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
+                                <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />
 
-                          {/* Fallback */}
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </BrowserRouter>
-          </ToastProvider>
-        </RoleProvider>
-      </NotificationProvider>
-    </TenantProvider>
-  </AuthProvider>
-</ErrorBoundary>
+                                {/* Fallback */}
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                              </Routes>
+                            </Suspense>
+                          </Layout>
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </BrowserRouter>
+              </ToastProvider>
+            </RoleProvider>
+          </NotificationProvider>
+        </TenantProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

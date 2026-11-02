@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
 import { UserRole } from '@hrms/shared';
 import {
   fetchEmployeesFromDb,
@@ -88,23 +89,47 @@ export const Dashboard: React.FC = () => {
   const [selectedDayAnalysis, setSelectedDayAnalysis] = useState<any | null>(null);
   const [rosterFilter, setRosterFilter] = useState<'ALL' | 'PRESENT' | 'LATE' | 'LEAVE'>('ALL');
 
+  const [fastStats, setFastStats] = useState<{
+    totalEmployees: number;
+    presentToday: number;
+    onLeaveToday: number;
+    pendingLeaves: number;
+    departments: { name: string; count: number }[];
+  } | null>(null);
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       const viewMode = activeRoleView ? activeRoleView.toLowerCase() : 'admin';
+      
+      // Fast path: load indexed aggregation counts immediately
+      try {
+        const statsRes = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+          headers: getAuthHeaders(),
+        });
+        if (statsRes.ok) {
+          const statsJson = await statsRes.json();
+          if (statsJson.success && statsJson.data) {
+            setFastStats(statsJson.data);
+          }
+        }
+      } catch (e) {
+        console.warn('Fast dashboard stats fetch skipped:', e);
+      }
+
       const [empData, balData, reqData, punchData, calData] = await Promise.all([
-        fetchEmployeesFromDb(),
-        fetchLeaveBalances(),
-        fetchLeaveRequests({ view: viewMode }),
-        fetchRawBiometricLogs(),
-        fetchCalendarEventsFromDb(2026),
+        fetchEmployeesFromDb().catch(() => []),
+        fetchLeaveBalances().catch(() => []),
+        fetchLeaveRequests({ view: viewMode }).catch(() => []),
+        fetchRawBiometricLogs().catch(() => []),
+        fetchCalendarEventsFromDb(2026).catch(() => []),
       ]);
 
-      setEmployees(empData);
-      setLeaveBalances(balData);
-      setLeaveRequests(reqData);
-      setPunchLogs(punchData);
-      setCalendarEvents(calData);
+      setEmployees(empData || []);
+      setLeaveBalances(balData || []);
+      setLeaveRequests(reqData || []);
+      setPunchLogs(punchData || []);
+      setCalendarEvents(calData || []);
     } catch (err) {
       console.error('Failed to load real dashboard metrics:', err);
     } finally {
@@ -587,18 +612,18 @@ export const Dashboard: React.FC = () => {
       <div className="stat-grid">
         <StatCard
           title="Total Workforce Headcount"
-          value={employees.length}
+          value={fastStats?.totalEmployees ?? employees.length}
           icon={<Users size={20} />}
           subtext="Active workforce records"
           onClick={() => navigate('/employees')}
         />
         <StatCard
           title="Pending Leave Applications"
-          value={pendingCount}
+          value={fastStats?.pendingLeaves ?? pendingCount}
           icon={<Clock size={20} />}
           subtext="Requires approval action"
-          change={pendingCount > 0 ? 'Action Needed' : 'Up to Date'}
-          changeType={pendingCount > 0 ? 'negative' : 'positive'}
+          change={(fastStats?.pendingLeaves ?? pendingCount) > 0 ? 'Action Needed' : 'Up to Date'}
+          changeType={(fastStats?.pendingLeaves ?? pendingCount) > 0 ? 'negative' : 'positive'}
           onClick={() => navigate('/leave')}
         />
         <StatCard

@@ -15,7 +15,11 @@ import { csrfProtection } from './security/csrfSecurity.js';
 export const app = express();
 
 // Security Middlewares
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 app.use(setSecurityHeaders);
 app.use(csrfProtection);
 app.use(

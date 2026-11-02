@@ -1007,7 +1007,7 @@ export async function seedDatabase() {
         (UUID(), 'Internship', 'INT');`);
     }
 
-    // 2. Seed Distinct Individual Test Accounts
+    // 2. Seed Administrative System Accounts Only (No fake operational or demo employee records)
     const defaultAccounts = [
       {
         employeeId: 'SUPER001',
@@ -1045,69 +1045,6 @@ export async function seedDatabase() {
         department: 'Information Technology',
         designation: 'Lead Architect & Super Administrator',
       },
-      {
-        employeeId: 'ER001',
-        fullName: 'Enterprise Employer Officer',
-        email: 'employer@hrms.com',
-        phone: '+91 98765 00002',
-        passwordRaw: 'Employer@123',
-        role: 'employer',
-        status: 'active',
-        mustChangePassword: 0,
-        department: 'Executive Board',
-        designation: 'Director of HR & Operations',
-      },
-      {
-        employeeId: 'EMP001',
-        fullName: 'Aarav Patel',
-        email: 'employee1@hrms.com',
-        phone: '+91 98765 10001',
-        passwordRaw: 'Employee1@123',
-        role: 'employee',
-        status: 'active',
-        mustChangePassword: 1, // First-time password change required
-        department: 'Software Engineering',
-        designation: 'Senior Full Stack Engineer',
-        salary: '90000.00',
-        basicSalary: '75000.00',
-        allowances: '25000.00',
-        deductions: '10000.00',
-        docTitle: 'Employment Offer Letter & Contract (EMP001)',
-      },
-      {
-        employeeId: 'EMP002',
-        fullName: 'Priya Sharma',
-        email: 'employee2@hrms.com',
-        phone: '+91 98765 10002',
-        passwordRaw: 'Employee2@123',
-        role: 'employee',
-        status: 'active',
-        mustChangePassword: 0,
-        department: 'Human Resources',
-        designation: 'Talent Acquisition Lead',
-        salary: '72000.00',
-        basicSalary: '60000.00',
-        allowances: '20000.00',
-        deductions: '8000.00',
-        docTitle: 'Form 16 Tax Certificate 2025-26 (EMP002)',
-      },
-      {
-        employeeId: 'EMP003',
-        fullName: 'Rajesh Kumar',
-        email: 'employee3@hrms.com',
-        phone: '+91 98765 10003',
-        passwordRaw: 'Employee3@123',
-        role: 'employee',
-        status: 'active',
-        mustChangePassword: 0,
-        department: 'Finance & Accounts',
-        designation: 'Senior Financial Analyst',
-        salary: '98000.00',
-        basicSalary: '80000.00',
-        allowances: '30000.00',
-        deductions: '12000.00',
-        docTitle: 'Annual Performance Review & Increment (EMP003)',
-      },
     ];
 
     for (const acc of defaultAccounts) {
@@ -1144,7 +1081,7 @@ export async function seedDatabase() {
           ]
         );
 
-        logger.info(`Seeded user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
+        logger.info(`Seeded administrative user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
       } else {
         userId = existingUsers[0].id;
         const passwordHash = await bcrypt.hash(acc.passwordRaw, 10);
@@ -1152,88 +1089,11 @@ export async function seedDatabase() {
           `UPDATE users SET full_name = ?, phone = ?, password_hash = ?, role = ?, status = ?, must_change_password = ? WHERE id = ?`,
           [acc.fullName, acc.phone, passwordHash, acc.role, acc.status, acc.mustChangePassword, userId]
         );
-        logger.info(`Updated user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
-      }
-
-      if (acc.role === 'employee') {
-        // Employee Profile
-        const [existingProfiles]: any = await conn.query('SELECT id FROM employee_profiles WHERE user_id = ?', [userId]);
-        if (existingProfiles.length === 0) {
-          await conn.query(
-            `INSERT INTO employee_profiles (id, user_id, department_name, designation, joining_date, salary)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [uuidv4(), userId, acc.department, acc.designation, '2024-01-15', acc.salary]
-          );
-        }
-
-        // Attendance records
-        const [existingAttendance]: any = await conn.query('SELECT id FROM attendance WHERE user_id = ?', [userId]);
-        if (existingAttendance.length === 0) {
-          await conn.query(
-            `INSERT INTO attendance (id, user_id, work_date, clock_in, clock_out, work_hours, status, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [uuidv4(), userId, '2026-08-11', '09:00 AM', '06:00 PM', 9.00, 'PRESENT', 'Biometric ZKTeco auto-log']
-          );
-          await conn.query(
-            `INSERT INTO attendance (id, user_id, work_date, clock_in, clock_out, work_hours, status, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [uuidv4(), userId, '2026-08-10', '09:10 AM', '06:05 PM', 8.90, 'PRESENT', 'On-time punch']
-          );
-        }
-
-        // Leave balances initialization
-        const [existingBal]: any = await conn.query('SELECT id FROM leave_balances WHERE user_id = ?', [userId]);
-        if (existingBal.length === 0) {
-          await conn.query(
-            `INSERT INTO leave_balances (id, user_id, leave_type, allocated_days, used_days) VALUES
-             (UUID(), ?, 'CL', 12.00, 0.00),
-             (UUID(), ?, 'PL', 14.00, 0.00)`,
-            [userId, userId]
-          );
-        }
-
-        // Leave records
-        const [existingLeave]: any = await conn.query('SELECT id FROM leave_requests WHERE user_id = ?', [userId]);
-        if (existingLeave.length === 0) {
-          const initStatus = acc.employeeId === 'EMP001' ? 'APPROVED' : 'PENDING';
-          await conn.query(
-            `INSERT INTO leave_requests (id, user_id, leave_type, start_date, end_date, days_count, reason, status, employer_status, admin_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              uuidv4(),
-              userId,
-              'CL',
-              '2026-08-20',
-              '2026-08-21',
-              2,
-              `Personal leave request for ${acc.fullName}`,
-              initStatus,
-              initStatus,
-              initStatus,
-            ]
-          );
-        }
-
-        // Documents
-        const [existingDocs]: any = await conn.query('SELECT id FROM employee_documents WHERE user_id = ?', [userId]);
-        if (existingDocs.length === 0) {
-          await conn.query(
-            `INSERT INTO employee_documents (id, user_id, title, document_type, file_url, file_size)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-              uuidv4(),
-              userId,
-              acc.docTitle,
-              'PDF Agreement',
-              `/documents/${acc.employeeId}_contract.pdf`,
-              '1.4 MB',
-            ]
-          );
-        }
+        logger.info(`Updated administrative user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
       }
     }
 
-    logger.info('✅ HRMS MySQL database seeding with isolated employee data completed.');
+    logger.info('✅ HRMS database initialization complete with clean administrative accounts.');
   } catch (error) {
     logger.error('Error during database seed execution:', error);
     throw error;
