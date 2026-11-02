@@ -105,3 +105,4 @@ export function demoGuard(req: TenantRequest, res: Response, next: NextFunction)
   // Safe exploratory actions pass through
   next();
 }
+
