@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { pool } from '../database/index.js';
 
+export const SYSTEM_SUPER_ADMIN_EMAIL = 'amanupadhyay2030@gmail.com';
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -71,7 +73,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       return;
     }
 
-    const isSuper = user.role === 'super_admin';
+    const isSuper = user.role === 'super_admin' && user.email.toLowerCase() === SYSTEM_SUPER_ADMIN_EMAIL.toLowerCase();
     const headerTenantId = req.headers['x-tenant-id'] as string;
 
     req.user = {
@@ -133,8 +135,8 @@ export function requireRole(allowedRoles: Array<'super_admin' | 'admin' | 'emplo
       }
     }
 
-    // Super admin has permission for all admin and employer routes
-    const isSuper = req.user.role === 'super_admin';
+    // Only the single authorized Super Admin account has master permissions
+    const isSuper = req.user.role === 'super_admin' && req.user.email.toLowerCase() === SYSTEM_SUPER_ADMIN_EMAIL.toLowerCase();
     if (!isSuper && !allowedRoles.includes(req.user.role)) {
       res.status(403).json({
         success: false,

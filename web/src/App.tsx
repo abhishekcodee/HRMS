@@ -12,6 +12,7 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 // Eagerly loaded primary auth routes
 import { LoginPage } from './pages/LoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
+import { RequestDemoPage } from './pages/RequestDemoPage';
 
 // Lazy loaded feature modules
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -98,6 +99,7 @@ export function App() {
                   <Routes>
                     {/* Unauthenticated Login Route */}
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/request-demo" element={<RequestDemoPage />} />
 
                     {/* Mandatory First-Time Password Change Route */}
                     <Route

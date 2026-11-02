@@ -33,13 +33,25 @@ export async function createUser(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const allowedRoles = ['admin', 'employer', 'employee'];
-    if (!allowedRoles.includes(role)) {
+    const roleLower = String(role).toLowerCase();
+    if (roleLower === 'admin' || roleLower === 'super_admin') {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'ADMIN_CREATION_RESTRICTED',
+          message: 'Security Policy: Exactly one Super Administrator account is authorized in this system. Additional administrator accounts cannot be created.',
+        },
+      });
+      return;
+    }
+
+    const allowedRoles = ['employer', 'employee'];
+    if (!allowedRoles.includes(roleLower)) {
       res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Role must be strictly one of: admin, employer, employee.',
+          message: 'Role must be strictly one of: employer, employee.',
         },
       });
       return;

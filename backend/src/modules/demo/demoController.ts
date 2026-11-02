@@ -9,10 +9,69 @@ const DEMO_EMAIL = 'demo@wokhman.com';
 const DEMO_COMPANY_ID = 'c2000000-0000-0000-0000-000000000001';
 
 /**
- * Public metadata for the Demo HRMS environment
+ * Extracts and verifies signed Demo Access Grant token
+ */
+export function extractAndVerifyDemoGrant(req: Request): { authorized: boolean; email?: string } | null {
+  const token =
+    (req.headers['x-demo-access-token'] as string) ||
+    (req.query.demo_access as string) ||
+    (req.body?.demoAccessToken as string) ||
+    (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+
+  if (!token) return null;
+
+  try {
+    const decoded: any = jwt.verify(token, env.JWT_SECRET);
+    if (decoded && (decoded.type === 'DEMO_ACCESS_GRANT' || decoded.authorized === true)) {
+      return { authorized: true, email: decoded.email };
+    }
+  } catch (err) {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Verifies demo authorization token for front-end access check
+ */
+export async function verifyDemoAccess(req: Request, res: Response): Promise<void> {
+  const grant = extractAndVerifyDemoGrant(req);
+  if (!grant) {
+    res.status(401).json({
+      success: false,
+      authorized: false,
+      error: {
+        code: 'UNAUTHORIZED_DEMO_ACCESS',
+        message: 'Demo credentials and access are restricted. Please submit a demo request to explore.',
+      },
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    authorized: true,
+    email: grant.email,
+    message: 'Authorized demo visitor verified.',
+  });
+}
+
+/**
+ * Metadata for Authorized Demo visitors only
  */
 export async function getDemoInfo(req: Request, res: Response) {
   try {
+    const grant = extractAndVerifyDemoGrant(req);
+    if (!grant) {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED_DEMO_ACCESS',
+          message: 'Unauthorized access. Demo credentials are only visible to visitors who requested demo access.',
+        },
+      });
+      return;
+    }
     const [settings]: any = await pool.query(
       'SELECT is_enabled, inactivity_timeout_minutes, allow_reset, last_reset_at FROM demo_settings WHERE company_id = ?',
       [DEMO_COMPANY_ID]
@@ -69,6 +128,17 @@ export async function getDemoInfo(req: Request, res: Response) {
  */
 export async function directDemoLogin(req: Request, res: Response) {
   try {
+    const grant = extractAndVerifyDemoGrant(req);
+    if (!grant) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED_DEMO_ACCESS',
+          message: 'Direct demo login requires an authorized demo access token from an approved demo request.',
+        },
+      });
+    }
+
     const [users]: any = await pool.query(
       `SELECT u.*, c.name as company_name, c.code as company_code, c.logo_url, c.brand_color, c.status as company_status
        FROM users u

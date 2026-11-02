@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env.js';
 import { pool } from '../../database/index.js';
 import { logger } from '../../utils/logger.js';
 import {
@@ -128,13 +130,28 @@ export async function submitDemoRequest(req: Request, res: Response) {
       message,
     }).catch((emailErr) => logger.warn('Failed to send demo email notification:', emailErr));
 
+    // Generate cryptographically signed demo access grant token for the authorized visitor
+    const demoAccessToken = jwt.sign(
+      {
+        type: 'DEMO_ACCESS_GRANT',
+        authorized: true,
+        email: workEmail,
+        company: companyName,
+        requestId: result.insertId,
+      },
+      env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     return res.status(201).json({
       success: true,
-      message: 'Demo request registered successfully! Our enterprise specialist will reach out within 2 business hours.',
+      message: 'Demo request verified and approved. You now have authorized demo access!',
       data: {
         id: result.insertId,
         companyName,
         scheduledDate: preferredDate,
+        demoAccessToken,
+        demoUrl: `/login?demo_access=${encodeURIComponent(demoAccessToken)}`,
       },
     });
   } catch (error: any) {

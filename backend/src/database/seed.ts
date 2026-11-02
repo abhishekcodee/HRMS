@@ -1007,38 +1007,14 @@ export async function seedDatabase() {
         (UUID(), 'Internship', 'INT');`);
     }
 
-    // 2. Seed Administrative System Accounts Only (No fake operational or demo employee records)
+    // 2. Seed Single Administrative Super Administrator Account (Strict Requirement: Only one admin in the entire HRMS)
     const defaultAccounts = [
-      {
-        employeeId: 'SUPER001',
-        fullName: 'Global Super Administrator',
-        email: 'superadmin@hrms.com',
-        phone: '+91 98765 00000',
-        passwordRaw: 'SuperAdmin@123',
-        role: 'super_admin',
-        status: 'active',
-        mustChangePassword: 0,
-        department: 'Executive Board',
-        designation: 'Global Super Admin',
-      },
-      {
-        employeeId: 'ADMIN001',
-        fullName: 'Chief System Administrator',
-        email: 'admin@hrms.com',
-        phone: '+91 98765 00001',
-        passwordRaw: 'Admin@123',
-        role: 'admin',
-        status: 'active',
-        mustChangePassword: 0,
-        department: 'Management',
-        designation: 'Chief Administrator',
-      },
       {
         employeeId: 'AMAN001',
         fullName: 'Aman Upadhyay',
         email: 'amanupadhyay2030@gmail.com',
         phone: '+91 98765 99999',
-        passwordRaw: 'Amanupa10@',
+        passwordRaw: 'Amanupa10',
         role: 'super_admin',
         status: 'active',
         mustChangePassword: 0,
@@ -1046,6 +1022,14 @@ export async function seedDatabase() {
         designation: 'Lead Architect & Super Administrator',
       },
     ];
+
+    // Ensure all other administrator accounts are demoted/disabled
+    await conn.query(
+      `UPDATE users SET role = 'employee', status = 'inactive' WHERE email IN ('superadmin@hrms.com', 'admin@hrms.com')`
+    );
+    await conn.query(
+      `UPDATE users SET role = 'employee' WHERE role IN ('admin', 'super_admin') AND email != 'amanupadhyay2030@gmail.com'`
+    );
 
     for (const acc of defaultAccounts) {
       // First remove any stale user record having matching email or employee_id that doesn't match both

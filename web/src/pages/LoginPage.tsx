@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Lock,
   Mail,
@@ -8,13 +8,11 @@ import {
   ArrowRight,
   KeyRound,
   Sparkles,
-  Calendar,
   Building,
   Phone,
   User,
   CheckCircle2,
-  Copy,
-  Check,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
@@ -27,14 +25,21 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const { branding } = useTenant();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  // Standard Login Form State
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDemoLoggingIn, setIsDemoLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Authorized Demo State (strictly enabled only after backend verification)
+  const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [authorizedDemoEmail, setAuthorizedDemoEmail] = useState<string | null>(null);
+  const [isVerifyingDemo, setIsVerifyingDemo] = useState(false);
+  const [isDemoLoggingIn, setIsDemoLoggingIn] = useState(false);
 
   // Forgot Password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -57,16 +62,44 @@ export const LoginPage: React.FC = () => {
   ]);
   const [demoMessage, setDemoMessage] = useState('');
   const [demoSubmitting, setDemoSubmitting] = useState(false);
-  const [demoSuccess, setDemoSuccess] = useState(false);
+  const [demoSuccessToken, setDemoSuccessToken] = useState<string | null>(null);
   const [demoFormError, setDemoFormError] = useState<string | null>(null);
-  const [copiedCreds, setCopiedCreds] = useState(false);
+
+  // Check URL query parameters for backend-verified demo access grant
+  useEffect(() => {
+    const accessGrant = searchParams.get('demo_access');
+    if (accessGrant) {
+      verifyDemoGrant(accessGrant);
+    }
+  }, [searchParams]);
+
+  const verifyDemoGrant = async (token: string) => {
+    setIsVerifyingDemo(true);
+    try {
+      const res = await fetch(`/api/v1/demo/verify-access?demo_access=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (res.ok && data.authorized) {
+        setDemoToken(token);
+        setAuthorizedDemoEmail(data.email || 'Authorized Demo Visitor');
+      } else {
+        setDemoToken(null);
+        setAuthorizedDemoEmail(null);
+        searchParams.delete('demo_access');
+        setSearchParams(searchParams, { replace: true });
+      }
+    } catch {
+      setDemoToken(null);
+    } finally {
+      setIsVerifyingDemo(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
     if (!identifier.trim()) {
-      setErrorMessage('Please enter your Email or Employee ID.');
+      setErrorMessage('Please enter your email or employee ID.');
       return;
     }
     if (!password) {
@@ -77,7 +110,7 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await login(identifier, password);
+      const result = await login(identifier.trim(), password);
       if (result.success) {
         if (result.mustChangePassword) {
           navigate('/change-password');
@@ -87,43 +120,45 @@ export const LoginPage: React.FC = () => {
       } else {
         setErrorMessage(result.error || 'Authentication failed. Please verify your credentials.');
       }
-    } catch (err: any) {
-      setErrorMessage('Network error connecting to HRMS backend API.');
+    } catch {
+      setErrorMessage('Network error connecting to HRMS backend service.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleTryLiveDemo = async () => {
+  const handleAuthorizedDemoLogin = async (tokenToUse?: string) => {
+    const activeToken = tokenToUse || demoToken;
+    if (!activeToken) return;
+
     setIsDemoLoggingIn(true);
     setErrorMessage(null);
 
     try {
-      // Direct demo login using predefined demo credentials
-      const result = await login('demo@wokhman.com', 'Demo@12345');
-      if (result.success) {
-        navigate('/');
+      const res = await fetch('/api/v1/demo/direct-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-demo-access-token': activeToken,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.token) {
+        // Authenticate demo session directly
+        localStorage.setItem('hrms_token', data.data.token);
+        if (data.data.user) {
+          localStorage.setItem('hrms_user', JSON.stringify(data.data.user));
+        }
+        window.location.href = '/';
       } else {
-        // Fallback to auto-filling form so visitor can click submit
-        setIdentifier('demo@wokhman.com');
-        setPassword('Demo@12345');
-        setErrorMessage(result.error || 'Unable to connect to demo account directly. Pre-filled credentials for you.');
+        setErrorMessage(data.error?.message || data.message || 'Demo access session could not be established.');
       }
-    } catch (err) {
-      setIdentifier('demo@wokhman.com');
-      setPassword('Demo@12345');
-      setErrorMessage('Network error connecting to live demo. Credentials filled below.');
+    } catch {
+      setErrorMessage('Network error initiating demo HRMS session.');
     } finally {
       setIsDemoLoggingIn(false);
     }
-  };
-
-  const handleQuickFill = (emailVal: string, passVal: string) => {
-    setIdentifier(emailVal);
-    setPassword(passVal);
-    setErrorMessage(null);
-    setCopiedCreds(true);
-    setTimeout(() => setCopiedCreds(false), 2000);
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
@@ -143,9 +178,9 @@ export const LoginPage: React.FC = () => {
       if (!response.ok) {
         throw new Error(data.error?.message || data.message || 'Unable to send password reset request.');
       }
-      setForgotSuccessMessage(data.message || 'If the account exists, reset instructions will be sent shortly.');
-    } catch (err) {
-      setForgotSuccessMessage(err instanceof Error ? err.message : 'Unable to send password reset request.');
+      setForgotSuccessMessage(data.message || 'If an account is associated with this email, reset instructions will be sent shortly.');
+    } catch (err: any) {
+      setForgotSuccessMessage(err?.message || 'Unable to send password reset request.');
     } finally {
       setForgotSubmitting(false);
     }
@@ -179,13 +214,16 @@ export const LoginPage: React.FC = () => {
       });
 
       const data = await response.json();
-      if (response.ok && data.success) {
-        setDemoSuccess(true);
+      if (response.ok && data.success && data.data?.demoAccessToken) {
+        const token = data.data.demoAccessToken;
+        setDemoSuccessToken(token);
+        setDemoToken(token);
+        setAuthorizedDemoEmail(demoWorkEmail.trim());
       } else {
-        setDemoFormError(data.message || 'Could not submit demo request. Please try again.');
+        setDemoFormError(data.message || 'Could not process demo request. Please try again.');
       }
-    } catch (err) {
-      setDemoFormError('Network connection issue. Please check your connection and try again.');
+    } catch {
+      setDemoFormError('Network connection issue. Please verify your connection.');
     } finally {
       setDemoSubmitting(false);
     }
@@ -208,13 +246,13 @@ export const LoginPage: React.FC = () => {
         padding: '2.5rem 1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '460px' }}>
+      <div style={{ width: '100%', maxWidth: '440px' }}>
         {/* Dynamic HRMS Tenant Branding Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <img
             src={branding.logo_url || '/logo.png'}
             alt={branding.name || 'Wokhman'}
-            style={{ maxHeight: '72px', maxWidth: '260px', marginBottom: '0.75rem', objectFit: 'contain' }}
+            style={{ maxHeight: '70px', maxWidth: '240px', marginBottom: '0.75rem', objectFit: 'contain' }}
           />
           <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
             {branding.name || 'Wokhman'}
@@ -224,7 +262,63 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Login Card */}
+        {/* Authorized Demo Access Banner (Only shown to backend-verified demo visitors) */}
+        {demoToken && authorizedDemoEmail && (
+          <div
+            style={{
+              marginBottom: '1.25rem',
+              padding: '1rem',
+              borderRadius: '12px',
+              background: 'rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c7d2fe', fontSize: '0.85rem', fontWeight: 600 }}>
+                <Sparkles size={16} color="#818cf8" />
+                <span>Authorized Demo Access Granted</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDemoToken(null);
+                  setAuthorizedDemoEmail(null);
+                  searchParams.delete('demo_access');
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer' }}
+              >
+                Exit Demo Mode
+              </button>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+              Verified for <strong>{authorizedDemoEmail}</strong>. You have permission to explore the isolated interactive demo.
+            </p>
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={isDemoLoggingIn}
+              onClick={() => handleAuthorizedDemoLogin()}
+              style={{
+                width: '100%',
+                padding: '0.65rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
+                color: '#ffffff',
+                border: 'none',
+              }}
+            >
+              Enter Interactive Demo Environment &rarr;
+            </Button>
+          </div>
+        )}
+
+        {/* Standard Enterprise Login Card */}
         <Card
           style={{
             background: 'rgba(30, 41, 59, 0.8)',
@@ -264,7 +358,7 @@ export const LoginPage: React.FC = () => {
                   id="identifier"
                   type="text"
                   className="input"
-                  placeholder="admin@hrms.com or demo@wokhman.com"
+                  placeholder="Enter your email or employee ID"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   style={{ paddingLeft: '2.5rem', background: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
@@ -295,7 +389,7 @@ export const LoginPage: React.FC = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   className="input"
-                  placeholder="••••••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
@@ -393,121 +487,31 @@ export const LoginPage: React.FC = () => {
               Sign In to HRMS <ArrowRight size={18} />
             </Button>
           </form>
-
-          {/* Divider */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              margin: '1.5rem 0',
-              color: '#64748b',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              letterSpacing: '0.05em',
-            }}
-          >
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-            <span style={{ padding: '0 0.75rem', textTransform: 'uppercase' }}>Explore Before Subscribing</span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-          </div>
-
-          {/* Demo Action Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <Button
-              type="button"
-              variant="secondary"
-              isLoading={isDemoLoggingIn}
-              onClick={handleTryLiveDemo}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                fontSize: '0.925rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
-                color: '#ffffff',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
-              }}
-            >
-              <Sparkles size={16} /> Try Live Demo (1-Click Access)
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setDemoSuccess(false);
-                setDemoFormError(null);
-                setShowDemoModal(true);
-              }}
-              style={{
-                width: '100%',
-                padding: '0.65rem',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                borderRadius: '8px',
-                borderColor: '#475569',
-                color: '#e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <Calendar size={15} /> Request a Personalized Demo
-            </Button>
-          </div>
         </Card>
 
-        {/* Dedicated Predefined Demo Credentials Card */}
-        <div
-          style={{
-            marginTop: '1.25rem',
-            background: 'rgba(15, 23, 42, 0.7)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-            color: '#cbd5e1',
-            fontSize: '0.825rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 600, color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Sparkles size={14} /> Predefined Demo Credentials:
-            </span>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('demo@wokhman.com', 'Demo@12345')}
-              style={{
-                background: 'rgba(99, 102, 241, 0.15)',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
-                color: '#a5b4fc',
-                borderRadius: '6px',
-                padding: '0.25rem 0.55rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}
-            >
-              {copiedCreds ? <Check size={12} /> : <Copy size={12} />}
-              {copiedCreds ? 'Filled!' : 'Quick Fill'}
-            </button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '0.8rem', background: '#090d16', padding: '0.4rem 0.65rem', borderRadius: '6px' }}>
-            <span>Email: <strong>demo@wokhman.com</strong></span>
-            <span>Pass: <strong>Demo@12345</strong></span>
-          </div>
+        {/* Discreet Enterprise Exploration Footer */}
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setDemoSuccessToken(null);
+              setDemoFormError(null);
+              setShowDemoModal(true);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#64748b',
+              fontSize: '0.825rem',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              transition: 'color 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+          >
+            Looking to explore? Request an Enterprise Demo
+          </button>
         </div>
       </div>
 
@@ -517,7 +521,7 @@ export const LoginPage: React.FC = () => {
         onClose={() => setShowDemoModal(false)}
         title="Schedule a Personalized Enterprise Demo"
       >
-        {demoSuccess ? (
+        {demoSuccessToken ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <div
               style={{
@@ -535,18 +539,19 @@ export const LoginPage: React.FC = () => {
               <CheckCircle2 size={32} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.5rem' }}>
-              Demo Request Received!
+              Demo Request Approved!
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.6, maxWidth: '380px', margin: '0 auto 1.5rem' }}>
-              Thank you, <strong>{demoFullName}</strong>. Our enterprise team will connect with <strong>{demoWorkEmail}</strong> shortly.
-              You don&apos;t have to wait — explore our live interactive demo right now.
+              Thank you, <strong>{demoFullName}</strong>. Your enterprise inquiry for <strong>{demoCompanyName}</strong> has been registered.
+              You now have authorized access to explore the interactive demo environment.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
               <Button
                 variant="primary"
+                isLoading={isDemoLoggingIn}
                 onClick={() => {
                   setShowDemoModal(false);
-                  handleTryLiveDemo();
+                  handleAuthorizedDemoLogin(demoSuccessToken);
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
@@ -585,7 +590,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="text"
                     className="input"
-                    placeholder="Jane Doe"
+                    placeholder="Enter your name"
                     value={demoFullName}
                     onChange={(e) => setDemoFullName(e.target.value)}
                     style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
@@ -605,7 +610,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="email"
                     className="input"
-                    placeholder="jane@company.com"
+                    placeholder="name@company.com"
                     value={demoWorkEmail}
                     onChange={(e) => setDemoWorkEmail(e.target.value)}
                     style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
@@ -627,7 +632,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="tel"
                     className="input"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="Enter phone number"
                     value={demoPhone}
                     onChange={(e) => setDemoPhone(e.target.value)}
                     style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
@@ -647,7 +652,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="text"
                     className="input"
-                    placeholder="Acme Enterprises"
+                    placeholder="Enter company name"
                     value={demoCompanyName}
                     onChange={(e) => setDemoCompanyName(e.target.value)}
                     style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
