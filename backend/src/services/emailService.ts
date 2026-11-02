@@ -505,3 +505,206 @@ export async function retryFailedNotification(notificationId: string): Promise<{
     return { success: false, message: `Retry failed: ${err.message}` };
   }
 }
+
+// Function 6: Marketing Demo Request Email Notification
+export async function sendMarketingDemoNotification(payload: {
+  id?: number | string;
+  fullName: string;
+  workEmail: string;
+  phoneNumber: string;
+  companyName: string;
+  companySize?: string;
+  industry?: string;
+  designation?: string;
+  requiredModules?: string | string[];
+  preferredDate?: string;
+  message?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const recipient = process.env.MARKETING_NOTIFICATION_EMAIL || 'wokhman@gmail.com';
+  const modulesText = Array.isArray(payload.requiredModules)
+    ? payload.requiredModules.join(', ')
+    : (payload.requiredModules || 'General Overview');
+
+  const subject = `🚀 New HRMS Demo Request: ${payload.fullName} (${payload.companyName})`;
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #07111F; color: #F7F9FC; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="background: linear-gradient(135deg, #6335F5, #165DFF, #00C9D8); padding: 28px; text-align: center;">
+        <h1 style="margin: 0; color: #FFFFFF; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;">WOKHMAN HRMS</h1>
+        <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">New Inbound Demo Lead Received</p>
+      </div>
+
+      <div style="padding: 28px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="margin: 0 0 16px 0; color: #00C9D8; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+            Prospect Details
+          </h2>
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8; width: 140px;">Full Name:</td>
+              <td style="padding: 8px 0; color: #FFFFFF; font-weight: 600;">${payload.fullName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Work Email:</td>
+              <td style="padding: 8px 0;"><a href="mailto:${payload.workEmail}" style="color: #60A5FA; text-decoration: none;">${payload.workEmail}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Phone Number:</td>
+              <td style="padding: 8px 0;"><a href="tel:${payload.phoneNumber}" style="color: #00C9D8; text-decoration: none; font-weight: 600;">${payload.phoneNumber}</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Company Name:</td>
+              <td style="padding: 8px 0; color: #FFFFFF; font-weight: 600;">${payload.companyName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Company Size:</td>
+              <td style="padding: 8px 0; color: #CBD5E1;">${payload.companySize || 'Not specified'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Industry:</td>
+              <td style="padding: 8px 0; color: #CBD5E1;">${payload.industry || 'Not specified'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Designation:</td>
+              <td style="padding: 8px 0; color: #CBD5E1;">${payload.designation || 'Not specified'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Target Modules:</td>
+              <td style="padding: 8px 0; color: #A78BFA; font-weight: 600;">${modulesText}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Preferred Date:</td>
+              <td style="padding: 8px 0; color: #34D399; font-weight: 600;">${payload.preferredDate || 'Earliest Available'}</td>
+            </tr>
+          </table>
+        </div>
+
+        ${payload.message ? `
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 8px 0; color: #CBD5E1; font-size: 13px; text-transform: uppercase;">Prospect Requirements / Notes:</h3>
+          <p style="margin: 0; color: #E2E8F0; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${payload.message}</p>
+        </div>` : ''}
+
+        <div style="text-align: center; padding-top: 10px;">
+          <a href="mailto:${payload.workEmail}?subject=Re: Wokhman HRMS Demo for ${encodeURIComponent(payload.companyName)}" 
+             style="display: inline-block; background: linear-gradient(135deg, #6335F5, #165DFF); color: #FFFFFF; font-weight: 700; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px;">
+            Reply to Prospect (${payload.workEmail})
+          </a>
+        </div>
+      </div>
+
+      <div style="background: #0B1728; border-top: 1px solid rgba(255,255,255,0.08); padding: 16px; text-align: center; font-size: 12px; color: #64748B;">
+        Wokhman HRMS Platform • Delivered to: ${recipient} • Mumbai, Maharashtra, India
+      </div>
+    </div>
+  `;
+
+  try {
+    const transporter = getSmtpTransporter();
+    const result = await transporter.sendMail({
+      from: `"${fromName}" <${fromAddress}>`,
+      to: recipient,
+      replyTo: payload.workEmail,
+      subject,
+      html,
+    });
+    logger.info(`[MARKETING EMAIL] Demo notification dispatched to ${recipient}`, { messageId: result?.messageId });
+    return { success: true, messageId: result?.messageId };
+  } catch (err: any) {
+    logger.error(`[MARKETING EMAIL] Failed to send demo notification:`, err);
+    return { success: false, error: err?.message };
+  }
+}
+
+// Function 7: Marketing Contact Inquiry Email Notification
+export async function sendMarketingContactNotification(payload: {
+  id?: number | string;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  companyName?: string;
+  inquiryType?: string;
+  subject?: string;
+  message: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const recipient = process.env.MARKETING_NOTIFICATION_EMAIL || 'wokhman@gmail.com';
+  const emailSubject = `📩 New Website Inquiry [${payload.inquiryType || 'GENERAL'}]: ${payload.fullName} - ${payload.subject || 'General Inquiry'}`;
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #07111F; color: #F7F9FC; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="background: linear-gradient(135deg, #6335F5, #165DFF, #00C9D8); padding: 28px; text-align: center;">
+        <h1 style="margin: 0; color: #FFFFFF; font-size: 22px; font-weight: 800;">WOKHMAN HRMS</h1>
+        <p style="margin: 6px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">New Contact & Sales Inquiry</p>
+      </div>
+
+      <div style="padding: 28px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="margin: 0 0 16px 0; color: #00C9D8; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+            Inquiry Information
+          </h2>
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8; width: 140px;">Sender Name:</td>
+              <td style="padding: 8px 0; color: #FFFFFF; font-weight: 600;">${payload.fullName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Email Address:</td>
+              <td style="padding: 8px 0;"><a href="mailto:${payload.email}" style="color: #60A5FA; text-decoration: none;">${payload.email}</a></td>
+            </tr>
+            ${payload.phoneNumber ? `
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Phone Number:</td>
+              <td style="padding: 8px 0;"><a href="tel:${payload.phoneNumber}" style="color: #00C9D8; text-decoration: none; font-weight: 600;">${payload.phoneNumber}</a></td>
+            </tr>` : ''}
+            ${payload.companyName ? `
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Company:</td>
+              <td style="padding: 8px 0; color: #FFFFFF;">${payload.companyName}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Category:</td>
+              <td style="padding: 8px 0; color: #A78BFA; font-weight: 600;">${payload.inquiryType || 'GENERAL'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #94A3B8;">Subject:</td>
+              <td style="padding: 8px 0; color: #FFFFFF; font-weight: 600;">${payload.subject || 'General Inquiry'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 10px 0; color: #CBD5E1; font-size: 13px; text-transform: uppercase;">Message Content:</h3>
+          <p style="margin: 0; color: #F1F5F9; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${payload.message}</p>
+        </div>
+
+        <div style="text-align: center; padding-top: 10px;">
+          <a href="mailto:${payload.email}?subject=Re: ${encodeURIComponent(payload.subject || 'Wokhman Inquiry')}" 
+             style="display: inline-block; background: linear-gradient(135deg, #6335F5, #165DFF); color: #FFFFFF; font-weight: 700; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 10px;">
+            Reply to ${payload.fullName}
+          </a>
+        </div>
+      </div>
+
+      <div style="background: #0B1728; border-top: 1px solid rgba(255,255,255,0.08); padding: 16px; text-align: center; font-size: 12px; color: #64748B;">
+        Wokhman HRMS Platform • Delivered to: ${recipient} • Mumbai, Maharashtra, India
+      </div>
+    </div>
+  `;
+
+  try {
+    const transporter = getSmtpTransporter();
+    const result = await transporter.sendMail({
+      from: `"${fromName}" <${fromAddress}>`,
+      to: recipient,
+      replyTo: payload.email,
+      subject: emailSubject,
+      html,
+    });
+    logger.info(`[MARKETING EMAIL] Contact notification dispatched to ${recipient}`, { messageId: result?.messageId });
+    return { success: true, messageId: result?.messageId };
+  } catch (err: any) {
+    logger.error(`[MARKETING EMAIL] Failed to send contact notification:`, err);
+    return { success: false, error: err?.message };
+  }
+}
+

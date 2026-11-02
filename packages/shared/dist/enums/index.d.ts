@@ -4,7 +4,8 @@
 export declare enum UserRole {
     ADMIN = "ADMIN",
     EMPLOYER = "EMPLOYER",
-    EMPLOYEE = "EMPLOYEE"
+    EMPLOYEE = "EMPLOYEE",
+    DEMO = "DEMO"
 }
 /**
  * Standard Status Enums for System Resources.

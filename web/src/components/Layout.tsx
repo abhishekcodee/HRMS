@@ -6,6 +6,7 @@ import { useTenant } from '../context/TenantContext';
 import { UserRole } from '@hrms/shared';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { NotificationDrawer } from './NotificationDrawer';
+import { DemoBanner } from './DemoBanner';
 import { Tooltip, Avatar, Badge, Dropdown, Button, Modal } from './ui';
 import { API_BASE_URL } from '../config/api';
 import { safeFetchJson } from '../utils/safeFetch';
@@ -73,6 +74,20 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
   const navigate = useNavigate();
 
   const isSuper = user?.isSuperAdmin || user?.role === 'SUPER_ADMIN';
+  const isDemo = user?.role === UserRole.DEMO || (user?.role as any) === 'demo' || (user?.role as any) === 'DEMO';
+
+  const restrictedDemoPaths = [
+    '/super-admin',
+    '/settings',
+    '/company-branding',
+    '/users-roles',
+    '/payroll/bank-transfer',
+    '/payroll/ff-settlement',
+    '/payroll/statutory',
+    '/security-center',
+    '/audit',
+  ];
+  const isRestrictedPath = isDemo && restrictedDemoPaths.some(p => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
   // Load companies for Super Admin Selector
   useEffect(() => {
@@ -110,52 +125,52 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
     {
       id: 'main', label: 'Main Navigation', icon: <LayoutDashboard size={18} />, items: [
         ...(isSuper ? [{ path: '/super-admin', label: 'Platform SaaS Control', icon: <Globe size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
-        { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] },
-        { path: '/chat', label: 'Chat', icon: <MessageSquare size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'], badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined },
+        { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/chat', label: 'Chat', icon: <MessageSquare size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN', UserRole.DEMO, 'demo'], badge: unreadChatCount > 0 ? String(unreadChatCount) : undefined },
       ]
     },
     {
       id: 'people', label: 'People Management', icon: <Users size={18} />, items: [
-        { path: '/employees', label: 'Employees', icon: <Users size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/departments', label: 'Departments', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/teams', label: 'Teams', icon: <Users2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/employees', label: 'Employees', icon: <Users size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/departments', label: 'Departments', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/teams', label: 'Teams', icon: <Users2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
         { path: '/my-profile', label: 'My Profile', icon: <User size={18} />, roles: [UserRole.EMPLOYEE] },
       ]
     },
     {
       id: 'time', label: 'Time & Attendance', icon: <CalendarDays size={18} />, items: [
-        { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/attendance', label: 'Attendance', icon: <CalendarDays size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/my-attendance', label: 'My Attendance', icon: <CalendarDays size={18} />, roles: [UserRole.EMPLOYEE] },
         { path: '/biometrics', label: 'eSSL Biometric Machines', icon: <Fingerprint size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/leave', label: 'Leave', icon: <FileCheck2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/leave', label: 'Leave', icon: <FileCheck2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/my-leave', label: 'My Leave', icon: <FileCheck2 size={18} />, roles: [UserRole.EMPLOYEE] },
-        { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/calendar', label: 'Company Calendar', icon: <Calendar size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/my-calendar', label: 'Company Calendar', icon: <Calendar size={18} />, roles: [UserRole.EMPLOYEE] },
       ]
     },
     {
       id: 'payroll', label: 'Payroll & Finance', icon: <Receipt size={18} />, items: [
         { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
         { path: '/payroll/bank-transfer', label: 'Bank Transfer Advice', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
         { path: '/payroll/ff-settlement', label: 'Full & Final (F&F)', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/salary-slips', label: 'Salary Slips (Bulk & Single)', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
       ]
     },
     {
       id: 'documents', label: 'Document Center', icon: <FileText size={18} />, items: [
-        { path: '/document-management', label: 'Document Management', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
-        { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/document-management', label: 'Document Management', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/document-management/generate', label: 'Document Generator', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/documents', label: 'Document Uploads', icon: <FileText size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
         { path: '/my-documents', label: 'My Documents', icon: <FileText size={18} />, roles: [UserRole.EMPLOYEE] },
       ]
     },
     {
       id: 'reports', label: 'Reports & Analytics', icon: <BarChart3 size={18} />, items: [
-        { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/reports', label: 'Reports & Analytics', icon: <BarChart3 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
       ]
     },
     {
@@ -172,8 +187,14 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
     },
   ];
 
+  const effectiveNavRole = isDemo ? UserRole.DEMO : role;
   const visibleGroups = allGroups
-    .map(group => ({ ...group, items: group.items.filter(item => item.roles.includes(role as any)) }))
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item =>
+        item.roles.includes(effectiveNavRole as any) || (isDemo && (item.roles.includes('demo') || item.roles.includes(UserRole.DEMO)))
+      )
+    }))
     .filter(group => group.items.length > 0);
 
   const pathMatches = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(`${path}/`));
@@ -220,7 +241,9 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
   ];
 
   return (
-    <div className="hrms-layout">
+    <div className="hrms-app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <DemoBanner />
+      <div className="hrms-layout" style={{ flex: 1 }}>
       {/* Mobile Backdrop Overlay (Click to auto-close menu) */}
       {mobileOpen && (
         <div
@@ -406,7 +429,24 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
             )}
 
             {/* Header Role Display / Switcher based on User Role */}
-            {user?.role === UserRole.EMPLOYEE ? (
+            {isDemo ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '20px',
+                  background: 'rgba(99, 102, 241, 0.15)',
+                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  color: '#a5b4fc',
+                }}
+              >
+                ⚡ Role: DEMO MODE
+              </div>
+            ) : user?.role === UserRole.EMPLOYEE ? (
               <div
                 style={{
                   display: 'flex',
@@ -566,7 +606,44 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
           </div>
         </div>
       </Modal>
+
+      {/* Restricted Feature in Demo Modal */}
+      <Modal
+        isOpen={Boolean(isRestrictedPath)}
+        onClose={() => navigate('/')}
+        title="⚡ Restricted Feature in Demo Mode"
+      >
+        <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(99, 102, 241, 0.15)',
+              color: '#818cf8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem',
+            }}
+          >
+            <ShieldCheck size={28} />
+          </div>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.5rem' }}>
+            Enterprise Subscription Required
+          </h4>
+          <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.5, margin: '0 auto 1.5rem', maxWidth: '380px' }}>
+            Administrative configurations, live banking transfers, and security settings are restricted in the public demo to safeguard system integrity.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+            <Button variant="primary" onClick={() => navigate('/')}>
+              Return to Safe Dashboard
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
+  </div>
   );
 };
 

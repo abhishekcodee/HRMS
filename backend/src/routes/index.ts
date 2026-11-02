@@ -24,6 +24,8 @@ import settingsRouter from '../modules/settings/index.js';
 
 import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
 import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
+import { demoGuard } from '../middleware/demoGuard.js';
+import { demoRouter } from '../modules/demo/demoRoutes.js';
 import {
   getEmployees,
   createEmployee,
@@ -167,14 +169,14 @@ v1Router.get('/reports/entitlement-register', authenticateToken, getEntitlementR
 import { superAdminRouter } from './superAdmin.routes.js';
 import { companyRouter } from './company.routes.js';
 
-v1Router.use('/super-admin', superAdminRouter);
+v1Router.use('/super-admin', authenticateToken, tenantMiddleware, demoGuard, superAdminRouter);
 v1Router.use('/company', companyRouter);
 
 // Module Boundaries Mount Points
 v1Router.use('/auth', authModule.router);
-v1Router.use('/users', authenticateToken, tenantMiddleware, usersModule.router);
-v1Router.use('/roles', authenticateToken, tenantMiddleware, rolesModule.router);
-v1Router.use('/permissions', authenticateToken, tenantMiddleware, permissionsModule.router);
+v1Router.use('/users', authenticateToken, tenantMiddleware, demoGuard, usersModule.router);
+v1Router.use('/roles', authenticateToken, tenantMiddleware, demoGuard, rolesModule.router);
+v1Router.use('/permissions', authenticateToken, tenantMiddleware, demoGuard, permissionsModule.router);
 v1Router.use('/organization', authenticateToken, tenantMiddleware, organizationModule.router);
 v1Router.use('/employees', authenticateToken, tenantMiddleware, employeesModule.router);
 v1Router.use('/master', authenticateToken, tenantMiddleware, masterRouter);
@@ -184,22 +186,28 @@ v1Router.use('/attendance', authenticateToken, tenantMiddleware, attendanceModul
 v1Router.use('/zkteco', tenantMiddleware, zktecoRouter);
 v1Router.use('/essl', tenantMiddleware, zktecoRouter);
 v1Router.use('/leave', authenticateToken, tenantMiddleware, leaveModule.router);
-v1Router.use('/payroll', authenticateToken, tenantMiddleware, payrollRouter);
+v1Router.use('/payroll', authenticateToken, tenantMiddleware, demoGuard, payrollRouter);
 v1Router.use('/documents', authenticateToken, tenantMiddleware, documentsModule.router);
 v1Router.use('/notifications', authenticateToken, tenantMiddleware, notificationsModule.router);
 v1Router.use('/reports', authenticateToken, tenantMiddleware, reportsModule.router);
 v1Router.use('/audit', authenticateToken, tenantMiddleware, auditModule.router);
 v1Router.use('/calendar', authenticateToken, tenantMiddleware, calendarModule.router);
 v1Router.use('/chat', authenticateToken, tenantMiddleware, chatRouter);
-v1Router.use('/settings', authenticateToken, tenantMiddleware, settingsRouter);
+v1Router.use('/settings', authenticateToken, tenantMiddleware, demoGuard, settingsRouter);
 
 // Layer A & B Enterprise Additions Mount Points
 import documentManagementRouter from '../modules/documentManagement/index.js';
 import securityRouter from '../modules/security/index.js';
 
 v1Router.use('/document-management', authenticateToken, tenantMiddleware, documentManagementRouter);
-v1Router.use('/security', authenticateToken, tenantMiddleware, securityRouter);
+v1Router.use('/security', authenticateToken, tenantMiddleware, demoGuard, securityRouter);
 
 import { mobileRouter } from './mobile.routes.js';
 v1Router.use('/mobile', mobileRouter);
+
+import { marketingRouter } from '../modules/marketing/marketingRoutes.js';
+v1Router.use('/marketing', marketingRouter);
+
+// Dedicated Demo Routes
+v1Router.use('/demo', demoRouter);
 

@@ -6,6 +6,7 @@ export var UserRole;
     UserRole["ADMIN"] = "ADMIN";
     UserRole["EMPLOYER"] = "EMPLOYER";
     UserRole["EMPLOYEE"] = "EMPLOYEE";
+    UserRole["DEMO"] = "DEMO";
 })(UserRole || (UserRole = {}));
 /**
  * Standard Status Enums for System Resources.

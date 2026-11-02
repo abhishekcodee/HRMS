@@ -11,7 +11,7 @@ export interface UserAuthProfile {
   fullName: string;
   email: string;
   phone?: string;
-  role: UserRole | 'SUPER_ADMIN'; // Actual system role assigned in database
+  role: UserRole | 'SUPER_ADMIN' | 'DEMO' | 'demo'; // Actual system role assigned in database
   status: 'active' | 'inactive' | 'suspended';
   mustChangePassword?: boolean;
   profilePhoto?: string;
@@ -20,7 +20,7 @@ export interface UserAuthProfile {
 interface AuthContextType {
   user: UserAuthProfile | null;
   token: string | null;
-  activeRoleView: UserRole | 'SUPER_ADMIN';
+  activeRoleView: UserRole | 'SUPER_ADMIN' | 'DEMO' | 'demo';
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }>;

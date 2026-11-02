@@ -11,7 +11,7 @@ export interface AuthRequest extends Request {
     employeeId: string;
     fullName: string;
     email: string;
-    role: 'super_admin' | 'admin' | 'employer' | 'employee';
+    role: 'super_admin' | 'admin' | 'employer' | 'employee' | 'demo';
     status: 'active' | 'inactive' | 'suspended';
     mustChangePassword: boolean;
     profilePhoto?: string;
@@ -102,7 +102,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
   }
 }
 
-export function requireRole(allowedRoles: Array<'super_admin' | 'admin' | 'employer' | 'employee'>) {
+export function requireRole(allowedRoles: Array<'super_admin' | 'admin' | 'employer' | 'employee' | 'demo' | string>) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
