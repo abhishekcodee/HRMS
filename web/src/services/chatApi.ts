@@ -1,19 +1,12 @@
-const API_BASE_URL = `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || ''}/api/v1`;
+import { API_BASE_URL } from '../config/api';
 
 export function resolveFileUrl(url: string | undefined | null): string {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  const backendBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '') || '';
-  if (backendBase) {
-    return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
-  }
-  // If no VITE_API_URL is configured, in dev use localhost:4000; in prod use current origin (proxied)
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:4000${url.startsWith('/') ? '' : '/'}${url}`;
-  }
-  return `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+  const backendBase = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+  return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
 export interface ChatParticipant {

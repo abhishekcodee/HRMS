@@ -1,9 +1,14 @@
 import { io, Socket } from 'socket.io-client';
 
+const envSocketUrl = (import.meta.env.VITE_SOCKET_URL as string | undefined)?.trim();
+const envApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+
 const SOCKET_URL =
-  (import.meta.env.VITE_SOCKET_URL as string | undefined) ||
-  ((import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/api\/v1\/?$/, '')) ||
-  `${window.location.protocol}//${window.location.hostname}:4000`;
+  envSocketUrl ||
+  (envApiUrl ? envApiUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '') : '') ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? `${window.location.protocol}//${window.location.hostname}:4000`
+    : 'https://hrms-backend-dlez.onrender.com');
 
 let socket: Socket | null = null;
 
