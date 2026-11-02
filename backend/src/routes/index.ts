@@ -23,6 +23,7 @@ import { chatRouter } from '../modules/chat/index.js';
 import settingsRouter from '../modules/settings/index.js';
 
 import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
+import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 import {
   getEmployees,
   createEmployee,
@@ -165,7 +166,6 @@ v1Router.get('/reports/entitlement-register', authenticateToken, getEntitlementR
 // Multi-Tenant & Super Admin Mount Points
 import { superAdminRouter } from './superAdmin.routes.js';
 import { companyRouter } from './company.routes.js';
-import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 
 v1Router.use('/super-admin', superAdminRouter);
 v1Router.use('/company', companyRouter);
