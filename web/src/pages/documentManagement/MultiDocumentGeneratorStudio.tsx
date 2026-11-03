@@ -1356,7 +1356,16 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
           </Card>
 
           {/* 2-Column Studio Grid: Left Form & Right Live Preview */}
-          <div style={{ display: 'grid', gridTemplateColumns: previewMode ? '440px 1fr' : '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: previewMode
+                ? 'minmax(360px, 420px) minmax(0, 1fr)'
+                : 'minmax(420px, 480px) minmax(0, 1.4fr)',
+              gap: '24px',
+              alignItems: 'start',
+            }}
+          >
             {/* Left Column Form */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Option: Select Existing Employee / Filling Mode */}
@@ -2522,12 +2531,55 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                 zIndex: 10,
               }}
             >
-              <Card style={{ flexShrink: 0, marginBottom: 0 }}>
-                <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
-                  <CardTitle style={{ fontSize: '15px' }}>Document Preview & Toolbar</CardTitle>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Button variant="secondary" size="sm" onClick={() => setPreviewMode(!previewMode)}>
-                      {previewMode ? 'Exit Full Preview' : 'Full Preview (100vh)'}
+              <Card style={{ flexShrink: 0, marginBottom: 0, overflow: 'hidden' }}>
+                <CardHeader
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Eye style={{ width: '18px', height: '18px', color: 'var(--primary-500)' }} />
+                    <div>
+                      <CardTitle style={{ fontSize: '15px', margin: 0, lineHeight: 1.2 }}>
+                        Live Document Preview
+                      </CardTitle>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        Interactive real-time preview
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPreviewMode(!previewMode)}
+                      title={previewMode ? 'Exit wide view' : 'Expand preview to full screen'}
+                    >
+                      {previewMode ? 'Normal View' : 'Full Preview (100vh)'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleSaveCurrentTemplate}
+                      disabled={generating}
+                      title="Save current layout as master company template"
+                    >
+                      Save Template
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => window.print()}
+                      icon={<Printer style={{ width: '14px', height: '14px' }} />}
+                    >
+                      Print
                     </Button>
                     <Button
                       variant="primary"
@@ -2535,35 +2587,146 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       onClick={handleGeneratePDF}
                       disabled={generating}
                       icon={<Sparkles style={{ width: '14px', height: '14px' }} />}
+                      style={{
+                        boxShadow: '0 2px 8px rgba(124, 58, 237, 0.35)',
+                        fontWeight: 600,
+                      }}
                     >
                       {generating ? 'Generating...' : 'Generate PDF'}
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleSaveCurrentTemplate}
-                      disabled={generating}
-                    >
-                      Save Master Template
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => window.print()} icon={<Printer style={{ width: '14px', height: '14px' }} />}>
-                      Print / Export
-                    </Button>
                   </div>
                 </CardHeader>
-                <CardBody style={{ background: 'var(--bg-surface-hover)', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                    <span>
-                      Target PDF File: <code style={{ color: 'var(--primary-500)', background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>{selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf</code>
+                <CardBody
+                  style={{
+                    background: 'var(--bg-surface-hover)',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  {/* Left: Target File Badge & Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 auto' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      Target File:
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Zoom: {Math.round(previewScale * 100)}%</span>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.max(0.35, Number((s - 0.05).toFixed(2))))}>Zoom -</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(0.65)}>Fit Width</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale(1.0)}>100%</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setPreviewScale((s) => Math.min(1.5, Number((s + 0.05).toFixed(2))))}>Zoom +</Button>
-                      <Badge variant="success">Print-Ready A4</Badge>
-                    </div>
+                    <code
+                      style={{
+                        color: 'var(--primary-500)',
+                        background: 'var(--bg-surface)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        maxWidth: '260px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-block',
+                      }}
+                      title={`${selectedDocType.toLowerCase()}_${employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_${employeeCode || '001'}.pdf`}
+                    >
+                      {selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf
+                    </code>
+                    <Badge variant="success" style={{ fontSize: '10px', padding: '2px 6px' }}>Print A4</Badge>
+                  </div>
+
+                  {/* Right: Modern Segmented Zoom Controller */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '2px',
+                      gap: '2px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setPreviewScale((s) => Math.max(0.35, Number((s - 0.05).toFixed(2))))}
+                      title="Zoom Out"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--text-secondary)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        minWidth: '42px',
+                        textAlign: 'center',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {Math.round(previewScale * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewScale((s) => Math.min(1.5, Number((s + 0.05).toFixed(2))))}
+                      title="Zoom In"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--text-secondary)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      +
+                    </button>
+                    <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewScale(0.65)}
+                      title="Fit Width"
+                      style={{
+                        border: 'none',
+                        background: previewScale === 0.65 ? 'rgba(124, 58, 237, 0.15)' : 'transparent',
+                        color: previewScale === 0.65 ? 'var(--primary-500)' : 'var(--text-muted)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Fit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewScale(1.0)}
+                      title="100% Size"
+                      style={{
+                        border: 'none',
+                        background: previewScale === 1.0 ? 'rgba(124, 58, 237, 0.15)' : 'transparent',
+                        color: previewScale === 1.0 ? 'var(--primary-500)' : 'var(--text-muted)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      100%
+                    </button>
                   </div>
                 </CardBody>
               </Card>

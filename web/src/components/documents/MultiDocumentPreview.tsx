@@ -84,18 +84,19 @@ export const MultiDocumentPreview: React.FC<MultiDocumentPreviewProps> = ({
             maxWidth: '210mm',
             width: '100%',
             marginBottom: '16px',
-            padding: '10px 14px',
-            backgroundColor: '#EFF6FF',
-            border: '1px solid #BFDBFE',
+            padding: '10px 16px',
+            backgroundColor: 'rgba(30, 41, 59, 0.85)',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
             borderRadius: '8px',
             fontSize: '12px',
-            color: '#1E40AF',
+            color: '#93C5FD',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            backdropFilter: 'blur(4px)',
           }}
         >
-          <span>ℹ️ <strong>No active custom uploaded letterhead configured.</strong> Using standard company corporate letterhead format.</span>
+          <span>ℹ️ <strong style={{ color: '#BFDBFE' }}>No custom uploaded letterhead configured.</strong> Using standard company corporate letterhead format.</span>
         </div>
       )}
 

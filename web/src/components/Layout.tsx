@@ -247,9 +247,27 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
     }))
     .filter(group => group.items.length > 0);
 
+  const allNavItems = [
+    ...directNavItems,
+    ...visibleGroups.flatMap(group => group.items),
+  ];
+
   const pathMatches = (path: string) => {
     if (path === '/') return location.pathname === '/';
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    // 1. If any registered item strictly matches the current pathname, only that exact item is active
+    const hasExactMatch = allNavItems.some(item => item.path === location.pathname);
+    if (hasExactMatch) {
+      return location.pathname === path;
+    }
+    // 2. Otherwise (e.g. /employees/:id), match exclusively the longest matching prefix
+    if (location.pathname.startsWith(`${path}/`)) {
+      const candidates = allNavItems
+        .map(i => i.path)
+        .filter(p => p !== '/' && (location.pathname === p || location.pathname.startsWith(`${p}/`)));
+      const longestCandidate = candidates.sort((a, b) => b.length - a.length)[0];
+      return path === longestCandidate;
+    }
+    return false;
   };
 
   const activeGroup = visibleGroups.find(group => group.items.some(item => pathMatches(item.path)))?.id;
@@ -341,9 +359,11 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: theme === 'dark' ? '#ffffff' : 'transparent',
-                  padding: theme === 'dark' ? '4px 8px' : '0',
-                  borderRadius: '8px',
+                  backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+                  padding: theme === 'dark' ? '5px 10px' : '0',
+                  borderRadius: '10px',
+                  boxShadow: theme === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.25)' : 'none',
+                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
                   transition: 'all 0.2s ease',
                 }}
               >
