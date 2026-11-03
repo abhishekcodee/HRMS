@@ -2994,7 +2994,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B' }}>
                       {activeLetterhead
-                        ? `Format: ${(activeLetterhead.fileType || 'PDF').toUpperCase()} | Uploaded on: ${activeLetterhead.createdAt ? new Date(activeLetterhead.createdAt).toLocaleDateString() : 'System Default'}`
+                        ? `Format: ${String(activeLetterhead.fileType || 'PDF').toUpperCase()} | Uploaded on: ${activeLetterhead.createdAt ? new Date(activeLetterhead.createdAt).toLocaleDateString() : 'System Default'}`
                         : 'Upload an official A4 PDF or Image letterhead to apply to all company documents.'}
                     </p>
                   </div>
@@ -3135,7 +3135,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                           <Tr key={lh.id}>
                             <Td style={{ fontWeight: 700, color: '#3B82F6' }}>v{lh.version}.0</Td>
                             <Td style={{ fontWeight: 600, color: '#0F172A' }}>{lh.fileName}</Td>
-                            <Td><Badge variant="info">{(lh.fileType || 'PDF').toUpperCase()}</Badge></Td>
+                            <Td><Badge variant="info">{String(lh.fileType || 'PDF').toUpperCase()}</Badge></Td>
                             <Td>{lh.createdAt ? new Date(lh.createdAt).toLocaleDateString() : '-'}</Td>
                             <Td>{lh.isActive ? <Badge variant="success">ACTIVE</Badge> : <Badge variant="neutral">INACTIVE</Badge>}</Td>
                             <Td style={{ textAlign: 'right' }}>

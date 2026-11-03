@@ -19,12 +19,15 @@ export const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
 
-  const getInitials = (n: string) => {
-    const parts = n.trim().split(' ');
+  const getInitials = (n?: string) => {
+    if (!n || typeof n !== 'string') return '?';
+    const parts = n.trim().split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      const first = parts[0]?.[0] || '';
+      const second = parts[1]?.[0] || '';
+      return `${first}${second}`.toUpperCase() || '?';
     }
-    return n.slice(0, 2).toUpperCase();
+    return n.trim().slice(0, 2).toUpperCase() || '?';
   };
 
   const sizePx = size === 'xs' ? 22 : size === 'sm' ? 32 : size === 'lg' ? 48 : size === 'xl' ? 64 : 40;

@@ -383,7 +383,7 @@ export const ChatPage: React.FC = () => {
               className={`chat-filter-tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab ? tab.charAt(0).toUpperCase() + tab.slice(1) : ''}
             </button>
           ))}
         </div>
@@ -485,7 +485,7 @@ export const ChatPage: React.FC = () => {
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {activeConv.name}
                     <Badge variant={activeConv.type === 'announcement' ? 'error' : activeConv.type === 'department' ? 'warning' : 'info'}>
-                      {activeConv.type.toUpperCase()}
+                      {(activeConv.type || 'direct').toUpperCase()}
                     </Badge>
                   </div>
                   <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>

@@ -193,7 +193,7 @@ export const UsersRolesPage: React.FC = () => {
                             u.role === 'admin' ? 'error' : u.role === 'employer' ? 'warning' : 'success'
                           }
                         >
-                          {u.role.toUpperCase()}
+                          {(u.role || 'employee').toUpperCase()}
                         </Badge>
                       </Td>
                       <Td>
@@ -204,7 +204,7 @@ export const UsersRolesPage: React.FC = () => {
                       </Td>
                       <Td>
                         <Badge variant={u.status === 'active' ? 'success' : 'error'}>
-                          {u.status.toUpperCase()}
+                          {(u.status || 'active').toUpperCase()}
                         </Badge>
                       </Td>
                       <Td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>

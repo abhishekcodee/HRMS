@@ -197,7 +197,7 @@ export const SalaryStructuresPage: React.FC = () => {
                   type="text"
                   required
                   value={compForm.name}
-                  onChange={(e) => setCompForm({ ...compForm, name: e.target.value, code: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
+                  onChange={(e) => setCompForm({ ...compForm, name: e.target.value, code: (e.target.value || '').toUpperCase().replace(/\s+/g, '_') })}
                   style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)' }}
                   placeholder="e.g. Special Allowance"
                 />

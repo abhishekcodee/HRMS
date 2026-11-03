@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { checkCompanyEmployeeLimit } from '../../utils/employeeLimitGuard.js';
 
 export async function createUser(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -77,6 +79,23 @@ export async function createUser(req: AuthRequest, res: Response): Promise<void>
     const userId = uuidv4();
     const passwordHash = await bcrypt.hash(password, 10);
     const userStatus = status || 'active';
+    const targetCompanyId = req.body.companyId || getTenantId(req);
+
+    if (userStatus === 'active') {
+      const limitCheck = await checkCompanyEmployeeLimit(targetCompanyId, 1);
+      if (!limitCheck.allowed) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'EMPLOYEE_LIMIT_EXCEEDED',
+            message: limitCheck.message,
+            currentActive: limitCheck.currentActive,
+            maxLimit: limitCheck.maxLimit,
+          },
+        });
+        return;
+      }
+    }
 
     await pool.query(
       `INSERT INTO users (id, employee_id, full_name, email, phone, password_hash, role, status, profile_photo, must_change_password)

@@ -852,11 +852,12 @@ export const Dashboard: React.FC = () => {
                   .map((lvr) => {
                     const initials = lvr.employeeName
                       ? lvr.employeeName
-                          .split(' ')
-                          .map((n) => n[0])
+                          .trim()
+                          .split(/\s+/)
+                          .map((n) => n?.[0] || '')
                           .join('')
                           .toUpperCase()
-                          .slice(0, 2)
+                          .slice(0, 2) || 'EMP'
                       : 'EMP';
 
                     return (

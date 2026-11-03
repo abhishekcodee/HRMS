@@ -50,6 +50,7 @@ interface Company {
   plan_name?: string;
   monthly_price?: number;
   max_employees?: number;
+  active_employees?: number;
   custom_domain?: string;
   brand_color?: string;
   total_employees: number;
@@ -587,7 +588,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   // Handle Delete / Suspend
   const handleDeleteCompany = async (permanent: boolean) => {
     if (!selectedCompany) return;
-    if (permanent && deleteConfirmInput.trim().toUpperCase() !== selectedCompany.code.toUpperCase()) {
+    if (permanent && deleteConfirmInput.trim().toUpperCase() !== (selectedCompany.code || '').toUpperCase()) {
       alert(`Please type the exact company code '${selectedCompany.code}' to confirm permanent deletion.`);
       return;
     }
@@ -887,18 +888,33 @@ export const SuperAdminDashboardPage: React.FC = () => {
                           )}
                         </td>
                         <td>
-                          <strong style={{ color: 'var(--primary-500)' }}>{c.total_employees}</strong>
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            {' '}
-                            / {c.max_employees || 100}
-                          </span>
+                          {(() => {
+                            const activeCount = c.active_employees !== undefined ? c.active_employees : c.total_employees;
+                            const limit = c.max_employees || 100;
+                            const isAtCapacity = activeCount >= limit;
+                            return (
+                              <div>
+                                <strong style={{ color: isAtCapacity ? 'var(--error-text, #ef4444)' : 'var(--primary-500)' }}>
+                                  {activeCount}
+                                </strong>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                  {' '} / {limit}
+                                </span>
+                                {isAtCapacity && (
+                                  <span style={{ display: 'block', fontSize: '10px', color: '#ef4444', fontWeight: 700, marginTop: '2px' }}>
+                                    LIMIT REACHED
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           <span className="badge badge-info">{c.plan_name || 'Standard Plan'}</span>
                         </td>
                         <td>
                           <span className={`badge badge-${c.status === 'active' ? 'success' : 'danger'}`}>
-                            {c.status.toUpperCase()}
+                            {(c.status || 'active').toUpperCase()}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
@@ -1031,7 +1047,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
                         </td>
                         <td>
                           <span className={`badge badge-${adm.status === 'active' ? 'success' : 'danger'}`}>
-                            {adm.status.toUpperCase()}
+                            {(adm.status || 'active').toUpperCase()}
                           </span>
                         </td>
                         <td>
@@ -1186,7 +1202,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
                         <td>{c.employee_count || 0}</td>
                         <td>
                           <span className={`badge badge-${c.status === 'active' ? 'success' : 'danger'}`}>
-                            {c.status.toUpperCase()}
+                            {(c.status || 'active').toUpperCase()}
                           </span>
                         </td>
                         <td>{new Date(c.created_at).toLocaleDateString()}</td>
@@ -1756,7 +1772,7 @@ Portal URL: ${window.location.origin}/login`;
                       <button
                         type="button"
                         className="btn-sm btn-danger"
-                        disabled={deleteConfirmInput.trim().toUpperCase() !== selectedCompany.code.toUpperCase() || saving}
+                        disabled={deleteConfirmInput.trim().toUpperCase() !== (selectedCompany.code || '').toUpperCase() || saving}
                         onClick={() => handleDeleteCompany(true)}
                       >
                         Permanently Purge

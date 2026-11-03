@@ -532,7 +532,7 @@ DOCUMENT CLAUSES & RECORD BODY:
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <CheckCircle2 size={14} color="var(--success-text)" />
-                    <span>DIGITAL SEAL: HRMS-VAULT-{activeDoc.id.slice(0, 8).toUpperCase()}</span>
+                    <span>DIGITAL SEAL: HRMS-VAULT-{String(activeDoc.id || '').slice(0, 8).toUpperCase()}</span>
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <ShieldCheck size={14} color="var(--info-text)" />

@@ -18,6 +18,8 @@ export async function getCompanies(req: AuthRequest, res: Response): Promise<voi
               logo_path as logoPath, signature_path as signaturePath,
               letterhead_top_margin_mm as letterheadTopMarginMm,
               letterhead_bottom_margin_mm as letterheadBottomMarginMm,
+              max_employees as maxEmployees,
+              (SELECT COUNT(*) FROM users u WHERE u.company_id = companies.id AND u.status = 'active' AND u.role != 'super_admin') as activeEmployees,
               created_at as createdAt, updated_at as updatedAt
        FROM companies
        WHERE deleted_at IS NULL

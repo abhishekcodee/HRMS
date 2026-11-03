@@ -27,12 +27,15 @@ import {
   Card,
   ConfirmDialog,
 } from '../components/ui';
-import { UserPlus, Eye, Edit, UserX, LayoutGrid, LayoutList, RefreshCw } from 'lucide-react';
+import { UserPlus, Eye, Edit, UserX, LayoutGrid, LayoutList, RefreshCw, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<EmployeeDbRecord[]>([]);
   const [departments, setDepartments] = useState<MasterDepartment[]>([]);
+  const [companyLimit, setCompanyLimit] = useState<{ activeCount: number; maxEmployees: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
@@ -50,12 +53,24 @@ export const EmployeesPage: React.FC = () => {
   const loadDatabaseData = async () => {
     setLoading(true);
     try {
-      const [empList, deptList] = await Promise.all([
+      const token = localStorage.getItem('token');
+      const [empList, deptList, compRes] = await Promise.all([
         fetchEmployeesFromDb({ search, department: deptFilter, status: statusFilter }),
         fetchMasterDepartments(),
+        fetch('/api/v1/companies', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then(r => r.json()).catch(() => null),
       ]);
       setEmployees(empList);
       setDepartments(deptList);
+
+      if (compRes?.success && Array.isArray(compRes.data) && compRes.data.length > 0) {
+        const myComp = compRes.data[0];
+        setCompanyLimit({
+          activeCount: myComp.activeEmployees !== undefined ? Number(myComp.activeEmployees) : empList.filter(e => e.status === 'active').length,
+          maxEmployees: Number(myComp.maxEmployees || 100),
+        });
+      }
     } catch (err) {
       console.error('Error loading database data:', err);
     } finally {
@@ -95,14 +110,51 @@ export const EmployeesPage: React.FC = () => {
     }
   };
 
+  const activeCount = companyLimit ? companyLimit.activeCount : employees.filter(e => e.status === 'active').length;
+  const maxLimit = companyLimit?.maxEmployees || 100;
+  const isAtLimit = !user?.isSuperAdmin && activeCount >= maxLimit;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Employee Limit Banner when reached */}
+      {isAtLimit && (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: '8px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#f87171',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={18} color="#ef4444" />
+            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+              Your employee limit has been reached. Please contact the Super Admin to increase your employee limit.
+            </span>
+          </div>
+          <Badge variant="error">
+            Capacity: {activeCount} / {maxLimit}
+          </Badge>
+        </div>
+      )}
+
       {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Employee Directory</h1>
           <p className="page-subtitle">
             Workforce Management Directory • {employees.length} active records
+            {companyLimit && (
+              <span style={{ marginLeft: '8px', color: isAtLimit ? 'var(--error-text)' : 'var(--text-muted)' }}>
+                (Capacity: <strong>{activeCount}</strong> / <strong>{maxLimit}</strong>)
+              </span>
+            )}
           </p>
         </div>
         <div className="page-actions">
@@ -127,7 +179,19 @@ export const EmployeesPage: React.FC = () => {
               <LayoutGrid size={16} />
             </Button>
           </div>
-          <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => setIsAddModalOpen(true)}>
+          <Button
+            variant="primary"
+            icon={<UserPlus size={16} />}
+            onClick={() => {
+              if (isAtLimit) {
+                alert('Your employee limit has been reached. Please contact the Super Admin to increase your employee limit.');
+                return;
+              }
+              setIsAddModalOpen(true);
+            }}
+            disabled={isAtLimit}
+            title={isAtLimit ? 'Your employee limit has been reached. Please contact the Super Admin to increase your employee limit.' : 'Add new employee'}
+          >
             + Add Employee
           </Button>
         </div>

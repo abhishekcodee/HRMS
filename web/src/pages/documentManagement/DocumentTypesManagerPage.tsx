@@ -177,7 +177,7 @@ export const DocumentTypesManagerPage: React.FC = () => {
                           <Badge variant="error">Restricted Admin Only</Badge>
                         )}
                       </Td>
-                      <Td><Badge variant="info">{String(dt.status).toUpperCase()}</Badge></Td>
+                      <Td><Badge variant="info">{String(dt.status || 'ACTIVE').toUpperCase()}</Badge></Td>
                     </Tr>
                   ))
                 )}

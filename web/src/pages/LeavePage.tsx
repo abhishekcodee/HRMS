@@ -127,7 +127,7 @@ export const LeavePage: React.FC = () => {
 
   // Available remaining balance for selected type in modal
   const currentAvailableBalance = useMemo(() => {
-    const norm = form.leaveType.toUpperCase();
+    const norm = (form.leaveType || '').toUpperCase();
     return norm.includes('PL') || norm.includes('PRIVILEGE') ? plSummary.remaining : clSummary.remaining;
   }, [form.leaveType, clSummary, plSummary]);
 

@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { checkCompanyEmployeeLimit } from '../../utils/employeeLimitGuard.js';
 import { logger } from '../../utils/logger.js';
 import {
   calculateLeaveAccrual,
@@ -272,6 +274,22 @@ export async function importEmployeesCsv(req: AuthRequest, res: Response): Promi
 
     if (parsedRows.length === 0) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'No valid CSV rows provided for import.' } });
+      return;
+    }
+
+    const companyId = getTenantId(req);
+    const limitCheck = await checkCompanyEmployeeLimit(companyId, parsedRows.length);
+    if (!limitCheck.allowed) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'EMPLOYEE_LIMIT_EXCEEDED',
+          message: limitCheck.message,
+          currentActive: limitCheck.currentActive,
+          maxLimit: limitCheck.maxLimit,
+          attemptedToAdd: parsedRows.length,
+        },
+      });
       return;
     }
 

@@ -65,6 +65,7 @@ export async function listCompanies(req: AuthRequest, res: Response): Promise<vo
 
     let sql = `
       SELECT c.*, p.name as plan_name, p.monthly_price,
+             (SELECT COUNT(*) FROM users u WHERE u.company_id = c.id AND u.status = 'active' AND u.role != 'super_admin') as active_employees,
              (SELECT COUNT(*) FROM employee_profiles e WHERE e.company_id = c.id) as total_employees,
              (SELECT COUNT(*) FROM users u WHERE u.company_id = c.id) as total_users,
              (SELECT u.id FROM users u WHERE u.company_id = c.id AND u.role = 'admin' LIMIT 1) as admin_id,

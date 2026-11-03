@@ -244,7 +244,7 @@ export const ReportsPage: React.FC = () => {
     const blob = new Blob([csvRows.join('\n')], { type: format === 'EXCEL' ? 'application/vnd.ms-excel' : 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `HRMS_${reportTab.toUpperCase()}_Report_${new Date().toISOString().split('T')[0]}.${format === 'EXCEL' ? 'xls' : 'csv'}`;
+    link.download = `HRMS_${String(reportTab || 'Data').toUpperCase()}_Report_${new Date().toISOString().split('T')[0]}.${format === 'EXCEL' ? 'xls' : 'csv'}`;
     link.click();
     showToast('success', `Exported ${reportRows.length} ${reportTab} report records successfully.`);
   };

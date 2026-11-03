@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { checkCompanyEmployeeLimit } from '../../utils/employeeLimitGuard.js';
 
 /**
  * Automatically insert custom department or designation into master tables if not existing
@@ -289,6 +290,23 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     const passwordHash = await bcrypt.hash(password, 10);
     const userRole = role || 'employee';
     const userStatus = status || 'active';
+
+    // Strict Employee Limit Check: enforce maximum employee capacity set by Super Admin
+    if (userStatus === 'active') {
+      const limitCheck = await checkCompanyEmployeeLimit(companyId, 1);
+      if (!limitCheck.allowed) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'EMPLOYEE_LIMIT_EXCEEDED',
+            message: limitCheck.message,
+            currentActive: limitCheck.currentActive,
+            maxLimit: limitCheck.maxLimit,
+          },
+        });
+        return;
+      }
+    }
 
     // Insert user
     await pool.query(
@@ -641,6 +659,23 @@ export async function updateEmployeeStatus(req: AuthRequest, res: Response): Pro
 
     const user = users[0];
     const newStatus = String(status).toLowerCase();
+
+    // If reactivating to active, enforce company employee limit
+    if (newStatus === 'active' && user.status !== 'active') {
+      const limitCheck = await checkCompanyEmployeeLimit(user.company_id || companyId, 1);
+      if (!limitCheck.allowed) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'EMPLOYEE_LIMIT_EXCEEDED',
+            message: limitCheck.message,
+            currentActive: limitCheck.currentActive,
+            maxLimit: limitCheck.maxLimit,
+          },
+        });
+        return;
+      }
+    }
 
     let updateStatusSql = 'UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?';
     const updateStatusParams: any[] = [newStatus, id];
