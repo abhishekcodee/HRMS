@@ -2984,17 +2984,17 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <strong style={{ fontSize: '15px', color: '#0F172A' }}>
-                        {activeLetterhead ? activeLetterhead.fileName : 'No Active Letterhead Configured'}
+                        {activeLetterhead ? (activeLetterhead.fileName || 'Standard Corporate Letterhead') : 'No Active Letterhead Configured'}
                       </strong>
                       {activeLetterhead ? (
-                        <Badge variant="success">ACTIVE (v{activeLetterhead.version}.0)</Badge>
+                        <Badge variant="success">ACTIVE (v{activeLetterhead.version || 1}.0)</Badge>
                       ) : (
                         <Badge variant="warning">NOT CONFIGURED</Badge>
                       )}
                     </div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B' }}>
                       {activeLetterhead
-                        ? `Format: ${activeLetterhead.fileType.toUpperCase()} | Uploaded on: ${new Date(activeLetterhead.createdAt).toLocaleDateString()}`
+                        ? `Format: ${(activeLetterhead.fileType || 'PDF').toUpperCase()} | Uploaded on: ${activeLetterhead.createdAt ? new Date(activeLetterhead.createdAt).toLocaleDateString() : 'System Default'}`
                         : 'Upload an official A4 PDF or Image letterhead to apply to all company documents.'}
                     </p>
                   </div>
@@ -3135,8 +3135,8 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                           <Tr key={lh.id}>
                             <Td style={{ fontWeight: 700, color: '#3B82F6' }}>v{lh.version}.0</Td>
                             <Td style={{ fontWeight: 600, color: '#0F172A' }}>{lh.fileName}</Td>
-                            <Td><Badge variant="info">{lh.fileType.toUpperCase()}</Badge></Td>
-                            <Td>{new Date(lh.createdAt).toLocaleDateString()}</Td>
+                            <Td><Badge variant="info">{(lh.fileType || 'PDF').toUpperCase()}</Badge></Td>
+                            <Td>{lh.createdAt ? new Date(lh.createdAt).toLocaleDateString() : '-'}</Td>
                             <Td>{lh.isActive ? <Badge variant="success">ACTIVE</Badge> : <Badge variant="neutral">INACTIVE</Badge>}</Td>
                             <Td style={{ textAlign: 'right' }}>
                               {!lh.isActive && (

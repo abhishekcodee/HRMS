@@ -71,7 +71,7 @@ export const TerminationApprovalModal: React.FC<TerminationApprovalModalProps> =
             {requestRecord.employee_name} ({requestRecord.employee_code})
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Variant: <strong>{requestRecord.variant_code.toUpperCase()}</strong> | Last Working Day: <strong>{requestRecord.last_working_day}</strong>
+            Variant: <strong>{(requestRecord.variant_code || 'standard').toUpperCase()}</strong> | Last Working Day: <strong>{requestRecord.last_working_day || '-'}</strong>
           </div>
         </div>
 

@@ -170,7 +170,7 @@ export const SalaryStructuresPage: React.FC = () => {
                   <td style={{ padding: '12px', fontFamily: 'monospace', color: '#3b82f6' }}>{c.code}</td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', background: c.type === 'earning' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: c.type === 'earning' ? '#22c55e' : '#ef4444' }}>
-                      {c.type.toUpperCase()}
+                      {(c.type || 'earning').toUpperCase()}
                     </span>
                   </td>
                   <td style={{ padding: '12px', fontFamily: 'monospace' }}>{c.calculationType === 'percentage' ? `${c.percentageValue}% of ${c.percentageBasisCode || 'CTC'}` : 'Fixed Amount'}</td>
