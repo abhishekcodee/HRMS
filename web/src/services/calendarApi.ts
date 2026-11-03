@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 export interface CalendarEventRecord {
   id: string;
   title: string;
@@ -12,7 +14,7 @@ export interface CalendarEventRecord {
 }
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('hrms_token') || localStorage.getItem('token');
+  const token = localStorage.getItem('hrms_auth_token') || localStorage.getItem('hrms_token') || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -21,7 +23,7 @@ function getAuthHeaders() {
 
 export async function fetchCalendarEventsFromDb(year: number = 2026): Promise<CalendarEventRecord[]> {
   try {
-    const res = await fetch(`/api/v1/calendar/events?year=${year}`, {
+    const res = await fetch(`${API_BASE_URL}/calendar/events?year=${year}`, {
       headers: getAuthHeaders(),
     });
     const json = await res.json();
@@ -43,7 +45,7 @@ export async function createCalendarEventInDb(data: {
   location?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const res = await fetch('/api/v1/calendar/events', {
+    const res = await fetch(`${API_BASE_URL}/calendar/events`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),

@@ -377,13 +377,17 @@ html, body {
   overflow: hidden;
   opacity: 0;
   transform: translateY(-4px);
-  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+  transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.25s ease;
 }
 
 .nav-group.open .nav-group-items {
-  max-height: 520px;
+  max-height: 800px;
   opacity: 1;
   transform: translateY(0);
+}
+
+.mobile-overlay-backdrop {
+  display: none;
 }
 
 .nav-link {
@@ -1199,6 +1203,7 @@ html, body {
   }
 
   .mobile-overlay-backdrop {
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
