@@ -6,6 +6,10 @@ import {
   createCompany,
   updateCompany,
   deleteCompany,
+  listAdmins,
+  assignCompanyAdmin,
+  resetAdminPassword,
+  toggleAdminStatus,
   listPlans,
   createPlan,
   getPlatformAuditLogs,
@@ -18,12 +22,23 @@ export const superAdminRouter = Router();
 superAdminRouter.use(authenticateToken);
 superAdminRouter.use(requireRole(['super_admin']));
 
+// Platform Statistics
 superAdminRouter.get('/stats', getPlatformStats);
+
+// Multi-Company Management
 superAdminRouter.get('/companies', listCompanies);
 superAdminRouter.post('/companies', createCompany);
 superAdminRouter.put('/companies/:id', updateCompany);
 superAdminRouter.patch('/companies/:id', updateCompany);
 superAdminRouter.delete('/companies/:id', deleteCompany);
+
+// Company Administrator Management & Credentials
+superAdminRouter.get('/admins', listAdmins);
+superAdminRouter.post('/companies/:id/admin', assignCompanyAdmin);
+superAdminRouter.post('/admins/:id/reset-password', resetAdminPassword);
+superAdminRouter.patch('/admins/:id/status', toggleAdminStatus);
+
+// Plans, Logs & System Diagnostics
 superAdminRouter.get('/plans', listPlans);
 superAdminRouter.post('/plans', createPlan);
 superAdminRouter.get('/audit-logs', getPlatformAuditLogs);

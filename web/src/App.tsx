@@ -124,7 +124,7 @@ export function App() {
                       }
                     >
                       <Route path="/" element={<Dashboard />} />
-                      <Route path="/super-admin" element={<SuperAdminDashboardPage />} />
+                      <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminDashboardPage /></ProtectedRoute>} />
                       <Route path="/company-branding" element={<ProtectedRoute superAdminOnly><CompanyBrandingPage /></ProtectedRoute>} />
                       
                       {/* HRMS Internal Communication Platform */}
