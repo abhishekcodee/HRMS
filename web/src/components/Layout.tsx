@@ -354,33 +354,19 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                 borderRadius: '8px',
               }}
             >
-              <div
+              <img
+                src="/logo.png"
+                alt={branding.name || 'Wokhman'}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
-                  padding: theme === 'dark' ? '5px 10px' : '0',
-                  borderRadius: '10px',
-                  boxShadow: theme === 'dark' ? '0 2px 8px rgba(0, 0, 0, 0.25)' : 'none',
-                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
-                  transition: 'all 0.2s ease',
+                  height: collapsed ? '28px' : '36px',
+                  maxWidth: collapsed ? '28px' : '150px',
+                  objectFit: 'contain',
+                  display: 'block',
                 }}
-              >
-                <img
-                  src="/logo.png"
-                  alt={branding.name || 'Wokhman'}
-                  style={{
-                    height: collapsed ? '28px' : '36px',
-                    maxWidth: collapsed ? '28px' : '155px',
-                    objectFit: 'contain',
-                    display: 'block',
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = branding.logo_url || '/hrms-logo.png';
-                  }}
-                />
-              </div>
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = branding.logo_url || '/hrms-logo.png';
+                }}
+              />
             </Link>
             <button
               type="button"

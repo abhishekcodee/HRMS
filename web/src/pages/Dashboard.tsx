@@ -295,11 +295,11 @@ export const Dashboard: React.FC = () => {
                 />
               )}
               <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
-                  Welcome to {branding.name && branding.name !== 'Default Enterprise' ? branding.name : 'HRMS Portal'}, {user?.fullName?.split(' ')[0] || 'Employee'}! 👋
+                <h1 style={{ fontSize: '1.375rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
+                  Welcome back, {user?.fullName?.split(' ')[0] || 'Employee'}
                 </h1>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                  Official HRMS ID: <strong>{user?.employeeId || 'EMP'}</strong> • Corporate Tenant: {branding.name || 'Default Enterprise'}
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                  Employee ID: <strong>{user?.employeeId || 'EMP'}</strong> • {branding.name || 'Wokhman'}
                 </p>
               </div>
             </div>
@@ -589,21 +589,21 @@ export const Dashboard: React.FC = () => {
             <img
               src={branding.logo_url}
               alt={branding.name}
-              style={{ height: '48px', maxWidth: '160px', objectFit: 'contain', borderRadius: '6px' }}
+              style={{ height: '40px', maxWidth: '140px', objectFit: 'contain' }}
             />
           )}
           <div>
             <h1 className="page-title">
-              {branding.name && branding.name !== 'Default Enterprise' ? `${branding.name} Operations` : 'HRMS Executive Operations Command'}
+              {branding.name && branding.name !== 'Default Enterprise' ? `${branding.name} Overview` : 'Organization Overview'}
             </h1>
             <p className="page-subtitle">
-              Enterprise Operations • {activeRoleView} Command Center • Active Corporate Tenant: {branding.name || 'Default Enterprise'}
+              Workforce headcount, attendance status, and operational metrics.
             </p>
           </div>
         </div>
         <div className="page-actions">
           <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => navigate('/employees')}>
-            + Add Employee
+            Add Employee
           </Button>
         </div>
       </div>
@@ -611,17 +611,17 @@ export const Dashboard: React.FC = () => {
       {/* KPI Cards Grid with Live DB Metrics */}
       <div className="stat-grid">
         <StatCard
-          title="Total Workforce Headcount"
+          title="Total Employees"
           value={fastStats?.totalEmployees ?? employees.length}
           icon={<Users size={20} />}
-          subtext="Active workforce records"
+          subtext="Active workforce headcount"
           onClick={() => navigate('/employees')}
         />
         <StatCard
-          title="Pending Leave Applications"
+          title="Pending Approvals"
           value={fastStats?.pendingLeaves ?? pendingCount}
           icon={<Clock size={20} />}
-          subtext="Requires approval action"
+          subtext="Leave requests pending review"
           change={(fastStats?.pendingLeaves ?? pendingCount) > 0 ? 'Action Needed' : 'Up to Date'}
           changeType={(fastStats?.pendingLeaves ?? pendingCount) > 0 ? 'negative' : 'positive'}
           onClick={() => navigate('/leave')}
@@ -630,14 +630,14 @@ export const Dashboard: React.FC = () => {
           title="Approved Leaves"
           value={approvedCount}
           icon={<CheckCircle2Icon size={20} />}
-          subtext="Confirmed active leaves"
+          subtext="Active approved leaves"
           onClick={() => navigate('/leave')}
         />
         <StatCard
-          title="Active Departments"
+          title="Departments"
           value={departmentDistribution.length}
           icon={<TrendingUp size={20} />}
-          subtext="Company organizational units"
+          subtext="Configured organizational units"
         />
       </div>
 
@@ -646,12 +646,12 @@ export const Dashboard: React.FC = () => {
         {/* Attendance Bar Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Attendance Trend (Weekly Summary)</CardTitle>
-            <Badge variant="info">Live eSSL Biometric Feed</Badge>
+            <CardTitle>Weekly Attendance</CardTitle>
+            <Badge variant="info">Live Sync</Badge>
           </CardHeader>
           <CardBody>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', marginTop: 0 }}>
-              💡 Click on any day bar below to view full {employees.length}-member biometric punch analysis & employee roster
+              Select any day to inspect employee attendance logs and punch status.
             </p>
             <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem', paddingTop: '0.5rem' }}>
               {(() => {

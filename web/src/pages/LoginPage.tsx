@@ -242,17 +242,17 @@ export const LoginPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 1))',
+        background: '#090d16',
         padding: '2.5rem 1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '440px' }}>
+      <div style={{ width: '100%', maxWidth: '420px' }}>
         {/* Clean Logo Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
             src="/logo.png"
             alt="Wokhman"
-            style={{ maxHeight: '72px', maxWidth: '240px', objectFit: 'contain' }}
+            style={{ maxHeight: '68px', maxWidth: '220px', objectFit: 'contain' }}
           />
         </div>
 
@@ -262,9 +262,9 @@ export const LoginPage: React.FC = () => {
             style={{
               marginBottom: '1.25rem',
               padding: '1rem',
-              borderRadius: '12px',
-              background: 'rgba(99, 102, 241, 0.15)',
-              border: '1px solid rgba(99, 102, 241, 0.4)',
+              borderRadius: '8px',
+              background: 'rgba(99, 102, 241, 0.1)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
@@ -273,7 +273,7 @@ export const LoginPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c7d2fe', fontSize: '0.85rem', fontWeight: 600 }}>
                 <Sparkles size={16} color="#818cf8" />
-                <span>Authorized Demo Access Granted</span>
+                <span>Authorized Demo Access</span>
               </div>
               <button
                 type="button"
@@ -285,11 +285,11 @@ export const LoginPage: React.FC = () => {
                 }}
                 style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer' }}
               >
-                Exit Demo Mode
+                Exit
               </button>
             </div>
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-              Verified for <strong>{authorizedDemoEmail}</strong>. You have permission to explore the isolated interactive demo.
+              Verified for <strong>{authorizedDemoEmail}</strong>. 30-minute interactive session.
             </p>
             <Button
               type="button"
@@ -299,12 +299,9 @@ export const LoginPage: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '0.65rem',
-                fontSize: '0.9rem',
+                fontSize: '0.875rem',
                 fontWeight: 600,
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
-                color: '#ffffff',
-                border: 'none',
+                borderRadius: '6px',
               }}
             >
               Enter Interactive Demo Environment &rarr;
@@ -315,12 +312,11 @@ export const LoginPage: React.FC = () => {
         {/* Standard Enterprise Login Card */}
         <Card
           style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
+            background: '#111827',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '10px',
             padding: '2rem',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3)',
           }}
         >
           {searchParams.get('reason') === 'demo_expired' && (
@@ -361,7 +357,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="Enter your email or employee ID"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  style={{ paddingLeft: '2.5rem', background: '#0f172a', borderColor: '#334155', color: '#f8fafc' }}
+                  style={{ paddingLeft: '2.5rem', background: '#0d121f', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#f8fafc', borderRadius: '6px' }}
                   required
                 />
               </div>
@@ -395,9 +391,10 @@ export const LoginPage: React.FC = () => {
                   style={{
                     paddingLeft: '2.5rem',
                     paddingRight: '2.5rem',
-                    background: '#0f172a',
-                    borderColor: '#334155',
+                    background: '#0d121f',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
                     color: '#f8fafc',
+                    borderRadius: '6px',
                   }}
                   required
                 />
