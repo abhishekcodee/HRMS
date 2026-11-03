@@ -51,6 +51,8 @@ import {
   CheckCircle2,
   Info,
   Search,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { MultiDocumentPreview } from '../../components/documents/MultiDocumentPreview';
 import { buildNormalizedVariableMap, interpolateTemplateString, NormalizedDocumentData } from '../../utils/documentDataNormalizer';
@@ -372,7 +374,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
 
   // Preview & Generation State
   const [previewMode, setPreviewMode] = useState(false);
-  const [previewScale, setPreviewScale] = useState(0.65);
+  const [previewScale, setPreviewScale] = useState(0.55);
   const [generating, setGenerating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -1141,7 +1143,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1440px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1680px', margin: '0 auto' }}>
       {/* Studio Banner */}
       <div
         style={{
@@ -1359,9 +1361,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: previewMode
-                ? 'minmax(360px, 420px) minmax(0, 1fr)'
-                : 'minmax(420px, 480px) minmax(0, 1.4fr)',
+              gridTemplateColumns: 'minmax(380px, 460px) minmax(480px, 1.35fr)',
               gap: '24px',
               alignItems: 'start',
             }}
@@ -2537,8 +2537,6 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '12px',
                     padding: '12px 16px',
                     borderBottom: '1px solid var(--border-color)',
                   }}
@@ -2547,7 +2545,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     <Eye style={{ width: '18px', height: '18px', color: 'var(--primary-500)' }} />
                     <div>
                       <CardTitle style={{ fontSize: '15px', margin: 0, lineHeight: 1.2 }}>
-                        Live Document Preview
+                        Document Preview
                       </CardTitle>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                         Interactive real-time preview
@@ -2555,31 +2553,17 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  {/* Header Actions: Full Screen + Generate PDF */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setPreviewMode(!previewMode)}
-                      title={previewMode ? 'Exit wide view' : 'Expand preview to full screen'}
+                      onClick={() => setPreviewMode(true)}
+                      icon={<Maximize2 style={{ width: '14px', height: '14px' }} />}
+                      title="Open full-screen interactive preview (100vh)"
+                      style={{ fontWeight: 600 }}
                     >
-                      {previewMode ? 'Normal View' : 'Full Preview (100vh)'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleSaveCurrentTemplate}
-                      disabled={generating}
-                      title="Save current layout as master company template"
-                    >
-                      Save Template
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => window.print()}
-                      icon={<Printer style={{ width: '14px', height: '14px' }} />}
-                    >
-                      Print
+                      Full Screen
                     </Button>
                     <Button
                       variant="primary"
@@ -2596,42 +2580,41 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </Button>
                   </div>
                 </CardHeader>
+
                 <CardBody
                   style={{
                     background: 'var(--bg-surface-hover)',
-                    padding: '8px 16px',
+                    padding: '8px 14px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '10px',
+                    gap: '8px',
+                    borderTop: '1px solid var(--border-color)',
                   }}
                 >
-                  {/* Left: Target File Badge & Status */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 auto' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                      Target File:
-                    </span>
-                    <code
-                      style={{
-                        color: 'var(--primary-500)',
-                        background: 'var(--bg-surface)',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border-color)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        maxWidth: '260px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'inline-block',
-                      }}
-                      title={`${selectedDocType.toLowerCase()}_${employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_${employeeCode || '001'}.pdf`}
+                  {/* Left: Quick Actions & Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => window.print()}
+                      icon={<Printer style={{ width: '13px', height: '13px' }} />}
+                      title="Print or export to PDF"
+                      style={{ padding: '4px 10px', fontSize: '12px' }}
                     >
-                      {selectedDocType.toLowerCase()}_{employeeName ? employeeName.replace(/\s+/g, '_') : 'Draft'}_{employeeCode || '001'}.pdf
-                    </code>
-                    <Badge variant="success" style={{ fontSize: '10px', padding: '2px 6px' }}>Print A4</Badge>
+                      Print
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleSaveCurrentTemplate}
+                      disabled={generating}
+                      title="Save as company master template"
+                      style={{ padding: '4px 10px', fontSize: '12px' }}
+                    >
+                      Save
+                    </Button>
+                    <Badge variant="success" style={{ fontSize: '10px', padding: '3px 6px' }}>Print-Ready A4</Badge>
                   </div>
 
                   {/* Right: Modern Segmented Zoom Controller */}
@@ -2654,7 +2637,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         border: 'none',
                         background: 'transparent',
                         color: 'var(--text-secondary)',
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontSize: '12px',
@@ -2668,7 +2651,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         fontSize: '11px',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
-                        minWidth: '42px',
+                        minWidth: '38px',
                         textAlign: 'center',
                         userSelect: 'none',
                       }}
@@ -2683,7 +2666,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         border: 'none',
                         background: 'transparent',
                         color: 'var(--text-secondary)',
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontSize: '12px',
@@ -2695,13 +2678,13 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
                     <button
                       type="button"
-                      onClick={() => setPreviewScale(0.65)}
-                      title="Fit Width"
+                      onClick={() => setPreviewScale(0.55)}
+                      title="Fit to preview pane width"
                       style={{
                         border: 'none',
-                        background: previewScale === 0.65 ? 'rgba(124, 58, 237, 0.15)' : 'transparent',
-                        color: previewScale === 0.65 ? 'var(--primary-500)' : 'var(--text-muted)',
-                        padding: '3px 8px',
+                        background: previewScale === 0.55 ? 'rgba(124, 58, 237, 0.15)' : 'transparent',
+                        color: previewScale === 0.55 ? 'var(--primary-500)' : 'var(--text-muted)',
+                        padding: '2px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontSize: '11px',
@@ -2718,7 +2701,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         border: 'none',
                         background: previewScale === 1.0 ? 'rgba(124, 58, 237, 0.15)' : 'transparent',
                         color: previewScale === 1.0 ? 'var(--primary-500)' : 'var(--text-muted)',
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontSize: '11px',
@@ -2734,19 +2717,66 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
               {/* Dynamic Rendered Preview - 100vh Viewport with internal smooth scroll */}
               <div
                 style={{
+                  position: 'relative',
                   flex: 1,
                   minHeight: 0,
                   overflowY: 'auto',
                   overflowX: 'auto',
                   background: '#1E293B',
-                  padding: '24px',
+                  padding: '16px',
                   borderRadius: '12px',
                   display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'flex-start',
+                  flexDirection: 'column',
+                  alignItems: 'center',
                   boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.4)',
                 }}
               >
+                {/* Floating Quick Full Screen Pill */}
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginBottom: '8px',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 20,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 12px',
+                      borderRadius: '16px',
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(8px)',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--primary-600, #7C3AED)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.85)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    }}
+                    title="Expand preview to full screen"
+                  >
+                    <Maximize2 style={{ width: '12px', height: '12px' }} />
+                    <span>Expand Full Screen</span>
+                  </button>
+                </div>
+
                 <MultiDocumentPreview documentType={selectedDocType} data={getPreviewData()} scale={previewScale} activeLetterhead={activeLetterhead} />
               </div>
             </div>
@@ -2816,9 +2846,10 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => setPreviewMode(false)}
-                      style={{ background: '#DC2626', color: '#FFF', borderColor: '#DC2626' }}
+                      icon={<Minimize2 style={{ width: '14px', height: '14px' }} />}
+                      style={{ background: '#DC2626', color: '#FFF', borderColor: '#DC2626', fontWeight: 600 }}
                     >
-                      Close (Esc)
+                      Exit Full Screen
                     </Button>
                   </div>
                 </div>
