@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return cached ? JSON.parse(cached) : null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('hrms_token'));
-  const [activeRoleView, setActiveRoleView] = useState<UserRole | 'SUPER_ADMIN'>(() => {
+  const [activeRoleView, setActiveRoleView] = useState<UserRole | 'SUPER_ADMIN' | 'DEMO' | 'demo'>(() => {
     const cachedRole = localStorage.getItem('hrms_active_role') as any;
     if (cachedRole) {
       return cachedRole;
@@ -71,7 +71,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            const dbRoleUpper = data.data.role.toUpperCase();
+            const rawRole = data.data.role ? String(data.data.role).toUpperCase() : 'EMPLOYEE';
+            const dbRoleUpper = (rawRole as UserRole | 'SUPER_ADMIN' | 'DEMO' | 'demo');
+
+            // Check if demo user has exceeded 30 minute limit
+            const storedDemoExpiry = localStorage.getItem('hrms_demo_expires_at');
+            if (dbRoleUpper === 'DEMO' && storedDemoExpiry && Date.now() > Number(storedDemoExpiry)) {
+              logout();
+              window.location.href = '/login?reason=demo_expired';
+              return;
+            }
+
             const updatedProfile: UserAuthProfile = {
               id: data.data.id,
               companyId: data.data.companyId || null,
@@ -119,8 +129,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      const dbRoleUpper = result.data.user.role.toUpperCase();
+      const rawRole = result.data.user.role ? String(result.data.user.role).toUpperCase() : 'EMPLOYEE';
+      const dbRoleUpper = (rawRole as UserRole | 'SUPER_ADMIN' | 'DEMO' | 'demo');
       const mustChangePassword = !!result.data.user.mustChangePassword;
+
+      // Strictly record 30-minute demo expiration if demo role
+      if (dbRoleUpper === 'DEMO' || result.data.user.email?.toLowerCase().includes('demo')) {
+        const demoExpiry = result.data.demoExpiresAt || (Date.now() + 30 * 60 * 1000);
+        localStorage.setItem('hrms_demo_expires_at', String(demoExpiry));
+      } else {
+        localStorage.removeItem('hrms_demo_expires_at');
+      }
+
       const userProfile: UserAuthProfile = {
         id: result.data.user.id,
         companyId: result.data.user.companyId || null,

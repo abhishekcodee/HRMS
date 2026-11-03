@@ -166,6 +166,7 @@ export async function directDemoLogin(req: Request, res: Response) {
       custom_domain: null,
     };
 
+    const demoExpiresAt = Date.now() + 30 * 60 * 1000;
     const tokenPayload = {
       id: user.id,
       companyId: user.company_id,
@@ -173,16 +174,19 @@ export async function directDemoLogin(req: Request, res: Response) {
       employeeId: user.employee_id,
       email: user.email,
       role: 'demo',
+      demoExpiresAt,
       mustChangePassword: false,
     };
 
-    const token = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '1d' });
+    // Strictly limit demo JWT to 30 minutes
+    const token = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '30m' });
 
     res.json({
       success: true,
-      message: 'Demo session authenticated successfully. Welcome to Wokhman Demo!',
+      message: 'Demo session authenticated successfully. Welcome to Wokhman Demo! (30-Minute Access)',
       data: {
         token,
+        demoExpiresAt,
         user: {
           id: user.id,
           companyId: user.company_id,

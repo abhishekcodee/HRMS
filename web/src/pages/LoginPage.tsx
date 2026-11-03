@@ -247,19 +247,13 @@ export const LoginPage: React.FC = () => {
       }}
     >
       <div style={{ width: '100%', maxWidth: '440px' }}>
-        {/* Dynamic HRMS Tenant Branding Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+        {/* Clean Logo Header */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
-            src={branding.logo_url || '/logo.png'}
-            alt={branding.name || 'Wokhman'}
-            style={{ maxHeight: '70px', maxWidth: '240px', marginBottom: '0.75rem', objectFit: 'contain' }}
+            src="/logo.png"
+            alt="Wokhman"
+            style={{ maxHeight: '72px', maxWidth: '240px', objectFit: 'contain' }}
           />
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
-            {branding.name || 'Wokhman'}
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-            Work Meets Human. Next-Generation Enterprise HRMS
-          </p>
         </div>
 
         {/* Authorized Demo Access Banner (Only shown to backend-verified demo visitors) */}
@@ -329,6 +323,12 @@ export const LoginPage: React.FC = () => {
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
           }}
         >
+          {searchParams.get('reason') === 'demo_expired' && (
+            <Alert variant="warning" title="Demo Limit Reached (30 Minutes)">
+              Your 30-minute interactive demo session has ended. To get permanent access or set up your dedicated enterprise workspace, please contact us or sign in with your account credentials.
+            </Alert>
+          )}
+
           {errorMessage && (
             <Alert variant="error" title="Authentication Notice">
               {errorMessage}

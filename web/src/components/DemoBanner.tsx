@@ -11,45 +11,44 @@ export const DemoBanner: React.FC = () => {
 
   const isDemo = user?.role === UserRole.DEMO || (user?.role as any) === 'demo' || (user?.role as any) === 'DEMO';
 
-  // 30-minute inactivity timer (1800 seconds)
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(1800);
+  // Strict 30-minute total session limit (1800 seconds total)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
+    const stored = localStorage.getItem('hrms_demo_expires_at');
+    if (stored) {
+      const remaining = Math.max(0, Math.floor((Number(stored) - Date.now()) / 1000));
+      return remaining > 0 ? remaining : 0;
+    }
+    const freshExpiry = Date.now() + 30 * 60 * 1000;
+    localStorage.setItem('hrms_demo_expires_at', String(freshExpiry));
+    return 1800;
+  });
+
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
-
-  const lastActivityRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!isDemo) return;
 
-    // Activity tracking listeners
-    const handleActivity = () => {
-      lastActivityRef.current = Date.now();
-    };
-
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+    let storedExpiry = Number(localStorage.getItem('hrms_demo_expires_at'));
+    if (!storedExpiry || isNaN(storedExpiry)) {
+      storedExpiry = Date.now() + 30 * 60 * 1000;
+      localStorage.setItem('hrms_demo_expires_at', String(storedExpiry));
+    }
 
     const interval = setInterval(() => {
-      const elapsedInactive = Math.floor((Date.now() - lastActivityRef.current) / 1000);
-      const remaining = Math.max(0, 1800 - elapsedInactive);
+      const remaining = Math.max(0, Math.floor((storedExpiry - Date.now()) / 1000));
       setSecondsRemaining(remaining);
 
       if (remaining <= 0) {
         clearInterval(interval);
-        alert('Your interactive demo session has expired after 30 minutes of inactivity. Logging out...');
+        localStorage.removeItem('hrms_demo_expires_at');
         logout();
-        navigate('/login');
+        navigate('/login?reason=demo_expired');
       }
     }, 1000);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('click', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
     };
   }, [isDemo, logout, navigate]);
 
@@ -133,7 +132,7 @@ export const DemoBanner: React.FC = () => {
           <Sparkles size={13} /> DEMO MODE
         </span>
         <span style={{ color: '#cbd5e1' }}>
-          You are exploring <strong>Wokhman HRMS</strong> in interactive read-only mode with isolated sample data.
+          You have <strong>Full Demo Access</strong> with isolated sample data. Strict 30-minute test limit.
         </span>
       </div>
 
@@ -150,12 +149,12 @@ export const DemoBanner: React.FC = () => {
             background: 'rgba(15, 23, 42, 0.6)',
             padding: '0.25rem 0.65rem',
             borderRadius: '6px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: secondsRemaining < 300 ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
           }}
-          title="Demo session auto-expires after 30 minutes of inactivity"
+          title="Demo access strictly limited to 30 minutes total"
         >
           <Clock size={14} />
-          <span>Session: {timerStr}</span>
+          <span>Demo Limit: {timerStr}</span>
         </div>
 
         {/* Reset Button */}

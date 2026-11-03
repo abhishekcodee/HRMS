@@ -127,7 +127,9 @@ export async function login(req: Request, res: Response): Promise<void> {
       ]
     );
 
-    // Sign JWT token
+    // Sign JWT token with strict 30-minute limit for demo users
+    const isDemo = user.role === 'demo' || user.email?.toLowerCase().includes('demo');
+    const demoExpiresAt = isDemo ? Date.now() + 30 * 60 * 1000 : undefined;
     const tokenPayload = {
       id: user.id,
       companyId: user.company_id || null,
@@ -135,15 +137,17 @@ export async function login(req: Request, res: Response): Promise<void> {
       employeeId: user.employee_id,
       email: user.email,
       role: user.role,
+      demoExpiresAt,
       mustChangePassword,
     };
 
-    const token = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: isDemo ? '30m' : '1d' });
 
     res.json({
       success: true,
       data: {
         token,
+        demoExpiresAt,
         user: {
           id: user.id,
           companyId: user.company_id || null,

@@ -29,12 +29,20 @@ export async function getPublicBranding(req: Request, res: Response): Promise<vo
 
     let branding = rows.length > 0 ? rows[0] : null;
 
-    // Fallback to Default Enterprise if specified tenant not found
+    // Fallback to Default Enterprise if specified tenant not found (strictly exclude Demo Corp)
     if (!branding) {
       const [fallback]: any = await pool.query(
-        'SELECT id, name, code, logo_url, favicon_url, brand_color, secondary_brand_color, custom_domain FROM companies ORDER BY created_at DESC LIMIT 1'
+        "SELECT id, name, code, logo_url, favicon_url, brand_color, secondary_brand_color, custom_domain FROM companies WHERE code != 'DEMO_CORP' ORDER BY (id = 'c1000000-0000-0000-0000-000000000001') DESC, created_at ASC LIMIT 1"
       );
-      branding = fallback[0];
+      branding = fallback && fallback.length > 0 ? fallback[0] : {
+        id: 'c1000000-0000-0000-0000-000000000001',
+        name: 'Wokhman',
+        code: 'WOKHMAN',
+        logo_url: '/logo.png',
+        favicon_url: '/favicon.png',
+        brand_color: '#4f46e5',
+        secondary_brand_color: '#0066ff',
+      };
     }
 
     res.json({

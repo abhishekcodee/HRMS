@@ -62,6 +62,20 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
 
     const user = rows[0];
 
+    // Enforce 30-minute limit on demo account
+    if (user.role === 'demo' || user.email?.toLowerCase().includes('demo')) {
+      if (decoded.demoExpiresAt && Date.now() > decoded.demoExpiresAt) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'DEMO_EXPIRED',
+            message: 'Your 30-minute interactive demo session has expired. Thank you for exploring Wokhman HRMS!',
+          },
+        });
+        return;
+      }
+    }
+
     if (user.status !== 'active') {
       res.status(403).json({
         success: false,
