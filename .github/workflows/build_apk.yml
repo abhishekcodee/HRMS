@@ -21,9 +21,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Flutter SDK
@@ -38,6 +38,8 @@ jobs:
           flutter pub get
 
       - name: Build Release APK
+        env:
+          ORG_GRADLE_PROJECT_jvmargs: "-Xmx3G -XX:MaxMetaspaceSize=1G"
         run: |
           cd mobile
           flutter build apk --release --no-tree-shake-icons
@@ -46,5 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hrms-mobile-release-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            mobile/build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
