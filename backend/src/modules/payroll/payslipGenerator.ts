@@ -135,21 +135,45 @@ export function renderPayslipHtml(item: any, companyInfo: any): string {
   `;
 }
 
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+
 /**
- * Download or View Payslip HTML/PDF
+ * Download or View Payslip HTML/PDF (Tenant & IDOR Isolated)
  */
 export async function getPayslipById(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { itemId } = req.params;
-    const [rows]: any = await pool.query(`SELECT * FROM payroll_items WHERE id = ? OR employee_id = ? LIMIT 1`, [itemId, itemId]);
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
+    let query = `SELECT * FROM payroll_items WHERE (id = ? OR employee_id = ?)`;
+    const params: any[] = [itemId, itemId];
+    if (!isSuperGlobal) {
+      query += ` AND company_id = ?`;
+      params.push(companyId);
+    }
+    query += ` LIMIT 1`;
+
+    const [rows]: any = await pool.query(query, params);
 
     if (!rows || rows.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Payslip record not found.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Payslip record not found in company database.' } });
       return;
     }
 
     const item = rows[0];
-    const html = renderPayslipHtml(item, { name: 'HRMS Enterprise', address: 'Main Corporate Headquarters' });
+
+    // IDOR check for standard employee: cannot view other employee's payslip
+    if (req.user?.role === 'employee' && item.employee_id !== req.user.id && item.employee_code !== req.user.employeeId) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access Denied: You are not authorized to view another employee payslip.' } });
+      return;
+    }
+
+    // Fetch company branding name & address
+    const [compRows]: any = await pool.query('SELECT name, address FROM companies WHERE id = ?', [item.company_id || companyId]);
+    const companyInfo = compRows.length > 0 ? compRows[0] : { name: 'HRMS Enterprise', address: 'Main Corporate Headquarters' };
+
+    const html = renderPayslipHtml(item, companyInfo);
 
     if (req.query.format === 'html') {
       res.setHeader('Content-Type', 'text/html');

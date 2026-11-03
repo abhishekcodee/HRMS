@@ -7,13 +7,13 @@ import { AuthRequest } from '../../middleware/authMiddleware.js';
 export async function getPlatformStats(req: AuthRequest, res: Response): Promise<void> {
   try {
     const [companyCount]: any = await pool.query('SELECT COUNT(*) as total, SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active FROM companies');
-    const [employeeCount]: any = await pool.query('SELECT COUNT(*) as total FROM employees');
+    const [employeeCount]: any = await pool.query('SELECT COUNT(*) as total FROM employee_profiles');
     const [userCount]: any = await pool.query('SELECT COUNT(*) as total FROM users');
     const [plansCount]: any = await pool.query('SELECT COUNT(*) as total FROM saas_subscription_plans');
     const [recentCompanies]: any = await pool.query(
       `SELECT c.id, c.name, c.code, c.email, c.status, c.created_at, p.name as plan_name,
               (SELECT COUNT(*) FROM users u WHERE u.company_id = c.id) as user_count,
-              (SELECT COUNT(*) FROM employees e WHERE e.company_id = c.id) as employee_count
+              (SELECT COUNT(*) FROM employee_profiles e WHERE e.company_id = c.id) as employee_count
        FROM companies c
        LEFT JOIN saas_subscription_plans p ON c.subscription_plan_id = p.id
        ORDER BY c.created_at DESC LIMIT 10`
@@ -43,7 +43,7 @@ export async function listCompanies(req: AuthRequest, res: Response): Promise<vo
 
     let sql = `
       SELECT c.*, p.name as plan_name, p.monthly_price,
-             (SELECT COUNT(*) FROM employees e WHERE e.company_id = c.id) as total_employees,
+             (SELECT COUNT(*) FROM employee_profiles e WHERE e.company_id = c.id) as total_employees,
              (SELECT COUNT(*) FROM users u WHERE u.company_id = c.id) as total_users
       FROM companies c
       LEFT JOIN saas_subscription_plans p ON c.subscription_plan_id = p.id
@@ -313,6 +313,44 @@ export async function updateCompany(req: AuthRequest, res: Response): Promise<vo
   } catch (error) {
     console.error('updateCompany error:', error);
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to update company.' } });
+  }
+}
+
+export async function deleteCompany(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const companyId = req.params.id;
+    const [existing]: any = await pool.query('SELECT id, name FROM companies WHERE id = ?', [companyId]);
+    if (existing.length === 0) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Company not found.' } });
+      return;
+    }
+
+    // Soft-delete / suspend company so tenant users cannot login or access data
+    await pool.query('UPDATE companies SET status = "suspended", updated_at = NOW() WHERE id = ?', [companyId]);
+
+    // Audit log
+    await pool.query(
+      `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        companyId,
+        req.user?.id,
+        req.user?.email,
+        req.user?.role,
+        'COMPANY_SUSPENDED',
+        `Super Admin suspended company ${existing[0].name}`,
+        req.ip || '127.0.0.1',
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: `Company '${existing[0].name}' suspended successfully.`,
+    });
+  } catch (error) {
+    console.error('deleteCompany error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to suspend company.' } });
   }
 }
 

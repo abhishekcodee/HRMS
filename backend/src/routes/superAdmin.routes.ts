@@ -5,6 +5,7 @@ import {
   listCompanies,
   createCompany,
   updateCompany,
+  deleteCompany,
   listPlans,
   createPlan,
   getPlatformAuditLogs,
@@ -22,6 +23,7 @@ superAdminRouter.get('/companies', listCompanies);
 superAdminRouter.post('/companies', createCompany);
 superAdminRouter.put('/companies/:id', updateCompany);
 superAdminRouter.patch('/companies/:id', updateCompany);
+superAdminRouter.delete('/companies/:id', deleteCompany);
 superAdminRouter.get('/plans', listPlans);
 superAdminRouter.post('/plans', createPlan);
 superAdminRouter.get('/audit-logs', getPlatformAuditLogs);

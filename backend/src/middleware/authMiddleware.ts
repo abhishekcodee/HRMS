@@ -74,6 +74,25 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     }
 
     const isSuper = user.role === 'super_admin' && user.email.toLowerCase() === SYSTEM_SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // Enforce Company Suspension Guard for non-superadmin users
+    if (user.company_id && !isSuper) {
+      const [compRows]: any = await pool.query(
+        'SELECT id, status, name FROM companies WHERE id = ?',
+        [user.company_id]
+      );
+      if (compRows.length > 0 && compRows[0].status === 'suspended') {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'COMPANY_SUSPENDED',
+            message: `Your company (${compRows[0].name}) account is currently suspended. Please contact platform support.`,
+          },
+        });
+        return;
+      }
+    }
+
     const headerTenantId = req.headers['x-tenant-id'] as string;
 
     req.user = {

@@ -132,34 +132,43 @@ export async function listEmployees(req: AuthRequest, res: Response): Promise<vo
 export async function getEmployeeById(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params;
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
-    const [rows]: any = await pool.query(
-      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.email, u.phone,
-              u.role, u.status, u.profile_photo as profilePhoto, u.last_login_at as lastLoginAt,
-              u.created_at as createdAt,
-              ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
-              ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
-              ep.confirmation_date as confirmationDate, ep.resignation_date as resignationDate,
-              ep.last_working_date as lastWorkingDate, ep.experience_years as experienceYears,
-              ep.salary, ep.gender, ep.dob, ep.address,
-              ep.pan, ep.aadhaar, ep.uan, ep.pf_number as pfNumber, ep.esic_number as esicNumber,
-              ep.bank_name as bankName, ep.account_number as accountNumber, ep.ifsc,
-              ep.grade_id as gradeId, ep.cost_center_id as costCenterId,
-              ep.residential_address as residentialAddress, ep.residential_city as residentialCity,
-              ep.residential_state as residentialState, ep.residential_pincode as residentialPincode,
-              ep.permanent_address as permanentAddress, ep.permanent_city as permanentCity,
-              ep.permanent_state as permanentState, ep.permanent_pincode as permanentPincode,
-              ep.permanent_address_same as permanentAddressSame,
-              ep.emergency_contact as emergencyContact, ep.emergency_phone as emergencyPhone,
-              ep.manager_id as managerId, ep.manager_name as managerName
-       FROM users u
-       LEFT JOIN employee_profiles ep ON ep.user_id = u.id
-       WHERE u.id = ? OR u.employee_id = ?`,
-      [id, id]
-    );
+    let query = `
+      SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.email, u.phone,
+             u.role, u.status, u.profile_photo as profilePhoto, u.last_login_at as lastLoginAt,
+             u.created_at as createdAt,
+             ep.department_name as departmentName, ep.designation, ep.branch_name as branchName,
+             ep.shift_name as shiftName, ep.employment_type as employmentType, ep.joining_date as joiningDate,
+             ep.confirmation_date as confirmationDate, ep.resignation_date as resignationDate,
+             ep.last_working_date as lastWorkingDate, ep.experience_years as experienceYears,
+             ep.salary, ep.gender, ep.dob, ep.address,
+             ep.pan, ep.aadhaar, ep.uan, ep.pf_number as pfNumber, ep.esic_number as esicNumber,
+             ep.bank_name as bankName, ep.account_number as accountNumber, ep.ifsc,
+             ep.grade_id as gradeId, ep.cost_center_id as costCenterId,
+             ep.residential_address as residentialAddress, ep.residential_city as residentialCity,
+             ep.residential_state as residentialState, ep.residential_pincode as residentialPincode,
+             ep.permanent_address as permanentAddress, ep.permanent_city as permanentCity,
+             ep.permanent_state as permanentState, ep.permanent_pincode as permanentPincode,
+             ep.permanent_address_same as permanentAddressSame,
+             ep.emergency_contact as emergencyContact, ep.emergency_phone as emergencyPhone,
+             ep.manager_id as managerId, ep.manager_name as managerName
+      FROM users u
+      LEFT JOIN employee_profiles ep ON ep.user_id = u.id
+      WHERE (u.id = ? OR u.employee_id = ?)
+    `;
+
+    const params: any[] = [id, id];
+    if (!isSuperGlobal) {
+      query += ` AND u.company_id = ?`;
+      params.push(companyId);
+    }
+
+    const [rows]: any = await pool.query(query, params);
 
     if (rows.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee record not found in database.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee record not found in company database.' } });
       return;
     }
 
@@ -173,17 +182,23 @@ export async function getEmployeeById(req: AuthRequest, res: Response): Promise<
 }
 
 /**
- * Get Next Auto-Generated Employee ID (AMPL-00001 format)
+ * Get Next Auto-Generated Employee ID Scoped to Company Code
  */
-export async function getNextEmployeeId(_req: AuthRequest, res: Response): Promise<void> {
+export async function getNextEmployeeId(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const companyId = getTenantId(req);
+    const [compRows]: any = await pool.query('SELECT code FROM companies WHERE id = ?', [companyId]);
+    const prefix = compRows.length > 0 && compRows[0].code ? compRows[0].code.trim().toUpperCase() : 'EMP';
+
     const [rows]: any = await pool.query(
-      `SELECT employee_id as employeeId FROM users WHERE employee_id LIKE 'AMPL-%'`
+      `SELECT employee_id as employeeId FROM users WHERE company_id = ? AND employee_id LIKE ?`,
+      [companyId, `${prefix}-%`]
     );
 
     let maxNum = 0;
+    const regex = new RegExp(`^${prefix}-(\\d+)$`, 'i');
     for (const r of rows) {
-      const match = r.employeeId.match(/^AMPL-(\d+)$/i);
+      const match = r.employeeId.match(regex);
       if (match) {
         const num = parseInt(match[1], 10);
         if (!isNaN(num) && num > maxNum) {
@@ -193,7 +208,7 @@ export async function getNextEmployeeId(_req: AuthRequest, res: Response): Promi
     }
 
     const nextNum = maxNum + 1;
-    const nextEmployeeId = `AMPL-${String(nextNum).padStart(5, '0')}`;
+    const nextEmployeeId = `${prefix}-${String(nextNum).padStart(5, '0')}`;
 
     res.json({
       success: true,
@@ -423,35 +438,50 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       managerName,
     } = req.body;
 
-    const [users]: any = await pool.query('SELECT id, employee_id, full_name, email FROM users WHERE id = ?', [id]);
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
+    let userCheckSql = 'SELECT id, employee_id, full_name, email, company_id FROM users WHERE id = ?';
+    const userCheckParams: any[] = [id];
+    if (!isSuperGlobal) {
+      userCheckSql += ' AND company_id = ?';
+      userCheckParams.push(companyId);
+    }
+
+    const [users]: any = await pool.query(userCheckSql, userCheckParams);
     if (users.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found in database.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found in your company database.' } });
       return;
     }
 
     const currentUser = users[0];
 
-    // Update Users Table
-    await pool.query(
-      `UPDATE users
-       SET full_name = COALESCE(?, full_name),
-           email = COALESCE(?, email),
-           phone = COALESCE(?, phone),
-           profile_photo = COALESCE(?, profile_photo),
-           role = COALESCE(?, role),
-           status = COALESCE(?, status),
-           updated_at = NOW()
-       WHERE id = ?`,
-      [
-        fullName ? fullName.trim() : null,
-        email ? email.trim() : null,
-        phone ? phone.trim() : null,
-        profilePhoto ? profilePhoto.trim() : null,
-        role || null,
-        status || null,
-        id,
-      ]
-    );
+    // Update Users Table with Company Boundary
+    let updateUsersSql = `
+      UPDATE users
+      SET full_name = COALESCE(?, full_name),
+          email = COALESCE(?, email),
+          phone = COALESCE(?, phone),
+          profile_photo = COALESCE(?, profile_photo),
+          role = COALESCE(?, role),
+          status = COALESCE(?, status),
+          updated_at = NOW()
+      WHERE id = ?
+    `;
+    const updateUsersParams: any[] = [
+      fullName ? fullName.trim() : null,
+      email ? email.trim() : null,
+      phone ? phone.trim() : null,
+      profilePhoto ? profilePhoto.trim() : null,
+      role || null,
+      status || null,
+      id,
+    ];
+    if (!isSuperGlobal) {
+      updateUsersSql += ' AND company_id = ?';
+      updateUsersParams.push(companyId);
+    }
+    await pool.query(updateUsersSql, updateUsersParams);
 
     const expNum = parseFloat(req.body.experienceYears);
     if (req.body.experienceYears !== undefined && req.body.experienceYears !== null && req.body.experienceYears !== '' && (isNaN(expNum) || expNum < 0)) {
@@ -593,16 +623,32 @@ export async function updateEmployeeStatus(req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const [users]: any = await pool.query('SELECT id, employee_id, full_name, email FROM users WHERE id = ?', [id]);
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
+    let userSql = 'SELECT id, employee_id, full_name, email, company_id FROM users WHERE id = ?';
+    const userParams: any[] = [id];
+    if (!isSuperGlobal) {
+      userSql += ' AND company_id = ?';
+      userParams.push(companyId);
+    }
+
+    const [users]: any = await pool.query(userSql, userParams);
     if (users.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found in your company database.' } });
       return;
     }
 
     const user = users[0];
     const newStatus = String(status).toLowerCase();
 
-    await pool.query('UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?', [newStatus, id]);
+    let updateStatusSql = 'UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?';
+    const updateStatusParams: any[] = [newStatus, id];
+    if (!isSuperGlobal) {
+      updateStatusSql += ' AND company_id = ?';
+      updateStatusParams.push(companyId);
+    }
+    await pool.query(updateStatusSql, updateStatusParams);
 
     // Audit log
     await pool.query(
@@ -635,10 +681,19 @@ export async function getEmployeeAttendanceById(req: AuthRequest, res: Response)
   try {
     const { id } = req.params;
     const mode = String(req.query.mode || 'monthly').toLowerCase(); // 'weekly' or 'monthly'
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
-    const [users]: any = await pool.query('SELECT id, employee_id, full_name FROM users WHERE id = ? OR employee_id = ?', [id, id]);
+    let userSql = 'SELECT id, employee_id, full_name, company_id FROM users WHERE (id = ? OR employee_id = ?)';
+    const userParams: any[] = [id, id];
+    if (!isSuperGlobal) {
+      userSql += ' AND company_id = ?';
+      userParams.push(companyId);
+    }
+
+    const [users]: any = await pool.query(userSql, userParams);
     if (users.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found in your company database.' } });
       return;
     }
     const userId = users[0].id;
@@ -649,6 +704,12 @@ export async function getEmployeeAttendanceById(req: AuthRequest, res: Response)
       FROM attendance
       WHERE user_id = ?
     `;
+    const queryParams: any[] = [userId];
+
+    if (!isSuperGlobal) {
+      query += ` AND company_id = ?`;
+      queryParams.push(companyId);
+    }
 
     if (mode === 'weekly') {
       query += ` AND work_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`;
@@ -658,7 +719,7 @@ export async function getEmployeeAttendanceById(req: AuthRequest, res: Response)
 
     query += ` ORDER BY work_date DESC`;
 
-    const [rows]: any = await pool.query(query, [userId]);
+    const [rows]: any = await pool.query(query, queryParams);
 
     const totalDays = rows.length;
     const presentDays = rows.filter((r: any) => r.status === 'PRESENT').length;

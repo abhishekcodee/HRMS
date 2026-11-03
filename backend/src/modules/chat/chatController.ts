@@ -5,6 +5,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
 import { logger } from '../../utils/logger.js';
 
 // Configure Multer for Secure File Uploads
@@ -57,17 +58,26 @@ export async function listConversations(req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Fetch user conversations
-    const [convRows]: any = await pool.query(
-      `SELECT c.id, c.type, c.name, c.description, c.department_name as departmentName,
-              c.avatar_url as avatarUrl, c.created_by as createdBy, c.created_at as createdAt,
-              c.updated_at as updatedAt, p.role as participantRole, p.last_read_at as lastReadAt
-       FROM chat_conversations c
-       JOIN chat_participants p ON p.conversation_id = c.id
-       WHERE p.user_id = ?
-       ORDER BY c.updated_at DESC`,
-      [userId]
-    );
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
+    // Fetch user conversations strictly scoped to their company
+    let convSql = `
+      SELECT c.id, c.company_id as companyId, c.type, c.name, c.description, c.department_name as departmentName,
+             c.avatar_url as avatarUrl, c.created_by as createdBy, c.created_at as createdAt,
+             c.updated_at as updatedAt, p.role as participantRole, p.last_read_at as lastReadAt
+      FROM chat_conversations c
+      JOIN chat_participants p ON p.conversation_id = c.id
+      WHERE p.user_id = ?
+    `;
+    const convParams: any[] = [userId];
+    if (!isSuperGlobal) {
+      convSql += ` AND (c.company_id = ? OR c.company_id IS NULL)`;
+      convParams.push(companyId);
+    }
+    convSql += ` ORDER BY c.updated_at DESC`;
+
+    const [convRows]: any = await pool.query(convSql, convParams);
 
     const conversations: any[] = [];
 
@@ -276,34 +286,48 @@ export async function getOrCreatePrivateConversation(req: AuthRequest, res: Resp
       return;
     }
 
-    // Verify target user exists in HRMS
-    const [targetUsers]: any = await pool.query('SELECT id, full_name, email FROM users WHERE id = ?', [targetUserId]);
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
+    // Verify target user exists in HRMS and belongs to the same tenant
+    let targetSql = 'SELECT id, full_name, email, company_id FROM users WHERE id = ?';
+    const targetParams: any[] = [targetUserId];
+    if (!isSuperGlobal) {
+      targetSql += ' AND company_id = ?';
+      targetParams.push(companyId);
+    }
+    const [targetUsers]: any = await pool.query(targetSql, targetParams);
     if (targetUsers.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Target HRMS user not found.' } });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Target HRMS user not found in this company.' } });
       return;
     }
 
     // Check existing private conversation between these two users
-    const [existing]: any = await pool.query(
-      `SELECT c.id
+    let existingSql = `
+       SELECT c.id
        FROM chat_conversations c
        JOIN chat_participants p1 ON p1.conversation_id = c.id AND p1.user_id = ?
        JOIN chat_participants p2 ON p2.conversation_id = c.id AND p2.user_id = ?
-       WHERE c.type = 'private'`,
-      [userId, targetUserId]
-    );
+       WHERE c.type = 'private'
+    `;
+    const existingParams: any[] = [userId, targetUserId];
+    if (!isSuperGlobal) {
+      existingSql += ' AND (c.company_id = ? OR c.company_id IS NULL)';
+      existingParams.push(companyId);
+    }
+    const [existing]: any = await pool.query(existingSql, existingParams);
 
     if (existing.length > 0) {
       res.json({ success: true, conversationId: existing[0].id, isNew: false });
       return;
     }
 
-    // Create new private conversation
+    // Create new private conversation with company_id
     const conversationId = uuidv4();
     await pool.query(
-      `INSERT INTO chat_conversations (id, type, name, created_by)
-       VALUES (?, 'private', ?, ?)`,
-      [conversationId, targetUsers[0].full_name, userId]
+      `INSERT INTO chat_conversations (id, company_id, type, name, created_by)
+       VALUES (?, ?, 'private', ?, ?)`,
+      [conversationId, companyId, targetUsers[0].full_name, userId]
     );
 
     // Add both participants
@@ -329,6 +353,9 @@ export async function createGroupConversation(req: AuthRequest, res: Response): 
     const userId = req.user?.id;
     const { name, description, memberIds } = req.body;
 
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+
     if (!userId || !name || !Array.isArray(memberIds) || memberIds.length === 0) {
       res.status(400).json({
         success: false,
@@ -340,9 +367,9 @@ export async function createGroupConversation(req: AuthRequest, res: Response): 
     const conversationId = uuidv4();
 
     await pool.query(
-      `INSERT INTO chat_conversations (id, type, name, description, created_by)
-       VALUES (?, 'group', ?, ?, ?)`,
-      [conversationId, name.trim(), description || null, userId]
+      `INSERT INTO chat_conversations (id, company_id, type, name, description, created_by)
+       VALUES (?, ?, 'group', ?, ?, ?)`,
+      [conversationId, companyId, name.trim(), description || null, userId]
     );
 
     // Add creator as Admin
@@ -503,6 +530,8 @@ export async function searchChatEmployees(req: AuthRequest, res: Response): Prom
   try {
     const { q } = req.query;
     const currentUserId = req.user?.id;
+    const companyId = getTenantId(req);
+    const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
     let query = `
       SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.email, u.phone,
@@ -512,6 +541,11 @@ export async function searchChatEmployees(req: AuthRequest, res: Response): Prom
       WHERE u.status = 'active' AND u.id != ?
     `;
     const params: any[] = [currentUserId];
+
+    if (!isSuperGlobal) {
+      query += ` AND u.company_id = ?`;
+      params.push(companyId);
+    }
 
     if (q) {
       const p = `%${String(q).trim()}%`;
@@ -536,19 +570,28 @@ export async function postCompanyAnnouncement(req: AuthRequest, res: Response): 
     const userId = req.user?.id;
     const { title, message } = req.body;
 
+    const companyId = getTenantId(req);
+
     if (!title || !message) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Announcement title and message are required.' } });
       return;
     }
 
-    // Find HR Announcements Conversation
-    const [annRows]: any = await pool.query("SELECT id FROM chat_conversations WHERE type = 'announcement' LIMIT 1");
+    // Find HR Announcements Conversation for this company (or create one if missing)
+    let [annRows]: any = await pool.query(
+      "SELECT id FROM chat_conversations WHERE type = 'announcement' AND company_id = ? LIMIT 1",
+      [companyId]
+    );
+    let conversationId: string;
     if (annRows.length === 0) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'HR Announcements channel not configured.' } });
-      return;
+      conversationId = uuidv4();
+      await pool.query(
+        "INSERT INTO chat_conversations (id, company_id, type, name, description, created_by) VALUES (?, ?, 'announcement', 'Company Announcements', 'Official company broadcast notices', ?)",
+        [conversationId, companyId, userId]
+      );
+    } else {
+      conversationId = annRows[0].id;
     }
-
-    const conversationId = annRows[0].id;
     const messageId = uuidv4();
     const formattedMsg = `📢 ${title.toUpperCase()}\n\n${message}`;
 
