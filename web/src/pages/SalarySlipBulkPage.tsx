@@ -684,7 +684,7 @@ export const SalarySlipBulkPage: React.FC = () => {
           VIEW 1: SEND SINGLE SALARY SLIP (MANUAL / INDIVIDUAL DISPATCH)
          ============================================================= */}
       {activeView === 'single' && (
-        <div className="salary-slip-split-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', alignItems: 'start' }}>
           {/* Left Form Column */}
           <Card style={{ padding: '1.5rem', borderLeft: '4px solid #3B82F6' }}>
             <CardHeader style={{ marginBottom: '1.25rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>

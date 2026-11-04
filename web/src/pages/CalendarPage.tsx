@@ -438,7 +438,7 @@ export const CalendarPage: React.FC = () => {
 
       {/* Main View Container */}
       {viewMode === 'GRID' && (
-        <div className="calendar-split-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem' }}>
           {/* Calendar Month Grid */}
           <Card style={{ padding: '1.25rem' }}>
             {loading ? (

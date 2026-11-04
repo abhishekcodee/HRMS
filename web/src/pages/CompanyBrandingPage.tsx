@@ -123,7 +123,7 @@ export const CompanyBrandingPage: React.FC = () => {
         </div>
       )}
 
-      <div className="branding-page-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
         {/* Form Column */}
         <form
           onSubmit={handleSubmit}

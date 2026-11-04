@@ -168,7 +168,7 @@ export const DocumentTemplateBuilderPage: React.FC = () => {
       )}
 
       {/* Main Grid */}
-      <div className="template-builder-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px' }}>
         {/* Controls Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Card>
