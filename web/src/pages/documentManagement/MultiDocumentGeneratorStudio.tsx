@@ -1359,6 +1359,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
 
           {/* 2-Column Studio Grid: Left Form & Right Live Preview */}
           <div
+            className="doc-studio-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'minmax(380px, 460px) minmax(480px, 1.35fr)',

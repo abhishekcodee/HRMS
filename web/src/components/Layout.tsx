@@ -558,7 +558,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                   }}
                 >
                   <Building2 size={15} style={{ color: 'var(--primary-500)' }} />
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Scope:</span>
+                  <span className="scope-selector-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Scope:</span>
                   <select
                     aria-label="Select Company Scope"
                     value={activeTenantId || ''}

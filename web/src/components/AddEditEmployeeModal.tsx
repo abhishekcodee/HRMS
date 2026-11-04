@@ -212,7 +212,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     setLoading(true);
     try {
       if (isCustomDept && customDeptName.trim()) {
-        const code = customDeptName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15);
+        const code = (customDeptName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15);
         await createMasterDepartment(customDeptName.trim(), code || 'DEPT_CUSTOM');
       }
       if (isCustomDesig && customDesigName.trim()) {

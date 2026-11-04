@@ -595,7 +595,7 @@ export const ReportsPage: React.FC = () => {
                           <Td>{row.joiningDate}</Td>
                           <Td>
                             <Badge variant={row.status === 'active' ? 'success' : 'error'}>
-                              {String(row.status).toUpperCase()}
+                              {String(row.status || 'ACTIVE').toUpperCase()}
                             </Badge>
                           </Td>
                         </>
