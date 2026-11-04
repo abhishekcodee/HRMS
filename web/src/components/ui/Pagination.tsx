@@ -22,6 +22,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
   return (
     <div
+      className="pagination-container"
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -166,7 +166,7 @@ export const RequestDemoPage: React.FC = () => {
                 </Alert>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label" style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>
                     Full Name <span style={{ color: '#f87171' }}>*</span>
@@ -208,7 +208,7 @@ export const RequestDemoPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label" style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>
                     Phone Number <span style={{ color: '#f87171' }}>*</span>
@@ -250,7 +250,7 @@ export const RequestDemoPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div className="form-group">
                   <label className="form-label" style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>
                     Company Size
@@ -292,7 +292,7 @@ export const RequestDemoPage: React.FC = () => {
                 <label className="form-label" style={{ color: '#cbd5e1', fontSize: '0.8rem', marginBottom: '0.5rem', display: 'block' }}>
                   Modules of Interest
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   {[
                     'Attendance & Biometrics',
                     'Payroll Engine',

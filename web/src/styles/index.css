@@ -1136,13 +1136,33 @@ html, body {
   display: none;
 }
 
-/* Responsive Media Queries - Senior UX Mobile Architecture (100% Preserving Desktop >= 1024px) */
+/* Responsive Media Queries - Senior UX Mobile Architecture (100% Preserving Desktop >= 1025px) */
 @media (max-width: 1024px) {
   .hrms-content {
     padding: 1.25rem 1rem;
   }
-  .doc-studio-grid {
+  .doc-studio-grid,
+  .calendar-split-layout,
+  .salary-slip-split-grid,
+  .branding-page-grid,
+  .template-builder-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .tab-list {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+
+  .tab-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex-shrink: 0 !important;
   }
 }
 
@@ -1160,6 +1180,27 @@ html, body {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     display: block;
+  }
+
+  /* Responsive Grid Adaptation for High-Width minmax definitions */
+  div[style*="minmax(300px"],
+  div[style*="minmax(320px"],
+  div[style*="minmax(340px"],
+  div[style*="minmax(400px"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)) !important;
+  }
+
+  .calendar-cell-card {
+    min-height: 80px !important;
+    padding: 0.35rem !important;
+  }
+
+  .calendar-hero-banner {
+    padding: 1rem !important;
+  }
+
+  .btn, button.btn {
+    min-height: 40px;
   }
 
   .hrms-sidebar {
@@ -1379,26 +1420,48 @@ html, body {
   }
 
   .modal-overlay {
-    padding: 0.75rem;
+    padding: 0;
     align-items: flex-end; /* Mobile Bottom Sheet Modal Effect */
   }
 
   .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
-    max-height: 85vh;
+    max-height: 88vh;
     animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Responsive Multi-column Form & Dialog Auto-Stacking */
   .modal-content form div[style*="gridTemplateColumns"],
   .modal-content form div[style*="grid-template-columns"],
+  .form-section div[style*="gridTemplateColumns"],
+  .form-section div[style*="grid-template-columns"],
   .responsive-grid-2,
   .form-grid-2,
-  .form-grid-3 {
+  .form-grid-3,
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*="grid-template-columns: 1fr 1fr"],
+  div[style*="gridTemplateColumns: '1fr 2fr'"],
+  div[style*="grid-template-columns: 1fr 2fr"],
+  div[style*="gridTemplateColumns: 'repeat(3, 1fr)'"],
+  div[style*="grid-template-columns: repeat(3, 1fr)"],
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"],
+  div[style*="grid-template-columns: repeat(4, 1fr)"] {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Prevent iOS Safari input auto-zoom by enforcing 16px input base */
+  input.input,
+  select.select,
+  .input,
+  .select,
+  .form-group input,
+  .form-group select {
+    font-size: 16px !important;
   }
 
   /* Header Compact Controls on Mobile */
@@ -1437,13 +1500,23 @@ html, body {
     gap: 0.5rem;
   }
 
-  .page-actions button {
+  .page-actions button,
+  .page-actions a,
+  .page-actions .btn {
     flex: 1 1 auto;
+    justify-content: center;
   }
 
   .filter-bar {
     flex-direction: column;
     width: 100%;
+  }
+
+  .pagination-container {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    text-align: center;
   }
 }
 
@@ -1453,7 +1526,7 @@ html, body {
   }
 
   .hrms-content {
-    padding: 0.75rem 0.5rem 7.5rem 0.5rem;
+    padding: 0.75rem 0.4rem 7.5rem 0.4rem;
   }
 
   .stat-grid {
@@ -1463,6 +1536,10 @@ html, body {
   .bottom-nav-item {
     padding: 4px 6px;
     font-size: 0.625rem;
+  }
+
+  .card, .stat-card {
+    padding: 0.85rem !important;
   }
 }
 

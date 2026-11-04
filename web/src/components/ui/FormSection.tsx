@@ -20,7 +20,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
         marginBottom: '1.5rem',
         borderBottom: '1px solid var(--border-color)'
       }}
-      className={className}
+      className={`form-section ${className}`}
     >
       <div style={{ marginBottom: '1rem' }}>
         <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h4>
