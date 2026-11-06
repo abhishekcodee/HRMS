@@ -480,11 +480,18 @@
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding-bottom: 4px;
     gap: 8px;
   }
 
+  .superadmin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
   .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
     padding: 8px 14px;
     font-size: 13px;
   }
@@ -504,6 +511,11 @@
     padding: 16px;
     border-radius: 10px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 650px;
   }
 
   .data-table th,

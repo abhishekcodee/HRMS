@@ -545,6 +545,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
               {/* Super Admin Multi-Tenant Company Scope Selector */}
               {isSuper && (
                 <div
+                  className="header-scope-selector"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -560,6 +561,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                   <Building2 size={15} style={{ color: 'var(--primary-500)' }} />
                   <span className="scope-selector-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Scope:</span>
                   <select
+                    className="scope-select-dropdown"
                     aria-label="Select Company Scope"
                     value={activeTenantId || ''}
                     onChange={async (e) => {
@@ -592,53 +594,55 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
               )}
 
               {/* Header Role Display / Switcher based on User Role */}
-              {isDemo ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '20px',
-                    background: 'rgba(99, 102, 241, 0.15)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: '#a5b4fc',
-                  }}
-                >
-                  ⚡ Role: DEMO MODE
-                </div>
-              ) : user?.role === UserRole.EMPLOYEE ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '20px',
-                    background: 'rgba(16, 185, 129, 0.12)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    color: 'var(--success-text)',
-                  }}
-                >
-                  <User size={14} /> Employee: {user?.employeeId}
-                </div>
-              ) : user?.role === UserRole.EMPLOYER ? (
-                <Badge variant="warning">Role: EMPLOYER</Badge>
-              ) : (
-                <Dropdown
-                  trigger={
-                    <Button variant="secondary" size="sm" style={{ gap: '0.4rem' }}>
-                      Role: <strong style={{ color: 'var(--primary-500)' }}>{role}</strong>
-                      <ChevronDown size={14} />
-                    </Button>
-                  }
-                  items={roleOptions}
-                />
-              )}
+              <div className="header-role-container">
+                {isDemo ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 700,
+                      color: '#a5b4fc',
+                    }}
+                  >
+                    ⚡ Role: DEMO MODE
+                  </div>
+                ) : user?.role === UserRole.EMPLOYEE ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: 'var(--success-text)',
+                    }}
+                  >
+                    <User size={14} /> Employee: {user?.employeeId}
+                  </div>
+                ) : user?.role === UserRole.EMPLOYER ? (
+                  <Badge variant="warning">Role: EMPLOYER</Badge>
+                ) : (
+                  <Dropdown
+                    trigger={
+                      <Button variant="secondary" size="sm" style={{ gap: '0.4rem' }}>
+                        Role: <strong style={{ color: 'var(--primary-500)' }}>{role}</strong>
+                        <ChevronDown size={14} />
+                      </Button>
+                    }
+                    items={roleOptions}
+                  />
+                )}
+              </div>
 
               {/* Senior Designer Theme Mode Toggle Switcher */}
               <button
