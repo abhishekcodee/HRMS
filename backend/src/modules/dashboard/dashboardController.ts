@@ -10,7 +10,7 @@ export async function getDashboardStats(req: AuthRequest, res: Response): Promis
     const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
     let empQuery = "SELECT COUNT(*) as count FROM users WHERE role = 'employee' AND status = 'active'";
-    let presentQuery = "SELECT COUNT(DISTINCT user_id) as count FROM attendance WHERE work_date = ? AND status = 'PRESENT'";
+    let presentQuery = "SELECT COUNT(DISTINCT user_id) as count FROM attendance WHERE work_date = ? AND UPPER(status) IN ('PRESENT', 'LATE', 'HALF_DAY')";
     let onLeaveQuery = "SELECT COUNT(DISTINCT user_id) as count FROM leave_requests WHERE ? BETWEEN start_date AND end_date AND status = 'APPROVED'";
     let pendingLeaveQuery = "SELECT COUNT(*) as count FROM leave_requests WHERE status = 'PENDING'";
     let deptDistQuery = `

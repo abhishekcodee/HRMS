@@ -40,8 +40,9 @@ Company (Single-Company Identity)
 - Saved settings persist permanently across all user sessions and server restarts.
 
 ### 📠 4. eSSL / ZKTeco Biometric Hardware Integration
-- Native ZKTeco ADMS push receiver listening at `/iclock/cdata` and `/iclock/getrequest`.
-- Direct bi-directional logging for hardware punch logs and device status.
+- Native ZKTeco ADMS push receiver listening at `/iclock/cdata`, `/iclock/getrequest` and `/iclock/devicecmd`.
+- Real-time punches → automatic clock-in/out, late minutes and overtime; device User ID ↔ employee mapping; remote "pull logs" command.
+- **Setup guide for eSSL AiFace Mars and similar terminals: [docs/essl-aiface-mars-setup.md](docs/essl-aiface-mars-setup.md)**
 
 ### 📧 5. Bulk Salary Slips & Mail Automation
 - Automated bulk PDF/Excel salary slip generation and direct email dispatch.

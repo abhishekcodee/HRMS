@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '@hrms/shared';
 import {
   fetchRawBiometricLogs,
+  formatDeviceTime,
   BiometricPunchLogRecord,
 } from '../services/biometricApi';
 import {
@@ -27,9 +28,11 @@ import { CalendarDays, Clock, Download, RefreshCw } from 'lucide-react';
 
 export const AttendancePage: React.FC = () => {
   const { user, activeRoleView } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const todayLocal = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const [selectedDate, setSelectedDate] = useState(todayLocal);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [logs, setLogs] = useState<BiometricPunchLogRecord[]>([]);
@@ -40,7 +43,7 @@ export const AttendancePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchRawBiometricLogs();
+      const data = await fetchRawBiometricLogs({ date: selectedDate || undefined, limit: 2000 });
       setLogs(data);
     } catch (err) {
       console.error('Failed to load biometric logs:', err);
@@ -52,7 +55,8 @@ export const AttendancePage: React.FC = () => {
 
   useEffect(() => {
     loadLogs();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   // Filter logs dynamically from real DB
   const filteredLogs = logs.filter((att) => {
@@ -121,10 +125,10 @@ export const AttendancePage: React.FC = () => {
             <StatCard
               title="Punched In Today"
               value={
-                logs.filter((l) => l.punchTime.startsWith(new Date().toISOString().split('T')[0])).length
+                new Set(logs.filter((l) => l.punchTime.startsWith(todayLocal)).map((l) => l.devicePin)).size
               }
               icon={<Clock size={20} />}
-              subtext="Punches recorded today"
+              subtext="People with a punch today"
             />
             <StatCard
               title="Active Devices"
@@ -193,9 +197,11 @@ export const AttendancePage: React.FC = () => {
               filteredLogs.map((att) => (
                 <Tr key={att.id}>
                   <Td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{att.employeeId}</Td>
-                  <Td style={{ fontWeight: 600 }}>{att.employeeName || user?.fullName || 'Employee'}</Td>
+                  <Td style={{ fontWeight: 600 }}>
+                    {att.matched ? att.employeeName : <Badge variant="warning">Device ID {att.devicePin} not linked</Badge>}
+                  </Td>
                   <Td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{att.deviceSn}</Td>
-                  <Td style={{ fontWeight: 600 }}>{new Date(att.punchTime).toLocaleString()}</Td>
+                  <Td style={{ fontWeight: 600 }}>{formatDeviceTime(att.punchTime)}</Td>
                   <Td>{att.verifyType || 'Fingerprint / Face ID'}</Td>
                   <Td>
                     {String(att.punchState ?? '0') === '0' ? (

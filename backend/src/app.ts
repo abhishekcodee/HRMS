@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import path from 'path';
 import { env } from './config/env.js';
 import { v1Router } from './routes/index.js';
-import { zktecoRouter } from './routes/zkteco.routes.js';
+import { admsDeviceRouter, ADMS_PATH_PATTERN } from './routes/zkteco.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { AppError } from './utils/app-error.js';
 
@@ -29,13 +29,19 @@ app.use(
   })
 );
 
-// Logging & Body Parsing Middlewares
+// Logging
 app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// eSSL / ZKTeco Biometric ADMS Hardware Direct Push Handler
-app.use('/iclock', zktecoRouter);
+// eSSL / ZKTeco Biometric ADMS hardware push endpoints.
+// Mounted before the JSON/urlencoded parsers: devices send tab-separated plain text that
+// those parsers would otherwise consume or mangle.
+app.use('/iclock', admsDeviceRouter);
+
+// Body Parsing Middlewares (skipped for ADMS device paths, which read the raw text body)
+const jsonParser = express.json({ limit: '50mb' });
+const urlencodedParser = express.urlencoded({ limit: '50mb', extended: true });
+app.use((req, res, next) => (ADMS_PATH_PATTERN.test(req.path) ? next() : jsonParser(req, res, next)));
+app.use((req, res, next) => (ADMS_PATH_PATTERN.test(req.path) ? next() : urlencodedParser(req, res, next)));
 
 // Static Uploads Directory Serving
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

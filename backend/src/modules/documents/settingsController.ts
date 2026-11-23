@@ -10,8 +10,15 @@ import { logger } from '../../utils/logger.js';
  * ============================================================================
  */
 
+/** Non super-admins may only see / change their own company. */
+function ownCompanyOnly(req: AuthRequest): string | null {
+  if (req.isSuperAdmin || req.user?.isSuperAdmin) return null;
+  return req.user?.companyId || req.tenantId || 'c1000000-0000-0000-0000-000000000001';
+}
+
 export async function getCompanies(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const ownId = ownCompanyOnly(req);
     const [rows]: any = await pool.query(
       `SELECT id, code, name, legal_suffix as legalSuffix, registered_address as registeredAddress,
               works_address as worksAddress, cin, gstin, pan, phone, email, website,
@@ -22,8 +29,9 @@ export async function getCompanies(req: AuthRequest, res: Response): Promise<voi
               (SELECT COUNT(*) FROM users u WHERE u.company_id = companies.id AND u.status = 'active' AND u.role != 'super_admin') as activeEmployees,
               created_at as createdAt, updated_at as updatedAt
        FROM companies
-       WHERE deleted_at IS NULL
-       ORDER BY name ASC`
+       WHERE deleted_at IS NULL ${ownId ? 'AND id = ?' : ''}
+       ORDER BY name ASC`,
+      ownId ? [ownId] : []
     );
     res.json({ success: true, data: rows });
   } catch (error: any) {
@@ -116,6 +124,12 @@ export async function updateCompany(req: AuthRequest, res: Response): Promise<vo
       letterheadBottomMarginMm,
     } = req.body;
 
+    const ownId = ownCompanyOnly(req);
+    if (ownId && ownId !== id) {
+      res.status(403).json({ success: false, error: { code: 'TENANT_ACCESS_DENIED', message: 'You can only update your own company.' } });
+      return;
+    }
+
     await pool.query(
       `UPDATE companies SET
         code = ?, name = ?, legal_suffix = ?, registered_address = ?, works_address = ?,
@@ -140,6 +154,10 @@ export async function updateCompany(req: AuthRequest, res: Response): Promise<vo
 export async function deleteCompany(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params;
+    if (!(req.isSuperAdmin || req.user?.isSuperAdmin)) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Only the platform administrator can delete companies.' } });
+      return;
+    }
     await pool.query(`UPDATE companies SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
     res.json({ success: true, message: 'Company soft-deleted successfully.' });
   } catch (error: any) {

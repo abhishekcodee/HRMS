@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { pool, checkDatabaseHealth } from './index.js';
 import { logger } from '../utils/logger.js';
+import { runBiometricSchemaUpgrade } from '../modules/zkteco/biometricSchema.js';
+import { repairTenantSchema } from './schemaRepair.js';
 
 export async function seedDatabase() {
   logger.info('Initializing MySQL HRMS database tables & seeding isolated data...');
@@ -862,13 +864,12 @@ export async function seedDatabase() {
       await conn.query(`ALTER TABLE master_departments ADD COLUMN head_name VARCHAR(100);`);
     } catch (_) {}
 
-    // Seed default eSSL / ZKTeco device if table empty
-    const [bioDevs]: any = await conn.query('SELECT COUNT(*) as count FROM biometric_devices');
-    if (bioDevs[0].count === 0) {
-      await conn.query(`INSERT INTO biometric_devices (id, device_sn, device_name, ip_address, port, location, status, last_ping_at) VALUES
-        (UUID(), 'ESSL-X990-BLR-01', 'Main Entrance eSSL X990 Biometric Scanner', '192.168.1.201', 4370, 'Bengaluru HQ Gate 1', 'ONLINE', NOW()),
-        (UUID(), 'ESSL-K30-MUM-02', 'Lobby eSSL K30 Attendance Punch Terminal', '192.168.2.105', 4370, 'Mumbai Office Reception', 'ONLINE', NOW());`);
-    }
+    // eSSL / ZKTeco ADMS integration columns & tables (company_id, biometric_pin, command queue, ...).
+    // No fake devices are seeded: real terminals register themselves on their first heartbeat.
+    await runBiometricSchemaUpgrade();
+
+    // Fresh installs: create `companies` and the company_id columns the multi-tenant code expects.
+    await repairTenantSchema(conn);
 
     // Ensure columns exist if table was created previously
     try {
