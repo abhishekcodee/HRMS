@@ -1617,3 +1617,87 @@ html, body {
 .weekend-cell-highlight {
   background-color: rgba(99, 102, 241, 0.03) !important;
 }
+
+
+/* ------------------------------------------------------------------------------------------
+   Mobile safety net
+   Many pages are built with inline styles, which media queries cannot target by class.
+   These rules make inline flex rows wrap, collapse fixed multi-column grids, and turn tab
+   bars into horizontal scrollers so nothing is cut off or forces sideways scrolling.
+   ------------------------------------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .hrms-content [style*="display: grid"] > *,
+  .hrms-content [style*="display: flex"] > * {
+    min-width: 0;
+  }
+
+  .hrms-content div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]):not(:has(> .tab-btn)) {
+    flex-wrap: wrap;
+  }
+
+  .tab-list,
+  .hrms-content div:has(> .tab-btn) {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-list::-webkit-scrollbar,
+  .hrms-content div:has(> .tab-btn)::-webkit-scrollbar { display: none; }
+  .tab-btn { flex: 0 0 auto; white-space: nowrap; }
+
+  /* Fixed-width or wide-minimum grids become a single column */
+  .hrms-content [style*="grid-template-columns"][style*="minmax(3"],
+  .hrms-content [style*="grid-template-columns"][style*="minmax(4"],
+  .hrms-content [style*="grid-template-columns: 1fr 3"],
+  .hrms-content [style*="grid-template-columns: 1fr 4"],
+  .hrms-content [style*="grid-template-columns: 3"],
+  .hrms-content [style*="grid-template-columns: 4"],
+  .hrms-content [style*="grid-template-columns: 1fr 2fr"],
+  .hrms-content [style*="grid-template-columns: 2fr 1fr"],
+  .hrms-content [style*="grid-template-columns: 1.2fr 1fr"],
+  .hrms-content [style*="grid-template-columns: 90px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 3+ equal columns become two */
+  .hrms-content [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .hrms-content [style*="grid-template-columns: 1.2fr 1fr 1fr"],
+  .hrms-content [style*="grid-template-columns: repeat(3,"],
+  .hrms-content [style*="grid-template-columns: repeat(4,"],
+  .hrms-content [style*="grid-template-columns: repeat(6,"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .hrms-content img,
+  .hrms-content video,
+  .hrms-content canvas { max-width: 100%; height: auto; }
+
+  .hrms-content pre,
+  .hrms-content code { white-space: pre-wrap; word-break: break-word; }
+
+  /* Comfortable tap targets */
+  .hrms-content button,
+  .hrms-content .btn,
+  .hrms-content select { min-height: 38px; }
+}
+
+@media (max-width: 480px) {
+  /* Two- and three-column layouts stack; four-column stat rows stay 2 x 2 */
+  .hrms-content [style*="grid-template-columns: 1fr 1fr"]:not([style*="1fr 1fr 1fr 1fr"]),
+  .hrms-content [style*="grid-template-columns: repeat(2,"],
+  .hrms-content [style*="grid-template-columns: 1.2fr 1fr 1fr"],
+  .hrms-content [style*="grid-template-columns: repeat(3,"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 768px) {
+  /* Raw tables that are not inside a scroll wrapper scroll on their own instead of widening the page */
+  .hrms-content table:not(.pp-lines):not(.pp-table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

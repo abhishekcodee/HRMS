@@ -34,6 +34,7 @@ const BiometricDevicesPage = lazy(() => import('./pages/BiometricDevicesPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const PayrollProcessingPage = lazy(() => import('./pages/PayrollProcessingPage').then(m => ({ default: m.PayrollProcessingPage })));
+const MyPayslipsPage = lazy(() => import('./pages/MyPayslipsPage').then(m => ({ default: m.MyPayslipsPage })));
 const SalaryStructuresPage = lazy(() => import('./pages/SalaryStructuresPage').then(m => ({ default: m.SalaryStructuresPage })));
 const StatutorySettingsPage = lazy(() => import('./pages/StatutorySettingsPage').then(m => ({ default: m.StatutorySettingsPage })));
 const BankTransferPage = lazy(() => import('./pages/BankTransferPage').then(m => ({ default: m.BankTransferPage })));
@@ -167,6 +168,7 @@ export function App() {
 
                       {/* Production Payroll & Salary Engine */}
                       <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
+                      <Route path="/my-payslips" element={<MyPayslipsPage />} />
                       <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
                       <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
                       <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />

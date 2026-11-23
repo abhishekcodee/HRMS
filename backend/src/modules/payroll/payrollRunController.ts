@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 import { getTenantId } from '../../middleware/tenantMiddleware.js';
-import { calculateEmployeeMonthlyPayroll } from './payrollEngine.js';
+import { PayrollLockedError, finaliseApprovedRun, generatePayrollRun } from './payrollEngine.js';
+import { ensurePayrollSchema } from './payrollSchemaSetup.js';
 
 /**
  * Validate Employees Readiness for Payroll Run (Strictly Scoped to Company)
@@ -15,16 +15,20 @@ export async function validatePayrollReadiness(req: AuthRequest, res: Response):
     const y = Number(year) || new Date().getFullYear();
     const companyId = getTenantId(req);
     const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
+    await ensurePayrollSchema();
 
+    const monthStart = `${y}-${String(m).padStart(2, '0')}-01`;
+    const monthEnd = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')} 23:59:59`;
     let query = `
-      SELECT u.id, u.employee_id as employeeCode, u.full_name as fullName,
+      SELECT u.id, u.employee_id as employeeCode, u.full_name as fullName, u.email,
              ep.salary, ep.bank_name as bankName, ep.account_number as accountNumber,
-             ep.pan, ep.uan, ep.department_name as department
+             ep.pan, ep.uan, ep.department_name as department,
+             (SELECT COUNT(*) FROM attendance a WHERE a.user_id = u.id AND a.work_date >= ? AND a.work_date <= ?) AS attendanceDays
       FROM users u
       JOIN employee_profiles ep ON ep.user_id = u.id
-      WHERE u.status = 'active'
+      WHERE LOWER(u.status) = 'active'
     `;
-    const params: any[] = [];
+    const params: any[] = [monthStart, monthEnd];
     if (!isSuperGlobal) {
       query += ' AND u.company_id = ?';
       params.push(companyId);
@@ -37,13 +41,19 @@ export async function validatePayrollReadiness(req: AuthRequest, res: Response):
       const errors: string[] = [];
 
       if (!emp.salary || Number(emp.salary) <= 0) {
-        errors.push('Salary / CTC is not configured');
+        errors.push('Monthly salary is not set');
+      }
+      if (!emp.email) {
+        warnings.push('No e-mail (payslip cannot be sent)');
       }
       if (!emp.accountNumber || !emp.bankName) {
         warnings.push('Bank details missing');
       }
       if (!emp.pan) {
-        warnings.push('PAN number missing');
+        warnings.push('PAN missing (TDS at 20% if taxable)');
+      }
+      if (!Number(emp.attendanceDays)) {
+        warnings.push('No attendance this month');
       }
 
       return {
@@ -63,6 +73,7 @@ export async function validatePayrollReadiness(req: AuthRequest, res: Response):
         totalEmployees: employees.length,
         validCount: validationReport.filter((r: any) => r.isValid).length,
         errorCount: validationReport.filter((r: any) => !r.isValid).length,
+        warningCount: validationReport.filter((r: any) => r.warnings.length > 0).length,
         items: validationReport,
       },
     });
@@ -81,164 +92,47 @@ export async function calculateMonthlyPayroll(req: AuthRequest, res: Response): 
     const y = Number(year);
     const companyId = getTenantId(req);
 
-    if (!m || !y) {
+    if (!m || !y || m < 1 || m > 12) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Month and Year are required.' } });
       return;
     }
-
-    const policy = payableDaysPolicy || 'CALENDAR_DAYS';
-    const calendarDays = new Date(y, m, 0).getDate();
-    const payPeriodStart = `${y}-${String(m).padStart(2, '0')}-01`;
-    const payPeriodEnd = `${y}-${String(m).padStart(2, '0')}-${String(calendarDays).padStart(2, '0')}`;
-    const financialYear = m >= 4 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-
-    // Duplicate Check: Check if existing payroll run exists for month & year for THIS company
-    const [existingRun]: any = await pool.query(
-      `SELECT id, status FROM payroll_runs WHERE payroll_month = ? AND payroll_year = ? AND company_id = ? LIMIT 1`,
-      [m, y, companyId]
-    );
-
-    let runId = '';
-    if (existingRun && existingRun.length > 0) {
-      if (existingRun[0].status === 'LOCKED' || existingRun[0].status === 'APPROVED' || existingRun[0].status === 'PAID') {
-        res.status(409).json({
-          success: false,
-          error: {
-            code: 'LOCKED',
-            message: `Payroll for ${m}/${y} is locked with status '${existingRun[0].status}'. Recalculation is forbidden.`,
-          },
-        });
-        return;
-      }
-      runId = existingRun[0].id;
-      // Delete old items for recalculation
-      await pool.query(`DELETE FROM payroll_items WHERE payroll_run_id = ? AND company_id = ?`, [runId, companyId]);
-    } else {
-      runId = uuidv4();
-      await pool.query(
-        `INSERT INTO payroll_runs 
-         (id, company_id, payroll_month, payroll_year, financial_year, pay_period_start, pay_period_end, status, payable_days_policy, calculated_by, calculated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'CALCULATED', ?, ?, NOW())`,
-        [runId, companyId, m, y, financialYear, payPeriodStart, payPeriodEnd, policy, req.user?.id || null]
-      );
+    if (!companyId) {
+      res.status(400).json({ success: false, error: { code: 'NO_COMPANY', message: 'Select a company before generating payroll.' } });
+      return;
     }
 
-    // Fetch active employees belonging EXCLUSIVELY to this company
-    const [employees]: any = await pool.query(
-      `SELECT u.id FROM users u WHERE u.status = 'active' AND u.company_id = ?`,
-      [companyId]
-    );
+    const allowedPolicies = ['CALENDAR_DAYS', 'FIXED_30', 'FIXED_26', 'WORKING_DAYS'];
+    const gen = await generatePayrollRun(companyId, m, y, {
+      actorId: req.user?.id || null,
+      payableDaysPolicy: allowedPolicies.includes(payableDaysPolicy) ? payableDaysPolicy : undefined,
+    });
 
-    let totalGross = 0;
-    let totalDeductions = 0;
-    let totalNet = 0;
-    let totalEmployerCost = 0;
-    const calculatedItems = [];
-
-    for (const emp of employees) {
-      try {
-        const item = await calculateEmployeeMonthlyPayroll(emp.id, m, y, policy);
-        const itemId = uuidv4();
-
-        await pool.query(
-          `INSERT INTO payroll_items
-           (id, company_id, payroll_run_id, employee_id, employee_code, employee_name, department, designation,
-            bank_name, account_number, ifsc, pan, uan, calendar_days, working_days, present_days, absent_days,
-            paid_leave_days, lop_days, payable_days, overtime_hours, basic_salary, hra, conveyance,
-            special_allowance, medical_allowance, other_allowances, overtime_pay, bonus_incentive,
-            lop_deduction_amount, gross_earnings, employee_pf, employee_esic, professional_tax, tds,
-            loan_emi_deduction, other_deductions, total_deductions, net_salary, employer_pf, employer_esic,
-            gratuity_provision, total_employer_cost, calculation_breakdown_json, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CALCULATED')`,
-          [
-            itemId,
-            companyId,
-            runId,
-            emp.id,
-            item.employeeCode,
-            item.employeeName,
-            item.department,
-            item.designation,
-            item.bankName || null,
-            item.accountNumber || null,
-            item.ifsc || null,
-            item.pan || null,
-            item.uan || null,
-            item.calendarDays,
-            item.workingDays,
-            item.presentDays,
-            item.absentDays,
-            item.paidLeaveDays,
-            item.lopDays,
-            item.payableDays,
-            item.overtimeHours,
-            item.basicSalary,
-            item.hra,
-            item.conveyance,
-            item.specialAllowance,
-            item.medicalAllowance,
-            item.otherAllowances,
-            item.overtimePay,
-            item.bonusIncentive,
-            item.lopDeductionAmount,
-            item.grossEarnings,
-            item.employeePf,
-            item.employeeEsic,
-            item.professionalTax,
-            item.tds,
-            item.loanEmiDeduction,
-            item.otherDeductions,
-            item.totalDeductions,
-            item.netSalary,
-            item.employerPf,
-            item.employerEsic,
-            item.gratuityProvision,
-            item.totalEmployerCost,
-            item.calculationBreakdownJson,
-          ]
-        );
-
-        totalGross += item.grossEarnings;
-        totalDeductions += item.totalDeductions;
-        totalNet += item.netSalary;
-        totalEmployerCost += item.totalEmployerCost;
-        calculatedItems.push({ id: itemId, ...item });
-      } catch (err: any) {
-        console.error(`Failed to calculate payroll for employee ${emp.id}:`, err.message);
-      }
-    }
-
-    // Update summary totals on payroll_run
-    await pool.query(
-      `UPDATE payroll_runs 
-       SET total_employees = ?, total_gross = ?, total_deductions = ?, total_net = ?, total_employer_cost = ?, status = 'CALCULATED', calculated_at = NOW()
-       WHERE id = ? AND company_id = ?`,
-      [employees.length, totalGross, totalDeductions, totalNet, totalEmployerCost, runId, companyId]
-    );
-
-    // Audit log
     await pool.query(
       `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details) VALUES (UUID(), ?, ?, ?, ?, 'PAYROLL_CALCULATED', ?)`,
-      [companyId, req.user?.id || null, req.user?.email || null, req.user?.role || 'admin', `Calculated payroll for ${m}/${y} for ${employees.length} employees.`]
-    );
+      [companyId, req.user?.id || null, req.user?.email || null, req.user?.role || 'admin', `Generated payroll for ${m}/${y}: ${gen.items.length} employees.`]
+    ).catch(() => undefined);
 
     res.json({
       success: true,
-      message: `Payroll for ${m}/${y} calculated successfully.`,
+      message: `Payroll for ${m}/${y} generated for ${gen.items.length} employee(s).`,
       data: {
-        runId,
+        runId: gen.runId,
         payrollMonth: m,
         payrollYear: y,
         status: 'CALCULATED',
-        totalEmployees: employees.length,
-        totalGross,
-        totalDeductions,
-        totalNet,
-        totalEmployerCost,
-        items: calculatedItems,
+        totalEmployees: gen.items.length,
+        totalGross: gen.totals.gross,
+        totalDeductions: gen.totals.deductions,
+        totalNet: gen.totals.net,
+        totalEmployerCost: gen.totals.employerCost,
+        warnings: gen.warnings,
       },
     });
   } catch (error: any) {
+    if (error instanceof PayrollLockedError) {
+      res.status(409).json({ success: false, error: { code: 'LOCKED', message: error.message } });
+      return;
+    }
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message || 'Failed to calculate payroll.' } });
   }
 }
@@ -248,6 +142,7 @@ export async function calculateMonthlyPayroll(req: AuthRequest, res: Response): 
  */
 export async function getPayrollRuns(req: AuthRequest, res: Response): Promise<void> {
   try {
+    await ensurePayrollSchema();
     const companyId = getTenantId(req);
     const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
@@ -257,7 +152,8 @@ export async function getPayrollRuns(req: AuthRequest, res: Response): Promise<v
              r.total_employees as totalEmployees, r.total_gross as totalGross,
              r.total_deductions as totalDeductions, r.total_net as totalNet,
              r.total_employer_cost as totalEmployerCost, r.created_at as createdAt,
-             r.approved_at as approvedAt, r.locked_at as lockedAt
+             r.approved_at as approvedAt, r.locked_at as lockedAt, r.calculated_at as calculatedAt,
+             r.emailed_at as emailedAt, r.auto_generated as autoGenerated, r.warnings_json as warningsJson
       FROM payroll_runs r
     `;
     const params: any[] = [];
@@ -279,6 +175,7 @@ export async function getPayrollRuns(req: AuthRequest, res: Response): Promise<v
  */
 export async function getPayrollRunById(req: AuthRequest, res: Response): Promise<void> {
   try {
+    await ensurePayrollSchema();
     const { id } = req.params;
     const companyId = getTenantId(req);
     const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
@@ -334,7 +231,7 @@ export async function updatePayrollRunStatus(req: AuthRequest, res: Response): P
     }
 
     // Verify run exists for company
-    let checkSql = `SELECT id FROM payroll_runs WHERE id = ?`;
+    let checkSql = `SELECT id, status, company_id FROM payroll_runs WHERE id = ?`;
     const checkParams: any[] = [id];
     if (!isSuperGlobal) {
       checkSql += ` AND company_id = ?`;
@@ -343,6 +240,16 @@ export async function updatePayrollRunStatus(req: AuthRequest, res: Response): P
     const [existing]: any = await pool.query(checkSql, checkParams);
     if (existing.length === 0) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Payroll run not found in company database.' } });
+      return;
+    }
+    const previous = String(existing[0].status || '').toUpperCase();
+    const order = ['DRAFT', 'CALCULATED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSED', 'PAID'];
+    if (status !== 'CANCELLED' && order.indexOf(status) < order.indexOf(previous)) {
+      res.status(409).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `A ${previous} payroll cannot be moved back to ${status}.` } });
+      return;
+    }
+    if (status === 'CANCELLED' && ['PROCESSED', 'PAID'].includes(previous)) {
+      res.status(409).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `A ${previous} payroll cannot be cancelled.` } });
       return;
     }
 
@@ -364,6 +271,10 @@ export async function updatePayrollRunStatus(req: AuthRequest, res: Response): P
       updateItemsParams.push(companyId);
     }
     await pool.query(updateItemsSql, updateItemsParams);
+
+    if (status === 'APPROVED' && !['APPROVED', 'PROCESSED', 'PAID'].includes(previous)) {
+      await finaliseApprovedRun(id, existing[0].company_id);
+    }
 
     // Audit log
     await pool.query(

@@ -16,7 +16,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   }
 
   // Exempt public login & webhook routes if necessary
-  const publicExempt = ['/api/v1/auth/login', '/iclock/', '/api/v1/zkteco/cdata', '/api/v1/zkteco/devicecmd', '/api/v1/essl/cdata', '/api/v1/essl/devicecmd'];
+  const publicExempt = ['/api/v1/auth/login', '/iclock/', '/api/v1/zkteco/cdata', '/api/v1/zkteco/devicecmd', '/api/v1/essl/cdata', '/api/v1/essl/devicecmd', '/api/v1/payroll-cron'];
   if (publicExempt.some(path => req.path.toLowerCase().startsWith(path.toLowerCase()))) {
     next();
     return;

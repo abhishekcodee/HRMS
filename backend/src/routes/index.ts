@@ -21,6 +21,8 @@ import { payrollRouter } from './payroll.routes.js';
 import { zktecoRouter } from './zkteco.routes.js';
 import { chatRouter } from '../modules/chat/index.js';
 import settingsRouter from '../modules/settings/index.js';
+import { attendanceFeedHandler } from '../modules/attendance/attendanceFeedController.js';
+import { payrollCronHandler } from '../modules/payroll/payrollAutomationController.js';
 
 import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
 import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
@@ -106,6 +108,11 @@ export const v1Router = Router();
 
 // Health & Readiness Routes
 v1Router.use('/', healthRouter);
+
+// Public, token-protected endpoints (no JWT): live Excel attendance feed and the payroll cron trigger
+v1Router.get('/attendance-feed/:token', attendanceFeedHandler);
+v1Router.get('/payroll-cron', payrollCronHandler);
+v1Router.post('/payroll-cron', payrollCronHandler);
 
 // High-Performance Consolidated Dashboard Stats Endpoint
 v1Router.get('/dashboard/stats', authenticateToken, tenantMiddleware, getDashboardStats);

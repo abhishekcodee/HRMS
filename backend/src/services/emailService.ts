@@ -36,8 +36,16 @@ export interface SalarySlipEmailPayload {
   netPayableSalary?: number;
 }
 
+export function isEmailConfigured(): boolean {
+  return !!(process.env.MAIL_USERNAME && process.env.MAIL_PASSWORD);
+}
+
+export function getMailFrom(): string {
+  return `"${process.env.MAIL_FROM_NAME || 'HRMS Enterprise Portal'}" <${process.env.MAIL_FROM_ADDRESS || process.env.MAIL_USERNAME || 'noreply@hrms.com'}>`;
+}
+
 // 1. Centralized SMTP Transport configuration
-function getSmtpTransporter() {
+export function getSmtpTransporter() {
   const host = process.env.MAIL_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.MAIL_PORT || '587', 10);
   const secure = process.env.MAIL_ENCRYPTION === 'ssl' || port === 465;

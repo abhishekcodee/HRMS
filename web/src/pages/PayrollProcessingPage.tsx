@@ -1,522 +1,644 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Calculator,
-  Lock,
-  CheckCircle,
   AlertTriangle,
-  FileSpreadsheet,
+  Calculator,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Download,
+  FileText,
+  Lock,
+  Mail,
   RefreshCw,
-  Eye,
-  Search,
-  DollarSign,
-  Users,
-  Building,
+  Settings as SettingsIcon,
+  X,
+  Zap,
 } from 'lucide-react';
-import { CalculationBreakdownModal } from '../components/payroll/CalculationBreakdownModal';
+import '../styles/payroll.css';
+import { MONTHS, PayrollSettings, PayrollSettingsResponse, inr, num, openAuthedFile, payrollRunApi } from '../services/payrollRunApi';
+
+const LOCKED = ['APPROVED', 'PROCESSED', 'PAID'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PT_STATES = ['Maharashtra', 'Karnataka', 'West Bengal', 'Gujarat', 'Telangana', 'Andhra Pradesh', 'Assam', 'Madhya Pradesh', 'Goa',
+  'Tamil Nadu', 'Kerala', 'Odisha', 'Bihar', 'Punjab', 'Delhi', 'Haryana', 'Uttar Pradesh', 'Rajasthan', 'Uttarakhand', 'Other'];
+
+function defaultMonth() {
+  // Payroll is usually run for the month that just ended
+  const d = new Date();
+  d.setDate(1);
+  if (new Date().getDate() <= 20) d.setMonth(d.getMonth() - 1);
+  return { month: d.getMonth() + 1, year: d.getFullYear() };
+}
+
+function parse<T = any>(v: any): T | null {
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
+}
+
+function emailBadge(status?: string | null) {
+  switch (status) {
+    case 'SENT': return <span className="pp-badge pp-badge-green"><Mail size={11} /> Sent</span>;
+    case 'DRY_RUN': return <span className="pp-badge pp-badge-amber">Not sent (no SMTP)</span>;
+    case 'FAILED': return <span className="pp-badge pp-badge-red">Failed</span>;
+    case 'SENDING': return <span className="pp-badge pp-badge-blue">Sending…</span>;
+    default: return <span className="pp-badge pp-badge-grey">Not sent</span>;
+  }
+}
 
 export const PayrollProcessingPage: React.FC = () => {
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [policy, setPolicy] = useState<string>('CALENDAR_DAYS');
-  const [search, setSearch] = useState<string>('');
-
-  const [loading, setLoading] = useState<boolean>(false);
-  const [payrollRun, setPayrollRun] = useState<any>(null);
+  const init = defaultMonth();
+  const [month, setMonth] = useState(init.month);
+  const [year, setYear] = useState(init.year);
+  const [run, setRun] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
-  const [validationReport, setValidationReport] = useState<any>(null);
+  const [readiness, setReadiness] = useState<any>(null);
+  const [cfg, setCfg] = useState<PayrollSettingsResponse | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'err' | 'warn'; text: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const [detail, setDetail] = useState<any>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showReadiness, setShowReadiness] = useState(false);
 
-  const [selectedItemForBreakdown, setSelectedItemForBreakdown] = useState<any>(null);
-  const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(false);
+  const label = `${MONTHS[month - 1]} ${year}`;
 
-  const getToken = () => localStorage.getItem('hrms_token') || localStorage.getItem('token');
-
-  const checkAuthStatus = (res: Response, json: any) => {
-    if (res.status === 401 || json.error?.code === 'UNAUTHORIZED' || json.error?.code === 'INVALID_TOKEN') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('hrms_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('hrms_user');
-      alert('Your session has expired. Please log in again.');
-      window.location.href = '/login';
-      return false;
-    }
-    return true;
-  };
-
-  const fetchReadiness = async () => {
+  const load = useCallback(async () => {
+    setBusy((b) => b || 'load');
     try {
-      const res = await fetch(`/api/v1/payroll/validate-readiness?month=${selectedMonth}&year=${selectedYear}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      const json = await res.json();
-      if (!checkAuthStatus(res, json)) return;
-      if (json.success) setValidationReport(json.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchCurrentRun = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/payroll/runs`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      const json = await res.json();
-      if (!checkAuthStatus(res, json)) return;
-      if (json.success && json.data.length > 0) {
-        const current = json.data.find(
-          (r: any) => r.payrollMonth === selectedMonth && r.payrollYear === selectedYear
-        );
-        if (current) {
-          setPayrollRun(current);
-          const itemRes = await fetch(`/api/v1/payroll/runs/${current.id}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
-          });
-          const itemJson = await itemRes.json();
-          if (itemJson.success) setItems(itemJson.data.items);
-        } else {
-          setPayrollRun(null);
-          setItems([]);
-        }
+      const [runsRes, readyRes] = await Promise.all([payrollRunApi.runs(), payrollRunApi.readiness(month, year)]);
+      setReadiness(readyRes.data);
+      const current = (runsRes.data || []).find((r: any) => Number(r.payrollMonth) === month && Number(r.payrollYear) === year);
+      if (current) {
+        const detailRes = await payrollRunApi.run(current.id);
+        setRun({ ...current, ...detailRes.data.run });
+        setItems(detailRes.data.items || []);
       } else {
-        setPayrollRun(null);
+        setRun(null);
         setItems([]);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: err.message });
     } finally {
-      setLoading(false);
+      setBusy((b) => (b === 'load' ? null : b));
     }
+  }, [month, year]);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      setCfg((await payrollRunApi.settings()).data);
+    } catch { /* employees can't see settings */ }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadSettings(); }, [loadSettings]);
+
+  const shiftMonth = (delta: number) => {
+    const d = new Date(year, month - 1 + delta, 1);
+    setMonth(d.getMonth() + 1);
+    setYear(d.getFullYear());
+    setNotice(null);
   };
 
-  useEffect(() => {
-    fetchReadiness();
-    fetchCurrentRun();
-  }, [selectedMonth, selectedYear]);
-
-  const handleCalculatePayroll = async () => {
-    setLoading(true);
+  const act = async (key: string, fn: () => Promise<{ message?: string; data?: any }>, confirmText?: string) => {
+    if (confirmText && !window.confirm(confirmText)) return;
+    setBusy(key);
+    setNotice(null);
     try {
-      const res = await fetch(`/api/v1/payroll/calculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
-          month: selectedMonth,
-          year: selectedYear,
-          payableDaysPolicy: policy,
-        }),
-      });
-      const json = await res.json();
-      if (!checkAuthStatus(res, json)) return;
-      if (json.success) {
-        alert(json.message);
-        fetchCurrentRun();
-      } else {
-        alert(json.error?.message || 'Failed to calculate payroll');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Error calculating payroll');
+      const res = await fn();
+      const warnings: string[] = res.data?.warnings || [];
+      const dry = res.data?.dryRun;
+      setNotice({ kind: dry || warnings.length ? 'warn' : 'ok', text: [res.message || 'Done', ...warnings.slice(0, 5)].join(' • ') });
+      await load();
+    } catch (err: any) {
+      setNotice({ kind: 'err', text: err.message });
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  const handleUpdateStatus = async (newStatus: string) => {
-    if (!payrollRun) return;
-    if (!confirm(`Are you sure you want to change payroll status to '${newStatus}'?`)) return;
+  const status = String(run?.status || '').toUpperCase();
+  const isLocked = LOCKED.includes(status);
+  const sentCount = items.filter((i) => i.email_status === 'SENT').length;
+  const pendingEmail = items.filter((i) => i.email_status !== 'SENT').length;
+  const runWarnings: string[] = parse<string[]>(run?.warnings_json || run?.warningsJson) || [];
 
-    try {
-      const res = await fetch(`/api/v1/payroll/runs/${payrollRun.id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const json = await res.json();
-      if (!checkAuthStatus(res, json)) return;
-      if (json.success) {
-        alert(json.message);
-        fetchCurrentRun();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleExportSalaryRegister = async () => {
-    try {
-      const currentToken = getToken();
-      const res = await fetch(`/api/v1/payroll/reports?reportType=salary_register&month=${selectedMonth}&year=${selectedYear}&format=csv`, {
-        headers: { Authorization: `Bearer ${currentToken}` }
-      });
-      if (res.status === 401) {
-        localStorage.clear();
-        alert('Your session has expired. Please log in again.');
-        window.location.href = '/login';
-        return;
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Salary_Register_${selectedMonth}_${selectedYear}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (err) {
-      alert('Failed to export salary register CSV');
-    }
-  };
-
-  const filteredItems = items.filter(
-    (item) =>
-      item.employee_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.employee_code.toLowerCase().includes(search.toLowerCase()) ||
-      (item.department && item.department.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+  const steps = [
+    { label: 'Generate', hint: run ? `${items.length} employees` : 'Not generated', done: !!run },
+    { label: 'Review', hint: run ? 'Check LOP & warnings' : '—', done: isLocked },
+    { label: 'Approve', hint: isLocked ? status.toLowerCase() : 'Pending', done: isLocked },
+    { label: 'E-mail slips', hint: items.length ? `${sentCount}/${items.length} sent` : '—', done: items.length > 0 && sentCount === items.length },
   ];
+  const currentStep = steps.findIndex((s) => !s.done);
 
-  const fmt = (amt: any) => `₹${(Number(amt) || 0).toLocaleString('en-IN')}`;
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i) => `${i.employee_name} ${i.employee_code} ${i.department || ''}`.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const openSlip = (item: any) =>
+    openAuthedFile(`/payroll/payslip/${item.id}/pdf`, `Payslip_${item.employee_code}.pdf`).catch((e) => setNotice({ kind: 'err', text: e.message }));
+
+  const auto = cfg?.settings.automation;
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="pp-page">
+      <div className="pp-head">
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-            <Calculator size={26} color="var(--accent-color, #4f46e5)" /> Monthly Payroll Processing Engine
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
-            Real-time, formula-driven, auditable monthly salary calculations with statutory compliance.
-          </p>
+          <h1 className="pp-title"><Calculator size={24} color="var(--primary-400)" /> Payroll</h1>
+          <p className="pp-sub">Salary is calculated from attendance, approved CL/PL and holidays. Generate it, check it, approve it, and the payslips are e-mailed.</p>
         </div>
-
-        {/* Action Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleCalculatePayroll}
-            disabled={loading || (payrollRun && ['APPROVED', 'PAID', 'LOCKED'].includes(payrollRun.status))}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '8px',
-              background: 'var(--accent-color, #4f46e5)',
-              color: '#fff',
-              fontWeight: '600',
-              fontSize: '13px',
-              border: 'none',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: (payrollRun && ['APPROVED', 'PAID', 'LOCKED'].includes(payrollRun.status)) ? 0.6 : 1
-            }}
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            {payrollRun ? 'Recalculate Payroll' : 'Calculate Monthly Payroll'}
-          </button>
-
-          {payrollRun && (
-            <>
-              {payrollRun.status === 'CALCULATED' && (
-                <button
-                  onClick={() => handleUpdateStatus('APPROVED')}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '8px',
-                    background: '#22c55e',
-                    color: '#fff',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Lock size={16} /> Lock & Approve Payroll
-                </button>
-              )}
-              {payrollRun.status === 'APPROVED' && (
-                <button
-                  onClick={() => handleUpdateStatus('PROCESSED')}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '8px',
-                    background: '#6366f1',
-                    color: '#fff',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <CheckCircle size={16} /> Process For Disbursement
-                </button>
-              )}
-            </>
-          )}
-
-          <button
-            onClick={handleExportSalaryRegister}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '8px',
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              fontWeight: '600',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <FileSpreadsheet size={16} color="#22c55e" /> Export Salary Register
-          </button>
+        <div className="pp-row">
+          <div className="pp-month" role="group" aria-label="Payroll month">
+            <button onClick={() => shiftMonth(-1)} aria-label="Previous month"><ChevronLeft size={18} /></button>
+            <span>{label}</span>
+            <button onClick={() => shiftMonth(1)} aria-label="Next month"><ChevronRight size={18} /></button>
+          </div>
+          {cfg && <button className="pp-btn" onClick={() => setSettingsOpen(true)}><SettingsIcon size={16} /> Settings</button>}
         </div>
       </div>
 
-      {/* Selectors Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', padding: '16px', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Pay Month</label>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '13px' }}
-          >
-            {months.map((m, idx) => (
-              <option key={idx} value={idx + 1}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Pay Year</label>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '13px' }}
-          >
-            {[2025, 2026, 2027].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Payable Days Policy</label>
-          <select
-            value={policy}
-            onChange={(e) => setPolicy(e.target.value)}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', fontWeight: '600', fontSize: '13px' }}
-          >
-            <option value="CALENDAR_DAYS">Actual Calendar Days (28/30/31)</option>
-            <option value="FIXED_30">Fixed 30-Day Base</option>
-            <option value="WORKING_DAYS">Actual Working Days (Excl. Holidays)</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Payroll Status</label>
-          <div style={{ padding: '9px 12px', borderRadius: '6px', background: 'var(--bg-app)', border: '1px solid var(--border-color)', fontSize: '13px', fontWeight: '700', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ textTransform: 'uppercase', color: payrollRun?.status === 'APPROVED' ? '#22c55e' : 'var(--text-primary)' }}>
-              {payrollRun?.status || 'NOT CALCULATED'}
-            </span>
-            {payrollRun?.status === 'APPROVED' && <Lock size={16} color="#22c55e" />}
+      {cfg && (
+        <div className={`pp-banner ${auto?.enabled ? 'pp-banner-info' : 'pp-banner-warn'}`}>
+          <Zap size={18} style={{ flex: '0 0 18px', marginTop: 1 }} />
+          <div style={{ flex: 1 }}>
+            {auto?.enabled ? (
+              <>
+                <b>Automatic payroll is on.</b> Next salary day: <b>{cfg.schedule.nextSalaryDate}</b> for {cfg.schedule.nextPayPeriod}.
+                {' '}A draft is generated {auto.generateDaysBefore} day(s) before, then{' '}
+                {auto.requireApproval ? 'payslips are e-mailed once you approve it.' : `it is approved automatically and payslips are e-mailed at ${auto.sendHour}:00.`}
+                {cfg.lastTick && <div className="pp-small" style={{ marginTop: 4 }}>Last check: {new Date(cfg.lastTick.at).toLocaleString()} – {cfg.lastTick.detail || cfg.lastTick.action}</div>}
+              </>
+            ) : (
+              <><b>Automatic payroll is off.</b> Turn it on in Settings to generate payroll and e-mail payslips with leave balances on salary day.</>
+            )}
+            {!cfg.emailConfigured && (
+              <div style={{ marginTop: 6 }}>
+                <AlertTriangle size={14} style={{ verticalAlign: '-2px' }} /> E-mail is not set up on the server yet (MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD). Until then payslips are prepared but not delivered.
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Readiness Check Banner */}
-      {validationReport && validationReport.errorCount > 0 && (
-        <div style={{ padding: '14px 18px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#eab308' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertTriangle size={18} color="#eab308" />
-            <div>
-              <strong>Payroll Readiness Notice:</strong> {validationReport.errorCount} out of {validationReport.totalEmployees} employees have missing CTC or bank details.
+      <div className="pp-steps">
+        {steps.map((s, i) => (
+          <div key={s.label} className={`pp-step ${s.done ? 'done' : ''} ${i === currentStep ? 'current' : ''}`}>
+            <div className="pp-step-num">{s.done ? <CheckCircle2 size={14} /> : i + 1}</div>
+            <div style={{ minWidth: 0 }}>
+              <div className="pp-step-label">{s.label}</div>
+              <div className="pp-step-hint">{s.hint}</div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Summary KPI Cards */}
-      {payrollRun && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <Users size={16} color="#3b82f6" /> Total Employees
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>{payrollRun.totalEmployees}</div>
-          </div>
-
-          <div style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <DollarSign size={16} color="#22c55e" /> Total Gross Earnings
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(payrollRun.totalGross)}</div>
-          </div>
-
-          <div style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <DollarSign size={16} color="#ef4444" /> Total Deductions
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#ef4444' }}>{fmt(payrollRun.totalDeductions)}</div>
-          </div>
-
-          <div style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <DollarSign size={16} color="#6366f1" /> Net Salary Payable
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#22c55e' }}>{fmt(payrollRun.totalNet)}</div>
-          </div>
-
-          <div style={{ padding: '16px', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <Building size={16} color="#a855f7" /> Total Employer Cost
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#6366f1' }}>{fmt(payrollRun.totalEmployerCost)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Items Table */}
-      <div style={{ background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-        {/* Table Search Header */}
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--text-secondary)' }} />
-            <input
-              type="text"
-              placeholder="Search employee, code, department..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: '100%',
-                paddingLeft: '36px',
-                paddingRight: '12px',
-                paddingTop: '8px',
-                paddingBottom: '8px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-app)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Showing <strong>{filteredItems.length}</strong> calculated records
-          </div>
-        </div>
-
-        {/* Table Container */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ background: 'var(--bg-app)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '11px', fontWeight: '700' }}>
-                <th style={{ padding: '12px' }}>Employee</th>
-                <th style={{ padding: '12px' }}>Department</th>
-                <th style={{ padding: '12px' }}>Pay / LOP Days</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Basic</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>HRA</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Gross Earnings</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>PF</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>ESIC</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>PT</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>TDS</th>
-                <th style={{ padding: '12px', textAlign: 'right', color: '#22c55e' }}>Net Salary</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Formula Audit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item) => (
-                <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.employee_name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{item.employee_code}</div>
-                  </td>
-                  <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{item.department || 'General'}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.payable_days}d</span>
-                    {Number(item.lop_days) > 0 && (
-                      <span style={{ marginLeft: '6px', fontSize: '11px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                        {item.lop_days} LOP
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(item.basic_salary)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>{fmt(item.hra)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(item.gross_earnings)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', color: '#ef4444' }}>{fmt(item.employee_pf)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', color: '#ef4444' }}>{fmt(item.employee_esic)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', color: '#ef4444' }}>{fmt(item.professional_tax)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', color: '#ef4444' }}>{fmt(item.tds)}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace', fontWeight: '700', color: '#22c55e' }}>{fmt(item.net_salary)}</td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => {
-                        setSelectedItemForBreakdown(item);
-                        setIsBreakdownOpen(true);
-                      }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        background: 'rgba(79, 70, 229, 0.12)',
-                        color: 'var(--accent-color, #4f46e5)',
-                        border: 'none',
-                        fontWeight: '600',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Eye size={14} /> Formula
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={12} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    {payrollRun ? 'No employee calculated items match your filter.' : 'No payroll run executed for this month yet. Click "Calculate Monthly Payroll" above.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        ))}
       </div>
 
-      {/* Formula Transparency Breakdown Modal */}
-      <CalculationBreakdownModal
-        isOpen={isBreakdownOpen}
-        onClose={() => setIsBreakdownOpen(false)}
-        item={selectedItemForBreakdown}
-      />
+      <div className="pp-card">
+        <div className="pp-row pp-actions">
+          {!isLocked && (
+            <button className={`pp-btn ${run ? '' : 'pp-btn-primary'}`} disabled={!!busy}
+              onClick={() => act('generate', () => payrollRunApi.generate(month, year), run ? `Recalculate ${label}? This replaces the current figures.` : undefined)}>
+              <RefreshCw size={16} className={busy === 'generate' ? 'animate-spin' : ''} />
+              {run ? 'Recalculate' : `Generate payroll for ${label}`}
+            </button>
+          )}
+          {run && !isLocked && status !== 'CANCELLED' && (
+            <button className="pp-btn pp-btn-success" disabled={!!busy}
+              onClick={() => act('approve', () => payrollRunApi.setStatus(run.id, 'APPROVED'), `Approve and lock payroll for ${label}? Figures can no longer be recalculated.`)}>
+              <Lock size={16} /> Approve &amp; lock
+            </button>
+          )}
+          {run && isLocked && (
+            <button className="pp-btn pp-btn-primary" disabled={!!busy || pendingEmail === 0}
+              onClick={() => act('email', () => payrollRunApi.sendPayslips(run.id), `E-mail payslips with leave balances to ${pendingEmail} employee(s)?`)}>
+              <Mail size={16} /> {pendingEmail === 0 ? 'All payslips sent' : `E-mail payslips (${pendingEmail})`}
+            </button>
+          )}
+          {run && status === 'APPROVED' && (
+            <button className="pp-btn" disabled={!!busy} onClick={() => act('paid', () => payrollRunApi.setStatus(run.id, 'PAID'), 'Mark salaries as paid?')}>
+              <CheckCircle2 size={16} /> Mark as paid
+            </button>
+          )}
+          <span className="pp-spacer" />
+          {run && <span className={`pp-badge ${isLocked ? 'pp-badge-green' : 'pp-badge-blue'}`}>{status}</span>}
+          {busy === 'load' && <span className="pp-small">Loading…</span>}
+        </div>
+        {notice && (
+          <div className={`pp-banner pp-banner-${notice.kind}`} style={{ marginTop: 12 }}>
+            {notice.kind === 'err' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+            <div style={{ flex: 1 }}>{notice.text}</div>
+            <button className="pp-btn pp-btn-ghost pp-btn-sm" onClick={() => setNotice(null)} aria-label="Dismiss"><X size={14} /></button>
+          </div>
+        )}
+      </div>
+
+      {readiness && (readiness.errorCount > 0 || readiness.warningCount > 0) && (
+        <div className="pp-banner pp-banner-warn">
+          <AlertTriangle size={18} style={{ flex: '0 0 18px' }} />
+          <div style={{ flex: 1 }}>
+            <b>{readiness.errorCount > 0 ? `${readiness.errorCount} employee(s) have no salary set and will be skipped.` : 'Some employee records are incomplete.'}</b>{' '}
+            {readiness.warningCount > 0 && `${readiness.warningCount} have warnings (no e-mail, bank, PAN or attendance).`}{' '}
+            <button className="pp-btn pp-btn-ghost pp-btn-sm" style={{ padding: 0, minHeight: 0, textDecoration: 'underline' }} onClick={() => setShowReadiness((v) => !v)}>
+              {showReadiness ? 'Hide' : 'Show list'}
+            </button>
+            {showReadiness && (
+              <ul>
+                {readiness.items.filter((r: any) => r.errors.length || r.warnings.length).slice(0, 50).map((r: any) => (
+                  <li key={r.employeeId}><b>{r.fullName}</b> ({r.employeeCode}): {[...r.errors, ...r.warnings].join(', ')}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {runWarnings.length > 0 && (
+        <div className="pp-banner pp-banner-warn">
+          <AlertTriangle size={18} style={{ flex: '0 0 18px' }} />
+          <div><b>Not included in this run:</b><ul>{runWarnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
+        </div>
+      )}
+
+      {run && (
+        <div className="pp-kpis">
+          <div className="pp-card"><div className="pp-kpi-label">Employees</div><div className="pp-kpi-value">{items.length}</div></div>
+          <div className="pp-card"><div className="pp-kpi-label">Gross pay</div><div className="pp-kpi-value">{inr(run.total_gross ?? run.totalGross)}</div></div>
+          <div className="pp-card"><div className="pp-kpi-label">Net pay (to bank)</div><div className="pp-kpi-value" style={{ color: 'var(--success-text)' }}>{inr(run.total_net ?? run.totalNet)}</div></div>
+          <div className="pp-card"><div className="pp-kpi-label">Cost to company</div><div className="pp-kpi-value">{inr(run.total_employer_cost ?? run.totalEmployerCost)}</div></div>
+        </div>
+      )}
+
+      <div className="pp-card">
+        <div className="pp-row" style={{ marginBottom: 12 }}>
+          <input className="pp-search" placeholder="Search employee, code or department" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <span className="pp-spacer" />
+          <span className="pp-muted">{filtered.length} of {items.length}</span>
+        </div>
+
+        {!run && busy !== 'load' && (
+          <div style={{ textAlign: 'center', padding: '32px 12px' }} className="pp-muted">
+            <FileText size={32} style={{ opacity: 0.5 }} />
+            <div style={{ marginTop: 8 }}>No payroll for {label} yet. Click <b>Generate payroll</b> to calculate it from attendance and leave.</div>
+          </div>
+        )}
+
+        {run && (
+          <>
+            <div className="pp-table-wrap">
+              <table className="pp-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th><th>Paid days</th><th className="num">Gross</th><th className="num">PF</th><th className="num">ESIC</th>
+                    <th className="num">PT</th><th className="num">TDS</th><th className="num">Other</th><th className="num">Net pay</th><th>Payslip</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((it) => {
+                    const warn = parse<string[]>(it.warnings_json) || [];
+                    return (
+                      <tr key={it.id}>
+                        <td className="emp">
+                          <div style={{ fontWeight: 600 }}>{it.employee_name}</div>
+                          <div className="pp-small">{it.employee_code}{it.department ? ` · ${it.department}` : ''}</div>
+                          {warn.length > 0 && <div className="pp-warn-line" title={warn.join('\n')}><AlertTriangle size={11} /> {warn.length} note{warn.length > 1 ? 's' : ''}: {warn[0]}</div>}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {num(it.payable_days)}/{it.calendar_days}
+                          {Number(it.lop_days) > 0 && <span className="pp-badge pp-badge-red" style={{ marginLeft: 6 }}>{num(it.lop_days)} LOP</span>}
+                        </td>
+                        <td className="num">{inr(it.gross_earnings)}</td>
+                        <td className="num">{inr(it.employee_pf)}</td>
+                        <td className="num">{inr(it.employee_esic)}</td>
+                        <td className="num">{inr(it.professional_tax)}</td>
+                        <td className="num">{inr(it.tds)}</td>
+                        <td className="num">{inr(Number(it.loan_emi_deduction) + Number(it.other_deductions))}</td>
+                        <td className="num" style={{ fontWeight: 700, color: 'var(--success-text)' }}>{inr(it.net_salary)}</td>
+                        <td>{emailBadge(it.email_status)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <button className="pp-btn pp-btn-sm" onClick={() => setDetail(it)}>Details</button>{' '}
+                          <button className="pp-btn pp-btn-sm" onClick={() => openSlip(it)} aria-label="Open payslip PDF"><Download size={14} /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pp-cards">
+              {filtered.map((it) => (
+                <div key={it.id} className="pp-emp-card">
+                  <div className="pp-emp-card-top">
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{it.employee_name}</div>
+                      <div className="pp-small">{it.employee_code}{it.department ? ` · ${it.department}` : ''}</div>
+                    </div>
+                    {emailBadge(it.email_status)}
+                  </div>
+                  <div className="pp-emp-card-grid">
+                    <div><span>Paid days</span><b>{num(it.payable_days)}/{it.calendar_days}</b></div>
+                    <div><span>LOP</span><b style={{ color: Number(it.lop_days) > 0 ? 'var(--error-text)' : undefined }}>{num(it.lop_days)}</b></div>
+                    <div><span>Gross</span><b>{inr(it.gross_earnings)}</b></div>
+                    <div><span>Deductions</span><b>{inr(it.total_deductions)}</b></div>
+                    <div><span>Net pay</span><b style={{ color: 'var(--success-text)' }}>{inr(it.net_salary)}</b></div>
+                  </div>
+                  <div className="pp-row" style={{ marginTop: 10 }}>
+                    <button className="pp-btn pp-btn-sm" style={{ flex: 1 }} onClick={() => setDetail(it)}>Details</button>
+                    <button className="pp-btn pp-btn-sm" style={{ flex: 1 }} onClick={() => openSlip(it)}><Download size={14} /> Payslip</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {detail && <ItemDetail item={detail} onClose={() => setDetail(null)} onOpenSlip={() => openSlip(detail)}
+        onResend={isLocked ? () => act('email', () => payrollRunApi.sendPayslips(run.id, { itemIds: [detail.id], resend: true })) : undefined} />}
+      {settingsOpen && cfg && (
+        <SettingsModal initial={cfg} onClose={() => setSettingsOpen(false)}
+          onSaved={(msg) => { setSettingsOpen(false); setNotice({ kind: 'ok', text: msg }); loadSettings(); }} />
+      )}
     </div>
   );
 };
+
+const ItemDetail: React.FC<{ item: any; onClose: () => void; onOpenSlip: () => void; onResend?: () => void }> = ({ item, onClose, onOpenSlip, onResend }) => {
+  const bd = parse<any>(item.calculation_breakdown_json) || {};
+  const leave = parse<any>(item.leave_summary_json);
+  const a = bd.attendanceSummary || {};
+  const codes: string[] = bd.dayCodes || [];
+  const formulas: Record<string, string> = bd.formulas || {};
+  const warnings: string[] = parse<string[]>(item.warnings_json) || [];
+
+  const earnings: [string, any][] = [
+    ['Basic', item.basic_salary], ['HRA', item.hra], ['Conveyance', item.conveyance], ['Medical', item.medical_allowance],
+    ['Special allowance', item.special_allowance], ['Overtime', item.overtime_pay], ['Arrears', item.arrears_amount],
+    ['Bonus', item.bonus_incentive], ['Reimbursements', item.reimbursements_amount],
+  ].filter(([, v]) => Number(v) > 0) as [string, any][];
+  const deductions: [string, any][] = [
+    ['Provident fund', item.employee_pf], ['ESIC', item.employee_esic], ['Professional tax', item.professional_tax],
+    ['Income tax (TDS)', item.tds], ['Loan EMI', item.loan_emi_deduction], ['Other', item.other_deductions],
+  ].filter(([, v]) => Number(v) > 0) as [string, any][];
+
+  const codeClass = (c: string) => (['P', 'P*'].includes(c) ? 'P' : c === 'A' ? 'A' : c === 'LWP' ? 'LWP' : c === 'HD' ? 'HD' : c === 'H' ? 'H' : c === 'WO' ? 'WO' : c === '-' ? '' : 'L');
+
+  return (
+    <div className="pp-overlay" onClick={onClose}>
+      <div className="pp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="pp-modal-head">
+          <div>
+            <h3>{item.employee_name}</h3>
+            <div className="pp-small">{item.employee_code}{item.designation ? ` · ${item.designation}` : ''}</div>
+          </div>
+          <button className="pp-btn pp-btn-ghost pp-btn-sm" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <div className="pp-modal-body">
+          {warnings.length > 0 && <div className="pp-banner pp-banner-warn"><AlertTriangle size={16} /><div>{warnings.join(' • ')}</div></div>}
+          <div className="pp-kpis">
+            <div><div className="pp-kpi-label">Paid days</div><div className="pp-kpi-value">{num(item.payable_days)}</div></div>
+            <div><div className="pp-kpi-label">LOP days</div><div className="pp-kpi-value" style={{ color: Number(item.lop_days) ? 'var(--error-text)' : undefined }}>{num(item.lop_days)}</div></div>
+            <div><div className="pp-kpi-label">Paid leave</div><div className="pp-kpi-value">{num(item.paid_leave_days)}</div></div>
+            <div><div className="pp-kpi-label">Net pay</div><div className="pp-kpi-value" style={{ color: 'var(--success-text)' }}>{inr(item.net_salary)}</div></div>
+          </div>
+
+          {codes.length > 0 && (
+            <div>
+              <p className="pp-section-title">Attendance this month</p>
+              <div className="pp-daystrip">
+                {codes.map((c, i) => <div key={i} className={`pp-day ${codeClass(c)}`}>{c === '-' ? '·' : c}<small>{i + 1}</small></div>)}
+              </div>
+              <div className="pp-small" style={{ marginTop: 6 }}>
+                Present {num(a.presentDays)} · Leave {num(a.paidLeaveDays)} · Absent/LWP {num(a.absentDays)} · Holidays {num(a.holidays)} · Weekly offs {num(a.weeklyOffs)}
+                {a.lateCount ? ` · Late ${a.lateCount}×` : ''}{a.overtimeHours ? ` · OT ${num(a.overtimeHours)} h` : ''}
+              </div>
+            </div>
+          )}
+
+          <div className="pp-split">
+            <div>
+              <p className="pp-section-title">Earnings</p>
+              <table className="pp-lines"><tbody>
+                {earnings.map(([k, v]) => <tr key={k}><td>{k}</td><td>{inr(v)}</td></tr>)}
+                <tr className="total"><td>Total</td><td>{inr(Number(item.gross_earnings) + Number(item.reimbursements_amount || 0))}</td></tr>
+              </tbody></table>
+            </div>
+            <div>
+              <p className="pp-section-title">Deductions</p>
+              <table className="pp-lines"><tbody>
+                {deductions.length === 0 && <tr><td className="pp-muted">None</td><td></td></tr>}
+                {deductions.map(([k, v]) => <tr key={k}><td>{k}</td><td>{inr(v)}</td></tr>)}
+                <tr className="total"><td>Total</td><td>{inr(item.total_deductions)}</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+
+          {leave && (
+            <div>
+              <p className="pp-section-title">Leave balance (FY {leave.financialYear})</p>
+              <table className="pp-lines"><tbody>
+                {(['cl', 'pl'] as const).map((k) => leave[k] && (
+                  <tr key={k}><td>{k === 'cl' ? 'Casual leave (CL)' : 'Privilege leave (PL)'}: entitled {num(leave[k].allocated)}, availed {num(leave[k].used)}, pending {num(leave[k].pending)}</td><td><b>{num(leave[k].balance)} left</b></td></tr>
+                ))}
+              </tbody></table>
+            </div>
+          )}
+
+          {Object.keys(formulas).length > 0 && (
+            <div>
+              <p className="pp-section-title">How it was calculated</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {Object.entries(formulas).map(([k, v]) => <div key={k} className="pp-formula">{v}</div>)}
+              </div>
+            </div>
+          )}
+          {item.email_error && <div className="pp-banner pp-banner-err"><AlertTriangle size={16} /><div>Last e-mail error: {item.email_error}</div></div>}
+        </div>
+        <div className="pp-modal-foot">
+          {onResend && <button className="pp-btn" onClick={onResend}><Mail size={16} /> {item.email_status === 'SENT' ? 'Resend payslip' : 'Send payslip'}</button>}
+          <button className="pp-btn pp-btn-primary" onClick={onOpenSlip}><Download size={16} /> Payslip PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SettingsModal: React.FC<{ initial: PayrollSettingsResponse; onClose: () => void; onSaved: (msg: string) => void }> = ({ initial, onClose, onSaved }) => {
+  const [s, setS] = useState<PayrollSettings>(JSON.parse(JSON.stringify(initial.settings)));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (patch: Partial<PayrollSettings>) => setS((p) => ({ ...p, ...patch }));
+  const setAuto = (patch: Partial<PayrollSettings['automation']>) => setS((p) => ({ ...p, automation: { ...p.automation, ...patch } }));
+  const ptKnown = PT_STATES.includes(s.ptState);
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await payrollRunApi.saveSettings(s);
+      onSaved(s.automation.enabled ? `Saved. Payroll will run automatically on day ${s.automation.salaryDay} of every month.` : 'Payroll settings saved.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="pp-overlay" onClick={onClose}>
+      <div className="pp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="pp-modal-head">
+          <h3><SettingsIcon size={18} style={{ verticalAlign: '-3px' }} /> Payroll settings</h3>
+          <button className="pp-btn pp-btn-ghost pp-btn-sm" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </div>
+        <div className="pp-modal-body">
+          <section>
+            <p className="pp-section-title"><Clock size={13} style={{ verticalAlign: '-2px' }} /> Salary day automation</p>
+            <label className="pp-check" style={{ marginBottom: 12 }}>
+              <input type="checkbox" checked={s.automation.enabled} onChange={(e) => setAuto({ enabled: e.target.checked })} />
+              <span><b>Generate payroll and e-mail payslips automatically</b><br /><span className="pp-small">Each employee gets a PDF payslip and their CL/PL balance by e-mail on salary day.</span></span>
+            </label>
+            <div className="pp-form">
+              <div className="pp-field">
+                <label>Salary day</label>
+                <select value={s.automation.salaryDay} onChange={(e) => setAuto({ salaryDay: Number(e.target.value) })}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d === 31 ? 'Last day of month' : `Day ${d}`}</option>)}
+                </select>
+              </div>
+              <div className="pp-field">
+                <label>Salary on that day is for</label>
+                <select value={s.automation.payFor} onChange={(e) => setAuto({ payFor: e.target.value as any })}>
+                  <option value="PREVIOUS_MONTH">The previous month (e.g. 1 Dec pays November)</option>
+                  <option value="CURRENT_MONTH">The same month (e.g. 30 Nov pays November)</option>
+                </select>
+              </div>
+              <div className="pp-field">
+                <label>Prepare draft for review</label>
+                <select value={s.automation.generateDaysBefore} onChange={(e) => setAuto({ generateDaysBefore: Number(e.target.value) })}>
+                  {[0, 1, 2, 3, 4, 5, 7, 10].map((d) => <option key={d} value={d}>{d === 0 ? 'On salary day' : `${d} day(s) before`}</option>)}
+                </select>
+              </div>
+              <div className="pp-field">
+                <label>E-mail payslips at</label>
+                <select value={s.automation.sendHour} onChange={(e) => setAuto({ sendHour: Number(e.target.value) })}>
+                  {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{`${String(h).padStart(2, '0')}:00`}</option>)}
+                </select>
+              </div>
+              <div className="pp-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="pp-check">
+                  <input type="checkbox" checked={s.automation.requireApproval} onChange={(e) => setAuto({ requireApproval: e.target.checked })} />
+                  <span>Wait for my approval before e-mailing<br /><span className="pp-small">Off = fully automatic: the draft is approved on salary day. On = you get a reminder and payslips go out when you approve.</span></span>
+                </label>
+              </div>
+              <div className="pp-field">
+                <label>Copy every payslip to (optional)</label>
+                <input type="email" placeholder="hr@yourcompany.com" value={s.automation.hrCcEmail} onChange={(e) => setAuto({ hrCcEmail: e.target.value })} />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <p className="pp-section-title">Attendance rules</p>
+            <div className="pp-form">
+              <div className="pp-field">
+                <label>Weekly off</label>
+                <div className="pp-chips">
+                  {WEEKDAYS.map((w, i) => (
+                    <button type="button" key={w} className={`pp-chip ${s.weeklyOffs.includes(i) ? 'on' : ''}`}
+                      onClick={() => set({ weeklyOffs: s.weeklyOffs.includes(i) ? s.weeklyOffs.filter((x) => x !== i) : [...s.weeklyOffs, i].sort() })}>{w}</button>
+                  ))}
+                </div>
+                <label className="pp-check" style={{ marginTop: 6 }}>
+                  <input type="checkbox" checked={s.secondFourthSaturdayOff} onChange={(e) => set({ secondFourthSaturdayOff: e.target.checked })} />
+                  <span>2nd and 4th Saturday off</span>
+                </label>
+              </div>
+              <div className="pp-field">
+                <label>Salary divided by</label>
+                <select value={s.payableDaysPolicy} onChange={(e) => set({ payableDaysPolicy: e.target.value as any })}>
+                  <option value="CALENDAR_DAYS">Days in the month (28–31)</option>
+                  <option value="FIXED_30">Always 30 days</option>
+                  <option value="FIXED_26">Always 26 days</option>
+                  <option value="WORKING_DAYS">Working days only</option>
+                </select>
+                <small>One day's pay = monthly salary ÷ this number. Each LOP day removes one day's pay.</small>
+              </div>
+              <div className="pp-field">
+                <label>A working day with no punch and no approved leave is</label>
+                <select value={s.missingAttendanceRule} onChange={(e) => set({ missingAttendanceRule: e.target.value as any })}>
+                  <option value="ABSENT">Absent (loss of pay) – recommended with biometric</option>
+                  <option value="PRESENT">Present – only marked absences deduct pay</option>
+                </select>
+              </div>
+              <div className="pp-field">
+                <label>Late marks</label>
+                <select value={s.lateMarksPerHalfDay} onChange={(e) => set({ lateMarksPerHalfDay: Number(e.target.value) })}>
+                  <option value={0}>No deduction for late coming</option>
+                  {[2, 3, 4, 5].map((n) => <option key={n} value={n}>Every {n} late marks = ½ day LOP</option>)}
+                </select>
+              </div>
+              <div className="pp-field">
+                <label className="pp-check">
+                  <input type="checkbox" checked={s.overtimeEnabled} onChange={(e) => set({ overtimeEnabled: e.target.checked })} />
+                  <span>Pay overtime from biometric hours</span>
+                </label>
+                {s.overtimeEnabled && (
+                  <select value={s.overtimeMultiplier} onChange={(e) => set({ overtimeMultiplier: Number(e.target.value) })}>
+                    {[1, 1.5, 2].map((m) => <option key={m} value={m}>{m}× hourly basic {m === 2 ? '(Factories Act)' : ''}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <p className="pp-section-title">Salary structure &amp; statutory</p>
+            <div className="pp-form">
+              <div className="pp-field">
+                <label>Basic = % of monthly gross</label>
+                <input type="number" min={10} max={100} value={s.basicPercent} onChange={(e) => set({ basicPercent: Number(e.target.value) })} />
+                <small>New Labour Codes: keep basic at 50% or more, otherwise PF is charged on the excess anyway.</small>
+              </div>
+              <div className="pp-field">
+                <label>HRA = % of basic</label>
+                <input type="number" min={0} max={100} value={s.hraPercentOfBasic} onChange={(e) => set({ hraPercentOfBasic: Number(e.target.value) })} />
+                <small>40% (non-metro) or 50% (metro). The rest of the salary is Special Allowance.</small>
+              </div>
+              <div className="pp-field">
+                <label>Professional tax state</label>
+                <select value={ptKnown ? s.ptState : 'Other'} onChange={(e) => set({ ptState: e.target.value === 'Other' ? '' : e.target.value })}>
+                  {PT_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+                </select>
+                {!ptKnown && <input placeholder="State name" value={s.ptState} onChange={(e) => set({ ptState: e.target.value })} />}
+                <small>Built-in slabs for most states. For Tamil Nadu, Kerala and others add slabs under Payroll → Statutory.</small>
+              </div>
+              <div className="pp-field">
+                <label className="pp-check">
+                  <input type="checkbox" checked={s.pf.enabled} onChange={(e) => set({ pf: { ...s.pf, enabled: e.target.checked } })} />
+                  <span>Provident Fund (12%)</span>
+                </label>
+                <label className="pp-check">
+                  <input type="checkbox" checked={s.pf.restrictToCeiling} disabled={!s.pf.enabled} onChange={(e) => set({ pf: { ...s.pf, restrictToCeiling: e.target.checked } })} />
+                  <span>Limit PF to wages of ₹{s.pf.ceiling.toLocaleString('en-IN')} (max ₹1,800)</span>
+                </label>
+                <label className="pp-check">
+                  <input type="checkbox" checked={s.esic.enabled} onChange={(e) => set({ esic: { ...s.esic, enabled: e.target.checked } })} />
+                  <span>ESIC for salaries up to ₹{s.esic.threshold.toLocaleString('en-IN')} (0.75% / 3.25%)</span>
+                </label>
+              </div>
+            </div>
+          </section>
+          {error && <div className="pp-banner pp-banner-err"><AlertTriangle size={16} /><div>{error}</div></div>}
+        </div>
+        <div className="pp-modal-foot">
+          <button className="pp-btn" onClick={onClose}>Cancel</button>
+          <button className="pp-btn pp-btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PayrollProcessingPage;

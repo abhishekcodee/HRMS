@@ -523,7 +523,7 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           {/* Table Data */}
-          <TableContainer style={{ borderRadius: 8, overflow: 'hidden' }}>
+          <TableContainer style={{ borderRadius: 8 }}>
             <Table>
               <Thead>
                 <Tr>

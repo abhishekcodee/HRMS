@@ -26,6 +26,14 @@ import {
 } from '../modules/payroll/payrollRunController.js';
 import { getPayslipById } from '../modules/payroll/payslipGenerator.js';
 import {
+  downloadPayslipPdfHandler,
+  getMyPayslipsHandler,
+  getPayrollSettingsHandler,
+  runAutomationNowHandler,
+  sendRunPayslipsHandler,
+  updatePayrollSettingsHandler,
+} from '../modules/payroll/payrollAutomationController.js';
+import {
   generateBankTransferBatch,
   getBankTransferBatch,
   updateBankPaymentStatus,
@@ -94,7 +102,15 @@ payrollRouter.get('/runs', getPayrollRuns);
 payrollRouter.get('/runs/:id', getPayrollRunById);
 payrollRouter.put('/runs/:id/status', requireRole(['admin', 'employer']), updatePayrollRunStatus);
 
+// Payroll policy + salary-day automation
+payrollRouter.get('/settings', requireRole(['admin', 'employer']), getPayrollSettingsHandler);
+payrollRouter.put('/settings', requireRole(['admin', 'employer']), updatePayrollSettingsHandler);
+payrollRouter.post('/automation/run-now', requireRole(['admin', 'employer']), runAutomationNowHandler);
+payrollRouter.post('/runs/:id/send-payslips', requireRole(['admin', 'employer']), sendRunPayslipsHandler);
+
 // Payslips
+payrollRouter.get('/my-payslips', getMyPayslipsHandler);
+payrollRouter.get('/payslip/:itemId/pdf', downloadPayslipPdfHandler);
 payrollRouter.get('/payslip/:itemId', getPayslipById);
 
 // Bank Transfer Disbursement

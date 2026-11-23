@@ -44,8 +44,11 @@ Company (Single-Company Identity)
 - Real-time punches → automatic clock-in/out, late minutes and overtime; device User ID ↔ employee mapping; remote "pull logs" command.
 - **Setup guide for eSSL AiFace Mars and similar terminals: [docs/essl-aiface-mars-setup.md](docs/essl-aiface-mars-setup.md)**
 
-### 📧 5. Bulk Salary Slips & Mail Automation
-- Automated bulk PDF/Excel salary slip generation and direct email dispatch.
+### 📧 5. Automatic Payroll, Payslip E-mails & Live Excel Attendance
+- One-click payroll from attendance, approved CL/PL, holidays and weekly offs (LOP, PF, ESIC, PT, TDS).
+- On salary day, every employee is e-mailed a PDF payslip with their CL/PL balance.
+- One permanent link that opens live attendance in Excel or Google Sheets.
+- **Guide: [docs/payroll-guide.md](docs/payroll-guide.md)**
 
 ---
 

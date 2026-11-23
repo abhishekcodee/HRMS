@@ -24,7 +24,8 @@ import {
   StatCard,
   Alert,
 } from '../components/ui';
-import { CalendarDays, Clock, Download, RefreshCw } from 'lucide-react';
+import { CalendarDays, Clock, RefreshCw } from 'lucide-react';
+import { AttendanceExcelLink } from '../components/AttendanceExcelLink';
 
 export const AttendancePage: React.FC = () => {
   const { user, activeRoleView } = useAuth();
@@ -109,10 +110,7 @@ export const AttendancePage: React.FC = () => {
 
       {activeRoleView !== UserRole.EMPLOYEE && (
         <>
-          {/* eSSL Integration Note Banner */}
-          <Alert variant="info" title="Hardware eSSL Biometric Machine Real-Time Ingestion">
-            Attendance punches are captured directly from hardware eSSL ZK-Teco biometric devices.
-          </Alert>
+          <AttendanceExcelLink />
 
           {/* Attendance Stats Cards */}
           <div className="stat-grid">

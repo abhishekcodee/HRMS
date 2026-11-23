@@ -40,7 +40,9 @@ export const EmployeesPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
+    typeof window !== 'undefined' && window.innerWidth <= 768 ? 'grid' : 'list'
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 

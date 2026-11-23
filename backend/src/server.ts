@@ -5,6 +5,8 @@ import { logger } from './utils/logger.js';
 import { pool } from './database/index.js';
 import { seedDatabase } from './database/seed.js';
 import { setupChatSockets } from './modules/chat/chatSocket.js';
+import { runPayrollSchemaUpgrade } from './modules/payroll/payrollSchemaSetup.js';
+import { startPayrollScheduler } from './modules/payroll/payrollAutomation.js';
 
 const server = app.listen(env.PORT, '0.0.0.0', async () => {
   logger.info(`🚀 HRMS Backend API Server started on port ${env.PORT}`);
@@ -16,6 +18,12 @@ const server = app.listen(env.PORT, '0.0.0.0', async () => {
   } catch (err) {
     logger.error('Auto seed database failed on server startup:', err);
   }
+  try {
+    await runPayrollSchemaUpgrade();
+  } catch (err) {
+    logger.error('Payroll schema upgrade failed on server startup:', err);
+  }
+  startPayrollScheduler();
 });
 
 // Initialize Socket.IO Real-Time Chat Engine

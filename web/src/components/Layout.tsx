@@ -190,7 +190,8 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
       label: 'Payroll & Finance',
       icon: <Receipt size={18} />,
       items: [
-        { path: '/payroll/processing', label: 'Payroll Processing Engine', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/payroll/processing', label: 'Run Payroll', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
+        { path: '/my-payslips', label: 'My Payslips', icon: <Receipt size={18} />, roles: [UserRole.EMPLOYEE] },
         { path: '/payroll/upcoming', label: 'Upcoming Payroll & Claims', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/payroll/structures', label: 'Salary Structures & Components', icon: <Receipt size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/payroll/statutory', label: 'Statutory Rules (PF/ESIC/PT)', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },

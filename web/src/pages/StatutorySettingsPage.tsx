@@ -94,6 +94,10 @@ export const StatutorySettingsPage: React.FC = () => {
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
           Configure versioned EPF rules, ESIC thresholds, State Professional Tax slabs, and Loans/Advances.
         </p>
+        <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '8px', padding: '10px 12px', borderRadius: '8px', background: 'var(--info-bg)', border: '1px solid var(--info-border)' }}>
+          Payroll uses the PF and ESIC switches in <a href="/payroll/processing" style={{ color: 'var(--info-text)', fontWeight: 600 }}>Run Payroll → Settings</a>.
+          Professional Tax slabs and loans added here are applied automatically (built-in PT slabs cover Maharashtra, Karnataka, West Bengal, Gujarat, Telangana, Andhra Pradesh, Assam, MP and Goa).
+        </p>
       </div>
 
       {/* Tabs */}
