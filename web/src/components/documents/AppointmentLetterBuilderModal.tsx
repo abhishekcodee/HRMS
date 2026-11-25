@@ -227,7 +227,7 @@ export const AppointmentLetterBuilderModal: React.FC<AppointmentLetterBuilderMod
 
       if (empJson.success && empJson.data) {
         const emp = empJson.data;
-        const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name || 'Abhishek Upadhyay';
+        const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name || 'Sample Employee';
         setLetterData((prev) => ({
           ...prev,
           employeeName: fullName,

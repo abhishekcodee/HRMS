@@ -165,7 +165,7 @@ export async function applyLeaveInDb(data: {
   leaveType: string;
   startDate: string;
   endDate: string;
-  daysCount: number;
+  halfDay?: 'FIRST_HALF' | 'SECOND_HALF';
   reason?: string;
   attachment?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {

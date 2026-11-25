@@ -243,7 +243,11 @@ function renderSalarySlipTemplate(payload: SalarySlipEmailPayload): string {
 // Function 1: Send Leave Applied Email to HR
 export async function sendLeaveAppliedEmail(payload: LeaveEmailPayload): Promise<{ success: boolean; notificationId: string; error?: string }> {
   const notificationId = uuidv4();
-  const hrTargetEmail = payload.hrEmail || process.env.HR_EMAIL || 'employer@hrms.com';
+  const hrTargetEmail = payload.hrEmail || process.env.HR_EMAIL || '';
+  if (!hrTargetEmail) {
+    logger.warn(`Leave request ${payload.leaveRequestId}: no approver e-mail found, in-app notification only`);
+    return { success: false, notificationId: '', error: 'No approver e-mail address' };
+  }
   const subject = `New Leave Request: ${payload.employeeName} (${payload.leaveType})`;
 
   // Duplicate Check

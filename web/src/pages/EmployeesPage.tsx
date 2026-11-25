@@ -27,12 +27,24 @@ import {
   Card,
   ConfirmDialog,
 } from '../components/ui';
-import { UserPlus, Eye, Edit, UserX, LayoutGrid, LayoutList, RefreshCw, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { UserPlus, Eye, Edit, UserX, LayoutGrid, LayoutList, RefreshCw, AlertTriangle, ShieldAlert, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
 
 export const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, activeRoleView } = useAuth();
+  const isHrUser = !!user?.isSuperAdmin || ['ADMIN', 'EMPLOYER', 'SUPER_ADMIN'].includes(String(activeRoleView || user?.role || '').toUpperCase());
+
+  const sendLoginLink = async (emp: any) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/${emp.id}/send-invite`, { method: 'POST', headers: getAuthHeaders(), body: '{}' });
+      const json = await res.json().catch(() => null);
+      window.alert(json?.message || json?.error?.message || (res.ok ? 'Login link sent.' : 'Could not send the login link.'));
+    } catch {
+      window.alert('Could not send the login link.');
+    }
+  };
   const [employees, setEmployees] = useState<EmployeeDbRecord[]>([]);
   const [departments, setDepartments] = useState<MasterDepartment[]>([]);
   const [companyLimit, setCompanyLimit] = useState<{ activeCount: number; maxEmployees: number } | null>(null);
@@ -181,7 +193,7 @@ export const EmployeesPage: React.FC = () => {
               <LayoutGrid size={16} />
             </Button>
           </div>
-          <Button
+          {isHrUser && <Button
             variant="primary"
             icon={<UserPlus size={16} />}
             onClick={() => {
@@ -195,7 +207,7 @@ export const EmployeesPage: React.FC = () => {
             title={isAtLimit ? 'Your employee limit has been reached. Please contact the Super Admin to increase your employee limit.' : 'Add new employee'}
           >
             + Add Employee
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -308,23 +320,29 @@ export const EmployeesPage: React.FC = () => {
                         items={[
                           {
                             id: 'view',
-                            label: 'View Employee Profile',
+                            label: 'View profile',
                             icon: <Eye size={14} />,
                             onClick: () => navigate(`/employees/${emp.id}`)
                           },
-                          {
+                          ...(isHrUser ? [{
                             id: 'edit',
-                            label: 'Edit Employee Record',
+                            label: 'Edit employee',
                             icon: <Edit size={14} />,
                             onClick: () => setEditingEmployee(emp)
+                          }] : []),
+                          ...(isHrUser ? [{
+                            id: 'invite',
+                            label: 'Send login link',
+                            icon: <Mail size={14} />,
+                            onClick: () => sendLoginLink(emp)
                           },
                           {
                             id: 'status',
-                            label: emp.status === 'active' ? 'Deactivate (Soft Delete)' : 'Reactivate Account',
+                            label: emp.status === 'active' ? 'Deactivate' : 'Reactivate',
                             icon: <UserX size={14} />,
                             danger: emp.status === 'active',
                             onClick: () => setDeactivatingEmployee(emp)
-                          }
+                          }] : [])
                         ]}
                       />
                     </Td>

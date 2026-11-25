@@ -127,12 +127,12 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   const [docTypeStateMap, setDocTypeStateMap] = useState<Record<string, any>>({
     OFFER_LETTER: {
       documentDate: '31/08/2026',
-      employeeName: 'Abhishek Upadhyay',
+      employeeName: 'Sample Employee',
       employeeCode: 'EMP-OFFER-001',
       salutation: 'Mr.',
       designation: 'IOT Developer',
       department: 'IoT & Embedded Engineering',
-      employeeAddress: 'Flat 101, Absolute Motion Complex',
+      employeeAddress: 'Employee address',
       city: 'Navi Mumbai',
       state: 'Maharashtra',
       pincode: '400701',
@@ -233,14 +233,14 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
     },
     PAYSLIP: {
       payMonthYear: 'Aug 2026',
-      employeeName: 'ABHISHEK UPADHYAY',
-      employeeCode: 'AMPL-00088',
+      employeeName: 'SAMPLE EMPLOYEE',
+      employeeCode: 'EMP-0001',
       salutation: 'Mr.',
       designation: 'IOT Developer',
       department: 'IoT Engineering',
       workedDays: '28.00',
       joiningDate: '1-Nov-2025',
-      uanNo: '102215947068',
+      uanNo: '000000000000',
       prevBalLeaves: '5.50',
       enjoyedLeaves: '4.50',
       balanceLeaves: '1.00',
@@ -280,13 +280,13 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   const [inputMode, setInputMode] = useState<'autofill' | 'manual'>('autofill');
   const [employeesList, setEmployeesList] = useState<any[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [employeeName, setEmployeeName] = useState('Abhishek Upadhyay');
+  const [employeeName, setEmployeeName] = useState('Sample Employee');
   const [employeeCode, setEmployeeCode] = useState('EMP-OFFER-001');
   const [salutation, setSalutation] = useState('Mr.');
   const [designation, setDesignation] = useState('IOT Developer');
   const [department, setDepartment] = useState('IoT & Embedded Engineering');
   const [documentDate, setDocumentDate] = useState('31/08/2026');
-  const [employeeAddress, setEmployeeAddress] = useState('Flat 101, Absolute Motion Complex');
+  const [employeeAddress, setEmployeeAddress] = useState('Employee address');
   const [city, setCity] = useState('Navi Mumbai');
   const [state, setState] = useState('Maharashtra');
   const [pincode, setPincode] = useState('400701');
@@ -319,7 +319,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   // Payslip Specific Fields
   const [payMonthYear, setPayMonthYear] = useState('Aug 2026');
   const [workedDays, setWorkedDays] = useState('28.00');
-  const [uanNo, setUanNo] = useState('102215947068');
+  const [uanNo, setUanNo] = useState('000000000000');
   const [prevBalLeaves, setPrevBalLeaves] = useState('5.50');
   const [enjoyedLeaves, setEnjoyedLeaves] = useState('4.50');
   const [balanceLeaves, setBalanceLeaves] = useState('1.00');
@@ -882,7 +882,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
     ]);
     setCustomClosingText(targetState.customClosingText || 'We look forward to your continued contribution and success with {{company_name}}.');
 
-    setEmployeeName(targetState.employeeName || (newDocType === 'OFFER_LETTER' ? 'Abhishek Upadhyay' : 'Jake Willms'));
+    setEmployeeName(targetState.employeeName || (newDocType === 'OFFER_LETTER' ? 'Sample Employee' : 'Jake Willms'));
     setEmployeeCode(targetState.employeeCode || (newDocType === 'OFFER_LETTER' ? 'EMP-OFFER-001' : 'EMP-APPT-001'));
     setSalutation(targetState.salutation || 'Mr.');
     setDesignation(targetState.designation || (newDocType === 'OFFER_LETTER' ? 'IOT Developer' : 'Data Analyst'));
@@ -1822,7 +1822,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                         </div>
                         <div>
                           <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>UAN Number</label>
-                          <Input value={uanNo} onChange={(e) => setUanNo(e.target.value)} placeholder="102215947068" />
+                          <Input value={uanNo} onChange={(e) => setUanNo(e.target.value)} placeholder="000000000000" />
                         </div>
                       </div>
 

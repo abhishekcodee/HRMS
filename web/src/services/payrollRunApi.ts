@@ -5,6 +5,7 @@ export interface PayrollSettings {
   weeklyOffs: number[];
   secondFourthSaturdayOff: boolean;
   missingAttendanceRule: 'ABSENT' | 'PRESENT';
+  missedPunchRule?: 'HALF_DAY' | 'PRESENT' | 'ABSENT';
   basicPercent: number;
   hraPercentOfBasic: number;
   overtimeEnabled: boolean;

@@ -8,7 +8,8 @@ async function setupSingleAdminAndDemo() {
 
   try {
     const adminEmail = 'amanupadhyay2030@gmail.com';
-    const adminPassRaw = 'Amanupa10';
+    const adminPassRaw = process.env.SUPER_ADMIN_PASSWORD || '';
+    if (adminPassRaw.length < 10) throw new Error('Set SUPER_ADMIN_PASSWORD (at least 10 characters) before running this script.');
     const adminHash = await bcrypt.hash(adminPassRaw, 10);
 
     // 1. Update or Insert the ONLY authorized Super Admin

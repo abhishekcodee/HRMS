@@ -3,11 +3,11 @@ import bcrypt from 'bcryptjs';
 
 async function main() {
   const conn = await mysql.createConnection({
-    host: 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com',
+    host: process.env.DB_HOST,
     port: 4000,
-    user: '2wmQscp4a6Rw6js.root',
-    password: 'N6UFsQIoc5k2JlHB',
-    database: 'hrms_db',
+    user: process.env.DB_USERNAME || process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'hrms_db',
     ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
   });
 
@@ -17,8 +17,8 @@ async function main() {
 
   if (rows.length > 0) {
     for (const u of rows) {
-      const match = await bcrypt.compare('Amanupa10', u.password_hash);
-      console.log(`User ${u.email} matches Amanupa10?`, match);
+      const check = process.env.CHECK_PASSWORD;
+      if (check) console.log(`User ${u.email} matches CHECK_PASSWORD?`, await bcrypt.compare(check, u.password_hash));
     }
   }
 

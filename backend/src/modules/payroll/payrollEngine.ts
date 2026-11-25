@@ -93,7 +93,7 @@ export async function loadCompanyMonthData(
   const monthEnd = ymd(year, month, daysInMonth(year, month));
   const today = companyToday(settings.automation.utcOffsetMinutes).date;
 
-  const empParams: any[] = [companyId, monthStart];
+  const empParams: any[] = [companyId, monthStart, monthEnd];
   let empSql = `
     SELECT u.id, u.employee_id AS employeeCode, u.full_name AS fullName, u.email, u.status,
            ep.department_name AS department, ep.designation, ep.salary, ep.joining_date AS joiningDate,
@@ -103,7 +103,8 @@ export async function loadCompanyMonthData(
     FROM users u
     JOIN employee_profiles ep ON ep.user_id = u.id
     WHERE u.company_id = ?
-      AND (LOWER(u.status) = 'active' OR (ep.last_working_date IS NOT NULL AND ep.last_working_date >= ?))`;
+      AND (LOWER(u.status) = 'active' OR (ep.last_working_date IS NOT NULL AND ep.last_working_date >= ?))
+      AND (ep.joining_date IS NULL OR ep.joining_date = '' OR ep.joining_date <= ?)`;
   if (options.includeEmployeeIds && options.includeEmployeeIds.length > 0) {
     empSql += ` AND u.id IN (${options.includeEmployeeIds.map(() => '?').join(',')})`;
     empParams.push(...options.includeEmployeeIds);
@@ -169,7 +170,7 @@ export async function loadCompanyMonthData(
     }
 
     const [leaveRows]: any = await pool.query(
-      `SELECT lr.user_id, lr.leave_type, lr.start_date, lr.end_date FROM leave_requests lr
+      `SELECT lr.user_id, lr.leave_type, lr.start_date, lr.end_date, lr.half_day FROM leave_requests lr
        WHERE lr.user_id IN (${ph}) AND lr.start_date <= ? AND lr.end_date >= ? AND ${APPROVED_LEAVE_SQL}`,
       [...ids, monthEnd, monthStart]
     );
@@ -185,7 +186,7 @@ export async function loadCompanyMonthData(
       const lastDay = Number(to.split('-')[2]);
       for (let d = fd; d <= lastDay; d++) {
         const date = ymd(fy, fm, d);
-        byDate.set(date, { leaveType: normaliseLeaveType(l.leave_type), paid: isPaidLeaveType(l.leave_type) });
+        byDate.set(date, { leaveType: normaliseLeaveType(l.leave_type), paid: isPaidLeaveType(l.leave_type), half: !!l.half_day });
       }
     }
   }

@@ -61,6 +61,7 @@ export function sanitizeSettings(raw: any): PayrollSettings {
     weeklyOffs,
     secondFourthSaturdayOff: bool(s.secondFourthSaturdayOff, d.secondFourthSaturdayOff),
     missingAttendanceRule: s.missingAttendanceRule === 'PRESENT' ? 'PRESENT' : 'ABSENT',
+    missedPunchRule: ['PRESENT', 'ABSENT'].includes(s.missedPunchRule) ? s.missedPunchRule : 'HALF_DAY',
     basicPercent: num(s.basicPercent, d.basicPercent, 10, 100),
     hraPercentOfBasic: num(s.hraPercentOfBasic, d.hraPercentOfBasic, 0, 100),
     overtimeEnabled: bool(s.overtimeEnabled, d.overtimeEnabled),

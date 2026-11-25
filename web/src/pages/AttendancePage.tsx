@@ -26,6 +26,7 @@ import {
 } from '../components/ui';
 import { CalendarDays, Clock, RefreshCw } from 'lucide-react';
 import { AttendanceExcelLink } from '../components/AttendanceExcelLink';
+import { HrAttendanceCorrections, MyAttendanceCalendar } from '../components/AttendanceCorrections';
 
 export const AttendancePage: React.FC = () => {
   const { user, activeRoleView } = useAuth();
@@ -110,6 +111,7 @@ export const AttendancePage: React.FC = () => {
 
       {activeRoleView !== UserRole.EMPLOYEE && (
         <>
+          <HrAttendanceCorrections />
           <AttendanceExcelLink />
 
           {/* Attendance Stats Cards */}
@@ -139,6 +141,8 @@ export const AttendancePage: React.FC = () => {
           </div>
         </>
       )}
+
+      {activeRoleView === UserRole.EMPLOYEE && <MyAttendanceCalendar />}
 
       {error && (
         <Alert variant="error" title="Unable to load attendance" onClose={() => setError(null)}>

@@ -505,7 +505,7 @@ DOCUMENT CLAUSES & RECORD BODY:
                         <li><strong>Document Title:</strong> {activeDoc.title}</li>
                         <li><strong>Category Type:</strong> {activeDoc.category}</li>
                         <li><strong>Allocated Size:</strong> {activeDoc.fileSize}</li>
-                        <li><strong>Archival Protocol:</strong> MySQL Encrypted Record</li>
+                        
                       </ul>
                     </div>
 
@@ -621,7 +621,7 @@ DOCUMENT CLAUSES & RECORD BODY:
               Cancel
             </Button>
             <Button type="submit" variant="primary" isLoading={uploading}>
-              Upload Document (Save DB)
+              Upload Document
             </Button>
           </div>
         </form>

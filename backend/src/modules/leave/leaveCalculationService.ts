@@ -11,7 +11,7 @@ export interface FinancialYearInfo {
 }
 
 export interface LeaveTypeBalance {
-  leaveType: 'CL' | 'PL';
+  leaveType: 'CL' | 'PL' | 'SL';
   allocated: number;
   used: number;
   pending: number;
@@ -46,6 +46,8 @@ export interface EmployeeLeaveSummary {
     annualCL: number;
   };
   pl: LeaveTypeBalance & PLEntitlementResult;
+  /** Sick leave: yearly quota (setting "sickLeave", default 7), pro-rated from joining like CL */
+  sl: LeaveTypeBalance;
 }
 
 /**
@@ -423,7 +425,7 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
     const fy = getFinancialYear();
 
     // 2. Fetch Annual Leave Policies from system_settings or default
-    const leaveSettings = await readSettings(['casualLeave', 'earnedLeave', 'privilegeLeave'], emp.companyId, conn as any);
+    const leaveSettings = await readSettings(['casualLeave', 'earnedLeave', 'privilegeLeave', 'sickLeave'], emp.companyId, conn as any);
 
     let annualCL = 10.0; // Default 10 days for CL
     let annualPL = 14.0; // Default 14 days for PL per financial year
@@ -441,6 +443,11 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
     const plCalc = calculatePLEntitlement(joiningDate, totalExperienceYears, fy, annualPL);
     const plAllocated = plCalc.plEntitlement;
 
+    let annualSL = 7.0;
+    const slVal = parseFloat(leaveSettings.sickLeave);
+    if (!isNaN(slVal) && slVal >= 0) annualSL = slVal;
+    const slAllocated = annualSL > 0 ? calculateCLEntitlement(joiningDate, fy, annualSL).clEntitlement : 0;
+
     // 4. Fetch Used & Pending Leave Requests for Current Financial Year
     const [reqRows]: any = await conn.query(
       `SELECT leave_type as leaveType, status, employer_status as employerStatus, admin_status as adminStatus,
@@ -457,18 +464,21 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
     let clPending = 0;
     let plUsed = 0;
     let plPending = 0;
+    let slUsed = 0;
+    let slPending = 0;
 
     for (const req of reqRows) {
       const type = String(req.leaveType).toUpperCase();
       const isCL = type === 'CL' || type.includes('CASUAL');
-      const isPL = type === 'PL' || type.includes('PRIVILEGE') || type.includes('EARNED');
+      const isPL = type === 'PL' || type === 'EL' || type.includes('PRIVILEGE') || type.includes('EARNED');
+      const isSL = type === 'SL' || type.includes('SICK');
 
       const isApproved = req.status === 'APPROVED' || req.employerStatus === 'APPROVED' || req.adminStatus === 'APPROVED';
       const isRejected = req.status === 'REJECTED' || req.employerStatus === 'REJECTED' || req.adminStatus === 'REJECTED';
       const isPending = !isApproved && !isRejected;
 
-      const rawDays = parseFloat(req.daysCount) || 0;
-      const days = calculateCLPLDuration(rawDays, req.leaveType);
+      // Days are counted by the server when the leave is applied (working days, 0.5 for a half day)
+      const days = Math.max(0, parseFloat(req.daysCount) || 0);
 
       if (isCL) {
         if (isApproved) clUsed += days;
@@ -476,16 +486,23 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
       } else if (isPL) {
         if (isApproved) plUsed += days;
         else if (isPending) plPending += days;
+      } else if (isSL) {
+        if (isApproved) slUsed += days;
+        else if (isPending) slPending += days;
       }
     }
 
-    clUsed = roundLeave(clUsed);
-    clPending = roundLeave(clPending);
-    plUsed = roundLeave(plUsed);
-    plPending = roundLeave(plPending);
+    const half = (n: number) => Math.round(n * 2) / 2;
+    clUsed = half(clUsed);
+    clPending = half(clPending);
+    plUsed = half(plUsed);
+    plPending = half(plPending);
+    slUsed = half(slUsed);
+    slPending = half(slPending);
 
-    const clRemaining = roundLeave(Math.max(0, clAllocated - clUsed - clPending));
-    const plRemaining = roundLeave(Math.max(0, plAllocated - plUsed - plPending));
+    const clRemaining = half(Math.max(0, clAllocated - clUsed - clPending));
+    const plRemaining = half(Math.max(0, plAllocated - plUsed - plPending));
+    const slRemaining = half(Math.max(0, slAllocated - slUsed - slPending));
 
     // 5. Update/Sync leave_balances Table in Database
     await conn.query(
@@ -548,6 +565,13 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
         pending: plPending,
         remaining: plRemaining,
         ...plCalc,
+      },
+      sl: {
+        leaveType: 'SL',
+        allocated: slAllocated,
+        used: slUsed,
+        pending: slPending,
+        remaining: slRemaining,
       },
     };
   } finally {

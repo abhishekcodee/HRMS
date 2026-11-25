@@ -940,7 +940,7 @@ export const CalendarPage: React.FC = () => {
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Save Event (Save DB)
+              Save Event
             </Button>
           </div>
         </form>

@@ -113,7 +113,7 @@ export const SalarySlipBulkPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Salary_Slip_${singleEmployeeId || 'AMPL-00088'}_${singleMonth}_${singleYear}</title>
+          <title>Salary_Slip_${singleEmployeeId || 'EMP-0001'}_${singleMonth}_${singleYear}</title>
           <style>
             @page { size: A4 portrait; margin: 0; }
             * { box-sizing: border-box; }
@@ -137,15 +137,15 @@ export const SalarySlipBulkPage: React.FC = () => {
 
   // Live Payslip Template Data matching Image 2 & 3
   const currentPayslipData: PayslipData = {
-    companyName: 'ABSOLUTE MOTION PVT LTD',
+    companyName: 'YOUR COMPANY PVT LTD',
     companyAddress: 'Address: R-601, Midc TTC Area, Near Hitech Radiator Tank Division, Navi Mumbai, Maharashtra 400701',
     payMonthYear: `${singleMonth.slice(0, 3)} ${singleYear}`,
-    employeeName: singleEmployeeName || (singleEmployeeId ? `Employee (${singleEmployeeId})` : 'ABHISHEK UPADHYAY'),
-    employeeCode: singleEmployeeId || 'AMPL-00088',
+    employeeName: singleEmployeeName || (singleEmployeeId ? `Employee (${singleEmployeeId})` : 'SAMPLE EMPLOYEE'),
+    employeeCode: singleEmployeeId || 'EMP-0001',
     designation: singleDesignation || 'IOT Developer',
     workedDays: '28.00',
     joiningDate: '1-Nov-2025',
-    uanNo: '102215947068',
+    uanNo: '000000000000',
     prevBalLeaves: '5.50',
     enjoyedLeaves: '4.50',
     balanceLeaves: '1.00',
@@ -334,11 +334,11 @@ export const SalarySlipBulkPage: React.FC = () => {
       setSingleEmployeeEmail(emp.email || '');
       setSingleDesignation(emp.designation || '');
       setSingleDepartment(emp.department || emp.department_name || '');
-      // Auto-fill salary if exists or for AMPL-00088 / Abhishek Upadhyay from Image 2
+      // Auto-fill salary if exists or for EMP-0001 / Sample Employee from Image 2
       const candidateSalary = (emp as any).salaryDetails?.basicSalary || (emp as any).basicSalary;
       if (candidateSalary) {
         calculateBreakdownFromBasic(String(candidateSalary));
-      } else if (emp.employeeId === 'AMPL-00088' || emp.emp_code === 'AMPL-00088' || (emp.fullName && emp.fullName.toLowerCase().includes('abhishek'))) {
+      } else if (emp.employeeId === 'EMP-0001' || emp.emp_code === 'EMP-0001' || (emp.fullName && emp.fullName.toLowerCase().includes('abhishek'))) {
         calculateBreakdownFromBasic('16205');
       }
     }
@@ -729,7 +729,7 @@ export const SalarySlipBulkPage: React.FC = () => {
                       Employee ID <span style={{ color: '#EF4444' }}>*</span>
                     </label>
                     <Input
-                      placeholder="e.g. AMPL-00088"
+                      placeholder="e.g. EMP-0001"
                       value={singleEmployeeId}
                       onChange={(e) => setSingleEmployeeId(e.target.value)}
                       required
@@ -741,7 +741,7 @@ export const SalarySlipBulkPage: React.FC = () => {
                       Employee Full Name
                     </label>
                     <Input
-                      placeholder="e.g. Abhishek Upadhyay"
+                      placeholder="e.g. Sample Employee"
                       value={singleEmployeeName}
                       onChange={(e) => setSingleEmployeeName(e.target.value)}
                     />
@@ -1076,7 +1076,7 @@ export const SalarySlipBulkPage: React.FC = () => {
                     {/* Status hint */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', fontSize: '11.5px' }}>
                       <span style={{ fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        ✓ Exact Reference Match (Absolute Motion Pvt. Ltd.)
+                        Payslip layout preview
                       </span>
                       <span style={{ color: '#64748B' }}>A4 Scaled Vector View</span>
                     </div>
@@ -1139,7 +1139,7 @@ export const SalarySlipBulkPage: React.FC = () => {
                       <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px', marginBottom: '14px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <span style={{ color: '#64748B' }}>Employee ID:</span>
-                          <strong style={{ fontFamily: 'monospace' }}>{singleEmployeeId || 'AMPL-00088'}</strong>
+                          <strong style={{ fontFamily: 'monospace' }}>{singleEmployeeId || 'EMP-0001'}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <span style={{ color: '#64748B' }}>Pay Period:</span>

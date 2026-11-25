@@ -170,17 +170,17 @@ export async function getReportsOverview(req: AuthRequest, res: Response): Promi
         activeEmployees: activeCount,
         inactiveEmployees: inactiveCount,
         newHires: newHiresCount,
-        newHiresTrendPct: '+5.4% vs previous period',
+        newHiresTrendPct: '',
         attritionCount,
         attritionRate: `${attritionRate}%`,
-        attritionTrendPct: '-1.2% vs previous period',
+        attritionTrendPct: '',
         absenteeismRate: `${absenteeismRate}%`,
         totalAbsentDays,
-        absenteeismTrendPct: '-0.8% vs previous period',
-        headcountGrowthPct: '+4.2%',
+        absenteeismTrendPct: '',
+        headcountGrowthPct: '',
         totalPayrollCost,
         avgPayrollCost: Math.round(avgPayrollCost),
-        payrollTrendPct: '+3.1% vs previous period',
+        payrollTrendPct: '',
         totalOvertimeHours: parseFloat(totalOvertimeHours),
         totalOvertimeCost: parseFloat(totalOvertimeCost),
         leaveUtilizedDays: totalUsedDays,
@@ -302,10 +302,8 @@ export async function getAttritionAnalytics(req: AuthRequest, res: Response): Pr
       data: {
         totalLeft: attritionDept.reduce((acc: number, r: any) => acc + parseInt(r.count, 10), 0),
         byDepartment: attritionDept.map((r: any) => ({ department: r.department, count: parseInt(r.count, 10) })),
-        exitReasons: [
-          { reason: 'Career Growth / Better Opportunity', count: 2 },
-          { reason: 'Personal / Relocation', count: 1 },
-        ],
+        // Exit reasons are not recorded yet, so none are reported (previously hard-coded sample values)
+        exitReasons: [],
       },
     });
   } catch (error: any) {
@@ -523,17 +521,11 @@ export async function getRecruitmentAnalytics(_req: AuthRequest, res: Response):
   res.json({
     success: true,
     data: {
-      funnel: [
-        { stage: 'Applicants', count: 48 },
-        { stage: 'Screening', count: 32 },
-        { stage: 'Shortlisted', count: 18 },
-        { stage: 'Interview', count: 12 },
-        { stage: 'Selected', count: 6 },
-        { stage: 'Offered', count: 5 },
-        { stage: 'Joined', count: 4 },
-      ],
-      conversionRate: '8.3%',
-      avgTimeToHireDays: 24,
+      // There is no recruitment module yet: report nothing instead of sample numbers
+      funnel: [],
+      conversionRate: '—',
+      avgTimeToHireDays: 0,
+      available: false,
     },
   });
 }

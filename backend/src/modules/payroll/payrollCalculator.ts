@@ -25,6 +25,8 @@ export interface PayrollPolicy {
   secondFourthSaturdayOff: boolean;
   /** What a past working day with no punch and no approved leave counts as */
   missingAttendanceRule: 'ABSENT' | 'PRESENT';
+  /** A day with a single punch (no regularisation yet) counts as: half day (default), present or absent */
+  missedPunchRule: 'HALF_DAY' | 'PRESENT' | 'ABSENT';
   basicPercent: number;
   hraPercentOfBasic: number;
   overtimeEnabled: boolean;
@@ -41,6 +43,7 @@ export const DEFAULT_POLICY: PayrollPolicy = {
   weeklyOffs: [0],
   secondFourthSaturdayOff: false,
   missingAttendanceRule: 'ABSENT',
+  missedPunchRule: 'HALF_DAY',
   basicPercent: 50,
   hraPercentOfBasic: 40,
   overtimeEnabled: false,
@@ -60,6 +63,8 @@ export interface AttendanceDay {
 export interface LeaveDay {
   leaveType: string;
   paid: boolean;
+  /** Half-day leave: only half of the day is covered by this leave */
+  half?: boolean;
 }
 
 export interface SalaryComponents {
@@ -112,7 +117,7 @@ export interface MonthInput {
   ptSlabs?: PtSlab[] | null;
 }
 
-const PRESENT_STATUSES = new Set(['PRESENT', 'LATE', 'EARLY_LEAVING', 'ON_DUTY', 'WORK_FROM_HOME', 'WFH', 'MISSING_PUNCH', 'OTHER']);
+const PRESENT_STATUSES = new Set(['PRESENT', 'LATE', 'EARLY_LEAVING', 'ON_DUTY', 'WORK_FROM_HOME', 'WFH', 'OTHER']);
 const PAID_LEAVE_STATUSES = new Set(['PAID_LEAVE', 'COMP_OFF', 'LEAVE', 'CL', 'PL', 'SL', 'EL']);
 const LOP_STATUSES = new Set(['ABSENT', 'UNPAID_LEAVE', 'LWP', 'LOP']);
 const UNPAID_LEAVE_TYPES = ['LWP', 'LOP', 'UNPAID', 'WITHOUT PAY'];
@@ -174,7 +179,7 @@ export interface ClassifiedDay {
 export function classifyMonth(
   employee: Pick<EmployeePayrollInput, 'joiningDate' | 'lastWorkingDate'>,
   month: Pick<MonthInput, 'year' | 'month' | 'today' | 'holidays' | 'attendance' | 'leaves'>,
-  policy: Pick<PayrollPolicy, 'weeklyOffs' | 'secondFourthSaturdayOff' | 'missingAttendanceRule'>
+  policy: Pick<PayrollPolicy, 'weeklyOffs' | 'secondFourthSaturdayOff' | 'missingAttendanceRule'> & Partial<Pick<PayrollPolicy, 'missedPunchRule'>>
 ): ClassifiedDay[] {
   const total = daysInMonth(month.year, month.month);
   const doj = normaliseDate(employee.joiningDate);
@@ -197,7 +202,17 @@ export function classifyMonth(
 
     // Worked days win over everything else (an approved leave on a day the person actually worked is not a loss of pay)
     if (PRESENT_STATUSES.has(status)) {
-      out.push({ ...base, kind: 'PRESENT', code: 'P', detail: status === 'MISSING_PUNCH' ? 'Single punch' : undefined, lopUnits: 0 });
+      out.push({ ...base, kind: 'PRESENT', code: 'P', lopUnits: 0 });
+      continue;
+    }
+    if (status === 'MISSING_PUNCH') {
+      const rule = policy.missedPunchRule || 'HALF_DAY';
+      if (rule === 'PRESENT') out.push({ ...base, kind: 'PRESENT', code: 'P', detail: 'Missed punch (paid)', lopUnits: 0 });
+      else if (rule === 'ABSENT' && !(leave && leave.paid)) out.push({ ...base, kind: 'LOP', code: 'MP', detail: 'Missed punch, not regularised', lopUnits: 1 });
+      else {
+        const covered = leave && leave.paid;
+        out.push({ ...base, kind: 'HALF_DAY', code: 'MP', detail: covered ? `½ ${leave!.leaveType}` : 'Missed punch, not regularised', lopUnits: covered ? 0 : 0.5 });
+      }
       continue;
     }
     if (status === 'HALF_DAY') {
@@ -220,6 +235,19 @@ export function classifyMonth(
       continue;
     }
 
+    if (leave && leave.half) {
+      // Half the day is leave; the other half is worked only if there is a punch (handled above), so it is
+      // absent in the past (unless the company treats days without a record as present) and assumed worked in the future
+      const otherHalfLop = date > month.today || policy.missingAttendanceRule === 'PRESENT' ? 0 : 0.5;
+      out.push({
+        ...base,
+        kind: 'HALF_DAY',
+        code: 'HD',
+        detail: `½ ${leave.leaveType}${leave.paid ? '' : ' (unpaid)'}`,
+        lopUnits: (leave.paid ? 0 : 0.5) + otherHalfLop,
+      });
+      continue;
+    }
     if (leave) {
       if (leave.paid) out.push({ ...base, kind: 'PAID_LEAVE', code: String(leave.leaveType).toUpperCase().slice(0, 4), detail: leave.leaveType, lopUnits: 0 });
       else out.push({ ...base, kind: 'LOP', code: 'LWP', detail: leave.leaveType, lopUnits: 1 });
@@ -279,7 +307,11 @@ export function summariseDays(days: ClassifiedDay[], lateMarksPerHalfDay = 0): A
       case 'PRESENT': t.presentDays += 1; t.workingDays += 1; break;
       case 'HALF_DAY':
         t.presentDays += 0.5; t.halfDays += 1; t.workingDays += 1;
-        if (d.lopUnits === 0) { t.paidLeaveDays += 0.5; const k = String(d.detail || 'Leave').replace('½ ', '').toUpperCase(); t.leaveBreakdown[k] = (t.leaveBreakdown[k] || 0) + 0.5; }
+        if (d.detail && d.detail.startsWith('½ ') && !d.detail.includes('unpaid')) {
+          t.paidLeaveDays += 0.5;
+          const k = d.detail.replace('½ ', '').toUpperCase();
+          t.leaveBreakdown[k] = (t.leaveBreakdown[k] || 0) + 0.5;
+        }
         break;
       case 'PAID_LEAVE': {
         t.paidLeaveDays += 1; t.workingDays += 1;

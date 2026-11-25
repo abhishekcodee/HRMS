@@ -10,6 +10,7 @@ import {
   updateEmployee,
   updateEmployeeStatus,
   getEmployeeAttendanceById,
+  sendEmployeeInvite,
 } from './employeeCrudController.js';
 
 const router = Router();
@@ -41,6 +42,7 @@ router.get('/:id/attendance', selfOrHr, getEmployeeAttendanceById);
 router.post('/', requireHr, createEmployee);
 router.put('/:id', hrOrSelfLimitedUpdate, updateEmployee);
 router.patch('/:id/status', requireHr, updateEmployeeStatus);
+router.post('/:id/send-invite', requireHr, sendEmployeeInvite);
 
 /**
  * Employees Module Boundary

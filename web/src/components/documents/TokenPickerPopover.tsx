@@ -10,7 +10,7 @@ export interface TokenItem {
 
 export const TOKEN_LIBRARY: TokenItem[] = [
   // Employee
-  { token: '{{employee.full_name}}', label: 'Employee Full Name', category: 'employee', sampleValue: 'Abhishek Upadhyay' },
+  { token: '{{employee.full_name}}', label: 'Employee Full Name', category: 'employee', sampleValue: 'Sample Employee' },
   { token: '{{employee.first_name}}', label: 'Employee First Name', category: 'employee', sampleValue: 'Abhishek' },
   { token: '{{employee.code}}', label: 'Employee Code / ID', category: 'employee', sampleValue: 'AMPL-00125' },
   { token: '{{employee.designation}}', label: 'Designation', category: 'employee', sampleValue: 'Software Developer' },

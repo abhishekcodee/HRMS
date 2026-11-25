@@ -1,5 +1,7 @@
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sendPasswordLink } from '../auth/passwordLinks.js';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
@@ -31,7 +33,7 @@ function validateEmployeeInput(body: any, isCreate: boolean): string | null {
     }
   }
   if (body.fullName !== undefined && body.fullName !== null && String(body.fullName).trim().length > 150) return 'Name is too long (max 150 characters).';
-  if (isCreate && body.password !== undefined && String(body.password).length < 8) return 'Initial password must be at least 8 characters.';
+  if (isCreate && body.password && String(body.password).length < 8) return 'Initial password must be at least 8 characters.';
   return null;
 }
 
@@ -289,10 +291,10 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
       managerName,
     } = req.body;
 
-    if (!employeeId || !fullName || !email || !password) {
+    if (!employeeId || !fullName || !email) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Employee ID, Full Name, Email, and Password are required.' },
+        error: { code: 'VALIDATION_ERROR', message: 'Employee ID, full name and e-mail are required.' },
       });
       return;
     }
@@ -336,7 +338,9 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     }
 
     const userId = uuidv4();
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Without a password from HR the account gets a random, unusable one and the employee sets their own via the welcome e-mail
+    const hrSetPassword = typeof password === 'string' && password.length >= 8;
+    const passwordHash = await bcrypt.hash(hrSetPassword ? password : crypto.randomBytes(24).toString('hex'), 10);
     const userRole = roleCheck.role || 'employee';
     const userStatus = status ? String(status).toLowerCase() : 'active';
 
@@ -360,8 +364,8 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
     // Insert user
     await pool.query(
       `INSERT INTO users (id, company_id, employee_id, full_name, email, phone, password_hash, role, status, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [userId, companyId, trimmedEmpId, fullName.trim(), trimmedEmail, phone ? phone.trim() : null, passwordHash, userRole, userStatus]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, companyId, trimmedEmpId, fullName.trim(), trimmedEmail, phone ? phone.trim() : null, passwordHash, userRole, userStatus, hrSetPassword ? 1 : 0]
     );
 
     const expNum = parseFloat(req.body.experienceYears);
@@ -447,10 +451,15 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
       ]
     );
 
+    const invite = userStatus === 'active' ? await sendPasswordLink(userId, 'WELCOME', req) : { sent: false, reason: 'Account not active' };
+
     res.status(201).json({
       success: true,
-      message: `Employee ${fullName} created successfully in database.`,
+      message: invite.sent
+        ? `${fullName} added. A welcome e-mail with a link to set their password was sent to ${trimmedEmail}.`
+        : `${fullName} added, but the welcome e-mail was not sent (${invite.reason}).${hrSetPassword ? ' Share the initial password with them yourself.' : ' Use "Send login link" once e-mail is set up.'}`,
       data: {
+        inviteSent: invite.sent,
         id: userId,
         employeeId: trimmedEmpId,
         fullName,
@@ -849,3 +858,27 @@ export async function getEmployeeAttendanceById(req: AuthRequest, res: Response)
   }
 }
 
+
+
+/** HR re-sends the welcome / set-password e-mail to an employee of its company. */
+export async function sendEmployeeInvite(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const [rows]: any = await pool.query('SELECT id, full_name, email, status FROM users WHERE id = ? AND company_id = ?', [req.params.id, getTenantId(req)]);
+    if (!rows.length) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Employee not found in your company.' } });
+      return;
+    }
+    if (String(rows[0].status).toLowerCase() !== 'active') {
+      res.status(409).json({ success: false, error: { code: 'INACTIVE', message: 'Activate the employee before sending a login link.' } });
+      return;
+    }
+    const result = await sendPasswordLink(rows[0].id, 'WELCOME', req);
+    if (!result.sent) {
+      res.status(503).json({ success: false, error: { code: 'EMAIL_NOT_SENT', message: `Login link not sent: ${result.reason}.` } });
+      return;
+    }
+    res.json({ success: true, message: `Login link sent to ${rows[0].email}.` });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to send the login link.' } });
+  }
+}

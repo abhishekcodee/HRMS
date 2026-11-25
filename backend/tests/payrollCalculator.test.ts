@@ -165,6 +165,32 @@ describe('payroll calculator', () => {
   });
 });
 
+describe('missed punches and half-day leave', () => {
+  it('a missed punch costs half a day by default, a full day or nothing depending on the setting', () => {
+    const m = month({ present: allWorkingDays([3]) });
+    m.attendance.set(ymd(Y, M, 3), { status: 'MISSING_PUNCH' });
+    expect(calculateMonthlyPayroll({ monthlyGross: 30000 }, m, policy()).attendance.lopDays).toBe(0.5);
+    expect(calculateMonthlyPayroll({ monthlyGross: 30000 }, m, policy({ missedPunchRule: 'ABSENT' })).attendance.lopDays).toBe(1);
+    expect(calculateMonthlyPayroll({ monthlyGross: 30000 }, m, policy({ missedPunchRule: 'PRESENT' })).attendance.lopDays).toBe(0);
+  });
+
+  it('half a day of paid leave with no punch costs half a day; with a half-day punch it costs nothing', () => {
+    const m = month({ present: allWorkingDays([4, 5]) });
+    m.leaves.set(ymd(Y, M, 4), { leaveType: 'CL', paid: true, half: true });
+    m.leaves.set(ymd(Y, M, 5), { leaveType: 'CL', paid: true, half: true });
+    m.attendance.set(ymd(Y, M, 5), { status: 'HALF_DAY' });
+    const r = calculateMonthlyPayroll({ monthlyGross: 30000 }, m, policy());
+    expect(r.attendance.lopDays).toBe(0.5);
+    expect(r.attendance.paidLeaveDays).toBe(1);
+  });
+
+  it('half a day of leave without pay plus no punch is a full day of LOP', () => {
+    const m = month({ present: allWorkingDays([6]) });
+    m.leaves.set(ymd(Y, M, 6), { leaveType: 'LWP', paid: false, half: true });
+    expect(calculateMonthlyPayroll({ monthlyGross: 30000 }, m, policy()).attendance.lopDays).toBe(1);
+  });
+});
+
 describe('income tax when earlier months were paid outside the system', () => {
   it('assumes those months at fixed pay so TDS is spread evenly instead of being zero', () => {
     const r = calculateMonthlyPayroll(

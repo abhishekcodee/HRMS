@@ -90,20 +90,25 @@ export const LeavePage: React.FC = () => {
     leaveType: 'CL',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
+    halfDay: false,
     reason: '',
     attachment: '',
   });
 
-  // Calculate days count dynamically using CL & PL half-day/full-day business rule
+  // Estimate only (Sundays skipped). The server makes the final count, also skipping the company's holidays and weekly offs.
   const calculatedDays = useMemo(() => {
     if (!form.startDate || !form.endDate) return 1;
-    const start = new Date(form.startDate);
-    const end = new Date(form.endDate);
-    if (start > end) return 0;
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const raw = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return calculateCLPLDuration(raw, form.leaveType);
-  }, [form.startDate, form.endDate, form.leaveType]);
+    if (form.endDate < form.startDate) return 0;
+    if (form.halfDay && form.startDate === form.endDate) return 0.5;
+    let days = 0;
+    const d = new Date(`${form.startDate}T00:00:00`);
+    const end = new Date(`${form.endDate}T00:00:00`);
+    for (let i = 0; i < 400 && d <= end; i++) {
+      if (d.getDay() !== 0) days++;
+      d.setDate(d.getDate() + 1);
+    }
+    return days;
+  }, [form.startDate, form.endDate, form.halfDay]);
 
   // Compute Dynamic Server-side CL Summary (Strict Integer Values)
   const clSummary = useMemo(() => {
@@ -126,9 +131,12 @@ export const LeavePage: React.FC = () => {
   }, [balances]);
 
   // Available remaining balance for selected type in modal
+  // Balance shown for CL / PL; SL is checked by the server and LWP has no balance
   const currentAvailableBalance = useMemo(() => {
     const norm = (form.leaveType || '').toUpperCase();
-    return norm.includes('PL') || norm.includes('PRIVILEGE') ? plSummary.remaining : clSummary.remaining;
+    if (norm === 'PL') return plSummary.remaining;
+    if (norm === 'CL') return clSummary.remaining;
+    return Infinity;
   }, [form.leaveType, clSummary, plSummary]);
 
   const loadLeaveData = async () => {
@@ -159,7 +167,7 @@ export const LeavePage: React.FC = () => {
   const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (calculatedDays <= 0) {
-      setToastMessage({ type: 'error', text: 'End Date must be after or equal to Start Date.' });
+      setToastMessage({ type: 'error', text: 'The To date cannot be before the From date.' });
       setTimeout(() => setToastMessage(null), 5000);
       return;
     }
@@ -167,7 +175,7 @@ export const LeavePage: React.FC = () => {
     if (calculatedDays > currentAvailableBalance) {
       setToastMessage({
         type: 'error',
-        text: `Insufficient balance for ${form.leaveType}. Requested: ${calculatedDays} day(s), Available Remaining: ${currentAvailableBalance} day(s).`,
+        text: `Not enough ${form.leaveType} balance: about ${calculatedDays} day(s) requested, ${currentAvailableBalance} left. Apply the rest as Leave Without Pay.`,
       });
       setTimeout(() => setToastMessage(null), 5000);
       return;
@@ -178,7 +186,7 @@ export const LeavePage: React.FC = () => {
       leaveType: form.leaveType,
       startDate: form.startDate,
       endDate: form.endDate,
-      daysCount: calculatedDays,
+      halfDay: form.halfDay && form.startDate === form.endDate ? 'FIRST_HALF' : undefined,
       reason: form.reason,
       attachment: form.attachment ? form.attachment.trim() : undefined,
     });
@@ -188,18 +196,19 @@ export const LeavePage: React.FC = () => {
       addNotification({
         type: 'LEAVE',
         title: 'Leave Application Submitted',
-        message: `Your ${form.leaveType} request (${calculatedDays} day(s)) has been submitted for Dual Approval.`,
+        message: res.message || `Your ${form.leaveType} request has been sent to HR.`,
         link: '/my-leave',
       });
       setToastMessage({
         type: 'success',
-        text: 'Leave request submitted successfully! Routed for Dual Approval.',
+        text: res.message || 'Leave request sent to HR for approval.',
       });
       setApplyModalOpen(false);
       setForm({
         leaveType: 'CL',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
+        halfDay: false,
         reason: '',
         attachment: '',
       });
@@ -641,6 +650,8 @@ export const LeavePage: React.FC = () => {
             options={[
               { value: 'CL', label: 'CL – Casual Leave' },
               { value: 'PL', label: 'PL – Privilege Leave' },
+              { value: 'SL', label: 'SL – Sick Leave' },
+              { value: 'LWP', label: 'LWP – Leave Without Pay' },
             ]}
             value={form.leaveType}
             onChange={(e) => setForm({ ...form, leaveType: e.target.value })}
@@ -663,6 +674,13 @@ export const LeavePage: React.FC = () => {
             />
           </div>
 
+          {form.startDate === form.endDate && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.checked })} />
+              Half day only
+            </label>
+          )}
+
           {/* Auto-Calculated Days & Balance Information */}
           <div
             style={{
@@ -678,12 +696,13 @@ export const LeavePage: React.FC = () => {
           >
             <div>
               <span style={{ color: 'var(--text-muted)' }}>Duration: </span>
-              <strong>{calculatedDays} Day(s)</strong>
+              <strong>{calculatedDays} day(s)</strong>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Weekly offs and holidays are not counted</div>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)' }}>Available Balance: </span>
               <strong style={{ color: currentAvailableBalance >= calculatedDays ? '#10b981' : '#ef4444' }}>
-                {currentAvailableBalance} day(s)
+                {currentAvailableBalance === Infinity ? (form.leaveType === 'LWP' ? 'Unpaid' : 'Checked on submit') : `${currentAvailableBalance} day(s)`}
               </strong>
             </div>
           </div>

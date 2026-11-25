@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sendPasswordLink } from './passwordLinks.js';
 import { logger } from '../../utils/logger.js';
 import { loginRetryAfter, recordLoginFailure, recordLoginSuccess } from '../../security/loginRateLimiter.js';
 import bcrypt from 'bcryptjs';
@@ -337,46 +338,29 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const [rows]: any = await pool.query('SELECT id, email, full_name, role FROM users WHERE email = ?', [email.trim()]);
+    const [rows]: any = await pool.query("SELECT id, email, full_name, role FROM users WHERE LOWER(email) = LOWER(?) AND LOWER(status) = 'active'", [String(email).trim()]);
 
     if (rows.length === 0) {
       res.json({
         success: true,
-        message: 'If an account exists with this email, password reset instructions have been generated.',
+        message: 'If an account exists with this e-mail, a password reset link has been sent to it.',
       });
       return;
     }
 
     const user = rows[0];
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    await pool.query(
-      `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at)
-       VALUES (?, ?, ?, ?)`,
-      [uuidv4(), user.id, tokenHash, expiresAt]
-    );
+    await sendPasswordLink(user.id, 'RESET', req);
 
     await pool.query(
       `INSERT INTO audit_logs (id, user_id, user_email, role, action, details, ip_address)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        uuidv4(),
-        user.id,
-        user.email,
-        user.role,
-        'PASSWORD_RESET_REQUEST',
-        'Password reset token generated',
-        req.ip || '127.0.0.1',
-      ]
+      [uuidv4(), user.id, user.email, user.role, 'PASSWORD_RESET_REQUEST', 'Password reset link e-mailed', req.ip || '127.0.0.1']
     );
 
     // The reset token is never returned in the response (that allowed account takeover); it only goes by e-mail.
-    if (env.NODE_ENV === 'test') logger.debug?.(`Password reset token issued for ${user.id}`);
     res.json({
       success: true,
-      message: 'If an account exists with this email, password reset instructions have been generated.',
+      message: 'If an account exists with this e-mail, a password reset link has been sent to it.',
     });
   } catch (error) {
     console.error('Forgot Password error:', error);

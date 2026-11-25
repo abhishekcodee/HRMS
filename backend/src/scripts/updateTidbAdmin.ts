@@ -3,17 +3,21 @@ import bcrypt from 'bcryptjs';
 
 async function main() {
   const conn = await mysql.createConnection({
-    host: 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com',
+    host: process.env.DB_HOST,
     port: 4000,
-    user: '2wmQscp4a6Rw6js.root',
-    password: 'N6UFsQIoc5k2JlHB',
-    database: 'hrms_db',
+    user: process.env.DB_USERNAME || process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'hrms_db',
     ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
   });
 
   console.log('Connected to TiDB Cloud Production Database...');
 
-  const newHash = await bcrypt.hash('Amanupa10', 10);
+  const newPassword = process.env.SUPER_ADMIN_PASSWORD || '';
+  if (newPassword.length < 10) {
+    throw new Error('Set SUPER_ADMIN_PASSWORD (at least 10 characters) before running this script.');
+  }
+  const newHash = await bcrypt.hash(newPassword, 10);
 
   // 1. Remove or disable any other super_admin accounts (e.g. superadmin@hrms.com)
   const [removed]: any = await conn.query(
@@ -21,7 +25,7 @@ async function main() {
   );
   console.log('Removed other super_admin accounts:', removed.affectedRows);
 
-  // 2. Ensure amanupadhyay2030@gmail.com exists with password Amanupa10 and role super_admin
+  // 2. Ensure amanupadhyay2030@gmail.com exists with the SUPER_ADMIN_PASSWORD password and role super_admin
   const [existing]: any = await conn.query(
     'SELECT id, email FROM users WHERE LOWER(email) = LOWER("amanupadhyay2030@gmail.com")'
   );
@@ -56,8 +60,8 @@ async function main() {
   console.log('Active Super Admin in TiDB Cloud:', verifyRows);
 
   for (const u of verifyRows) {
-    const match = await bcrypt.compare('Amanupa10', u.password_hash);
-    console.log(`Verification: ${u.email} matches Amanupa10? =>`, match);
+    const match = await bcrypt.compare(newPassword, u.password_hash);
+    console.log(`Verification: ${u.email} password updated =>`, match);
   }
 
   await conn.end();

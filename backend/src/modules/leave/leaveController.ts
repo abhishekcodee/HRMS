@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { LEAVE_TYPES, countLeaveDays, normaliseLeaveCode, parseDateOnly } from './leaveDays.js';
 import { getTenantId } from '../../middleware/tenantMiddleware.js';
 import { isHr } from '../../security/accessControl.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -75,78 +76,89 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const { leaveType, startDate, endDate, reason, attachment } = req.body;
+    const { leaveType, reason, attachment } = req.body;
+    const startDate = parseDateOnly(req.body.startDate);
+    const endDate = parseDateOnly(req.body.endDate || req.body.startDate);
 
     if (!leaveType || !startDate || !endDate) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Leave Type, Start Date, and End Date are required.' },
+        error: { code: 'VALIDATION_ERROR', message: 'Choose a leave type and valid From / To dates.' },
       });
       return;
     }
 
-    let normType = String(leaveType).trim().toUpperCase();
-    if (normType.includes('CASUAL') || normType === 'CL') normType = 'CL';
-    else if (normType.includes('PRIVILEGE') || normType.includes('EARNED') || normType === 'PL') normType = 'PL';
-    else {
+    const normType = normaliseLeaveCode(leaveType);
+    if (!normType) {
       res.status(400).json({
         success: false,
-        error: { code: 'INVALID_LEAVE_TYPE', message: 'Only CL (Casual Leave) and PL (Privilege Leave) are allowed.' },
+        error: { code: 'INVALID_LEAVE_TYPE', message: `Leave type must be one of: ${Object.values(LEAVE_TYPES).map((t) => t.label).join(', ')}.` },
       });
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    if (startDate > endDate) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'The To date cannot be before the From date.' } });
+      return;
+    }
+    const spanDays = (Date.parse(endDate) - Date.parse(startDate)) / 86400000 + 1;
+    if (spanDays > 180) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'A single leave application cannot be longer than 180 days.' } });
+      return;
+    }
+
+    // Half day: only for a single date. The number of days is always counted by the server (working days only)
+    const halfDayRaw = String(req.body.halfDay ?? req.body.session ?? '').toUpperCase();
+    const halfSession = ['FIRST_HALF', 'SECOND_HALF'].includes(halfDayRaw) ? halfDayRaw : (req.body.halfDay === true || halfDayRaw === 'TRUE' ? 'FIRST_HALF' : null);
+    if (halfSession && startDate !== endDate) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'A half-day leave must start and end on the same date.' } });
+      return;
+    }
+    const [companyRow]: any = await pool.query('SELECT company_id FROM users WHERE id = ?', [userId]);
+    const dayCount = await countLeaveDays(companyRow[0]?.company_id || null, startDate, endDate, !!halfSession);
+    const count = dayCount.days;
+    if (count <= 0) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'From Date cannot be after To Date.' },
+        error: { code: 'NO_WORKING_DAYS', message: `No leave is needed: ${dayCount.skipped.map((d) => `${d.date} is a ${d.reason.toLowerCase()}`).join(', ')}.` },
       });
       return;
     }
-
-    let rawDays = req.body.daysCount !== undefined ? parseFloat(req.body.daysCount) : (req.body.duration !== undefined ? parseFloat(req.body.duration) : NaN);
-    if (isNaN(rawDays) || rawDays < 0) {
-      rawDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    }
-
-    const count = calculateCLPLDuration(rawDays, normType);
 
     // A. Prevent Overlapping Leave Applications for the same employee
     const [overlapRows]: any = await pool.query(
-      `SELECT id FROM leave_requests
+      `SELECT id, start_date, end_date FROM leave_requests
        WHERE user_id = ?
-         AND status NOT IN ('REJECTED', 'CANCELLED', 'WITHDRAWN')
-         AND (
-           (start_date <= ? AND end_date >= ?) OR
-           (start_date <= ? AND end_date >= ?) OR
-           (? <= start_date AND ? >= end_date)
-         )`,
-      [userId, endDate, startDate, startDate, startDate, startDate, endDate]
+         AND UPPER(status) NOT IN ('REJECTED', 'CANCELLED', 'WITHDRAWN')
+         AND start_date <= ? AND end_date >= ?`,
+      [userId, endDate, startDate]
     );
 
     if (overlapRows.length > 0) {
       res.status(400).json({
         success: false,
-        error: { code: 'OVERLAPPING_LEAVE', message: 'You already have an active leave application overlapping with these dates.' },
+        error: {
+          code: 'OVERLAPPING_LEAVE',
+          message: `You already have a leave application for ${String(overlapRows[0].start_date).slice(0, 10)} to ${String(overlapRows[0].end_date).slice(0, 10)} that overlaps these dates.`,
+        },
       });
       return;
     }
 
-    // B. Server-side Dynamic Available Remaining Balance Validation
-    const summary = await calculateEmployeeLeaveSummary(userId);
-    const targetBal = normType === 'CL' ? summary.cl : summary.pl;
-
-    if (count > targetBal.remaining) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_BALANCE',
-          message: `Insufficient ${normType} balance. Requested: ${count} day(s), Available Remaining: ${targetBal.remaining} day(s).`,
-        },
-      });
-      return;
+    // B. Server-side balance check for CL / PL / SL (LWP has no balance)
+    if (LEAVE_TYPES[normType].balance) {
+      const summary = await calculateEmployeeLeaveSummary(userId);
+      const targetBal = normType === 'CL' ? summary.cl : normType === 'PL' ? summary.pl : summary.sl;
+      if (count > targetBal.remaining) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_BALANCE',
+            message: `Not enough ${LEAVE_TYPES[normType].label} balance: you asked for ${count} day(s) and have ${targetBal.remaining} left. Apply the rest as Leave Without Pay.`,
+          },
+        });
+        return;
+      }
     }
 
     // Retrieve user, employee profile & manager/admin IDs from MySQL
@@ -196,17 +208,18 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
     // Step A: Save Leave Request in Database First (PENDING employer & admin status)
     await pool.query(
       `INSERT INTO leave_requests (
-        id, company_id, user_id, leave_type, start_date, end_date, days_count, reason, attachment,
+        id, company_id, user_id, leave_type, start_date, end_date, days_count, half_day, reason, attachment,
         employer_id, employer_status, admin_id, admin_status, status
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 'PENDING', 'PENDING')`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 'PENDING', 'PENDING')`,
       [
         leaveId,
         userObj.companyId || null,
         userId,
         normType,
-        startDate.trim(),
-        endDate.trim(),
+        startDate,
+        endDate,
         count,
+        halfSession,
         reason ? reason.trim() : null,
         attachment ? attachment.trim() : null,
         employerId || null,
@@ -231,13 +244,27 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
       link: '/my-leave',
     });
 
+    // Notify the approver (reporting manager / company HR), never a hard-coded address
+    let approverEmail: string | undefined;
+    if (employerId) {
+      const [ap]: any = await pool.query('SELECT email FROM users WHERE id = ?', [employerId]);
+      approverEmail = ap[0]?.email || undefined;
+      await insertInAppNotification({
+        userId: employerId,
+        type: 'LEAVE',
+        title: 'Leave request to review',
+        message: `${userObj.fullName} applied for ${count} day(s) of ${LEAVE_TYPES[normType].label} (${startDate} to ${endDate}).`,
+        link: '/leave',
+      });
+    }
     const emailResult = await sendLeaveAppliedEmail({
+      hrEmail: approverEmail,
       leaveRequestId: leaveId,
       employeeId: userObj.employeeId,
       employeeName: userObj.fullName,
       employeeEmail: userObj.email,
       departmentName: userObj.departmentName || 'General',
-      leaveType,
+      leaveType: LEAVE_TYPES[normType].label,
       startDate,
       endDate,
       daysCount: count,
@@ -247,7 +274,7 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
 
     res.status(201).json({
       success: true,
-      message: 'Leave request submitted successfully and routed for Dual Approval (Employer & Admin).',
+      message: `Leave request for ${count} day(s) submitted to HR for approval.`,
       data: {
         id: leaveId,
         employeeId: userObj.employeeId,
@@ -410,13 +437,8 @@ export async function employerActionOnLeave(req: AuthRequest, res: Response): Pr
     const newEmployerStatus = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
     const rejectionReason = decision === 'REJECT' ? (remarks ? String(remarks).trim() : 'Rejected by Employer/Manager') : null;
 
-    // Determine new overall status: Approved if EITHER Employer OR Admin approves; Rejected if BOTH reject
-    let newOverallStatus = 'PENDING';
-    if (newEmployerStatus === 'APPROVED' || leaveObj.adminStatus === 'APPROVED') {
-      newOverallStatus = 'APPROVED';
-    } else if (newEmployerStatus === 'REJECTED' && leaveObj.adminStatus === 'REJECTED') {
-      newOverallStatus = 'REJECTED';
-    }
+    // HR's decision is final: approve -> APPROVED, reject -> REJECTED (frees the dates and the balance)
+    const newOverallStatus = newEmployerStatus;
 
     // Update DB
     await pool.query(
@@ -569,13 +591,8 @@ export async function adminActionOnLeave(req: AuthRequest, res: Response): Promi
     const newAdminStatus = decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
     const rejectionReason = decision === 'REJECT' ? (remarks ? String(remarks).trim() : 'Rejected by Admin') : null;
 
-    // Determine new overall status: Approved if EITHER Employer OR Admin approves; Rejected if BOTH reject
-    let newOverallStatus = 'PENDING';
-    if (newAdminStatus === 'APPROVED' || leaveObj.employerStatus === 'APPROVED') {
-      newOverallStatus = 'APPROVED';
-    } else if (newAdminStatus === 'REJECTED' && leaveObj.employerStatus === 'REJECTED') {
-      newOverallStatus = 'REJECTED';
-    }
+    // The reviewer's decision is final
+    const newOverallStatus = newAdminStatus;
 
     // Update DB
     await pool.query(

@@ -91,7 +91,7 @@ export async function buildAttendanceWorkbook(companyId: string, year: number, m
 
   const legend: any[][] = [
     ['Code', 'Meaning'],
-    ['P', 'Present'], ['P*', 'Future date (assumed present)'], ['HD', 'Half day'], ['CL / PL / SL …', 'Approved paid leave'],
+    ['P', 'Present'], ['P*', 'Future date (assumed present)'], ['HD', 'Half day'], ['MP', 'Missed punch (one punch only, not corrected)'], ['CL / PL / SL …', 'Approved paid leave'],
     ['LWP', 'Approved leave without pay'], ['A', 'Absent (no punch and no approved leave)'], ['H', 'Holiday'], ['WO', 'Weekly off'],
     ['(blank)', 'Before joining / after last working day'],
     [],

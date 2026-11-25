@@ -32,10 +32,10 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     fullName: employee?.fullName || '',
     employeeId: employee?.employeeId || 'AMPL-00001',
     email: employee?.email || '',
-    password: 'Employee@123',
+    password: '',
     phone: employee?.phone || '',
     gender: employee?.gender || 'Male',
-    dob: employee?.dob || '1995-01-01',
+    dob: employee?.dob || '',
     address: employee?.address || '',
     residentialAddress: employee?.residentialAddress || employee?.address || '',
     residentialCity: employee?.residentialCity || '',
@@ -52,7 +52,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     designation: employee?.designation || '',
     joiningDate: employee?.joiningDate || new Date().toISOString().split('T')[0],
     experienceYears: employee?.experienceYears !== undefined && employee?.experienceYears !== null ? employee.experienceYears : 0,
-    salary: employee?.salary || 65000,
+    salary: employee?.salary || '',
     emergencyContact: employee?.emergencyContact || '',
     emergencyPhone: employee?.emergencyPhone || ''
   });
@@ -118,10 +118,10 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         fullName: employee.fullName || '',
         employeeId: employee.employeeId || '',
         email: employee.email || '',
-        password: 'Employee@123',
+        password: '',
         phone: employee.phone || '',
         gender: employee.gender || 'Male',
-        dob: employee.dob || '1995-01-01',
+        dob: employee.dob || '',
         address: resAddr,
         residentialAddress: resAddr,
         residentialCity: resCity,
@@ -138,7 +138,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         designation: employee.designation || '',
         joiningDate: employee.joiningDate || new Date().toISOString().split('T')[0],
         experienceYears: employee.experienceYears !== undefined && employee.experienceYears !== null ? employee.experienceYears : 0,
-        salary: employee.salary || 65000,
+        salary: employee.salary || '',
         emergencyContact: employee.emergencyContact || '',
         emergencyPhone: employee.emergencyPhone || ''
       });
@@ -182,6 +182,15 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     }
     if (!formData.employeeId || !formData.employeeId.trim()) {
       setErrorMessage('Employee ID is required.');
+      return;
+    }
+
+    if (!isEdit && formData.password && formData.password.length < 8) {
+      setErrorMessage('An initial password must be at least 8 characters, or leave it blank to e-mail a set-password link.');
+      return;
+    }
+    if (formData.salary === '' || formData.salary === null || isNaN(Number(formData.salary)) || Number(formData.salary) <= 0) {
+      setErrorMessage('Enter the monthly gross salary.');
       return;
     }
 
@@ -232,7 +241,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? `Edit Database Record: ${employee?.fullName}` : 'Add New Employee (Database First)'}
+      title={isEdit ? `Edit employee: ${employee?.fullName}` : 'Add employee'}
       maxWidth="720px"
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -243,7 +252,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         )}
 
         {/* Section 1: Personal Information */}
-        <FormSection title="1. Personal Details (Saved to Database)" description="Basic user credentials & identification">
+        <FormSection title="1. Personal details" description="Name, login and contact">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Input
               label="Full Name"
@@ -296,9 +305,10 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
             />
             {!isEdit ? (
               <Input
-                label="Initial Password"
+                label="Initial password (optional)"
                 type="password"
-                required
+                autoComplete="new-password"
+                placeholder="Leave blank to e-mail a set-password link"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
               />
@@ -448,7 +458,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Department (From master_departments) *
+                  Department *
                 </label>
                 <button
                   type="button"
@@ -497,7 +507,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Designation (From master_designations) *
+                  Designation *
                 </label>
                 <button
                   type="button"
@@ -578,7 +588,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
               label="Monthly Compensation (Gross Salary)"
               type="number"
               value={formData.salary}
-              onChange={e => setFormData({ ...formData, salary: parseFloat(e.target.value) })}
+              onChange={e => setFormData({ ...formData, salary: e.target.value === '' ? '' : parseFloat(e.target.value) })}
             />
             <Select
               label="Account Role"
@@ -603,7 +613,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
         </FormSection>
 
         {/* Section 3: Contact / Emergency */}
-        <FormSection title="3. Emergency Contacts" description="Persisted directly into MySQL employee_profiles">
+        <FormSection title="3. Emergency Contacts" description="Who to call in an emergency">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Input
               label="Emergency Contact Person"
@@ -629,7 +639,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={loading}>
-            {loading ? 'Saving to Database...' : isEdit ? 'Update MySQL Record' : '+ Insert into Database'}
+            {loading ? 'Saving...' : isEdit ? 'Save changes' : 'Add employee'}
           </Button>
         </div>
       </form>

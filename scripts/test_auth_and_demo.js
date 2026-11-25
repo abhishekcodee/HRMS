@@ -17,14 +17,16 @@ async function runTests() {
     process.exit(1);
   }
 
-  // Test 2: Verify password hash matches Amanupa10
-  const [adminUser] = await pool.query('SELECT password_hash FROM users WHERE email = ?', ['amanupadhyay2030@gmail.com']);
-  const isMatch = await bcrypt.compare('Amanupa10', adminUser[0].password_hash);
-  if (isMatch) {
-    console.log('✅ PASS: Admin password Amanupa10 verified with bcrypt.');
-  } else {
-    console.error('❌ FAIL: Password mismatch for Amanupa10');
-    process.exit(1);
+  // Test 2: Verify the super admin password (only when SUPER_ADMIN_PASSWORD is provided)
+  if (process.env.SUPER_ADMIN_PASSWORD) {
+    const [adminUser] = await pool.query('SELECT password_hash FROM users WHERE email = ?', ['amanupadhyay2030@gmail.com']);
+    const isMatch = await bcrypt.compare(process.env.SUPER_ADMIN_PASSWORD, adminUser[0].password_hash);
+    if (isMatch) {
+      console.log('✅ PASS: Super admin password verified with bcrypt.');
+    } else {
+      console.error('❌ FAIL: Super admin password does not match SUPER_ADMIN_PASSWORD');
+      process.exit(1);
+    }
   }
 
   // Test 3: Verify old admin accounts are disabled or non-admin

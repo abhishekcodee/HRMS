@@ -141,6 +141,15 @@ export const Dashboard: React.FC = () => {
     loadDashboardData();
   }, [activeRoleView]);
 
+  // The signed-in employee's first real punch today (no placeholder time)
+  const todayFirstPunch = useMemo(() => {
+    const d = new Date();
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return punchLogs
+      .filter((p) => String(p.punchTime).startsWith(key) && (!user?.employeeId || p.employeeId === user.employeeId))
+      .sort((a, b) => String(a.punchTime).localeCompare(String(b.punchTime)))[0];
+  }, [punchLogs, user?.employeeId]);
+
   // Derived Metrics from Real DB Data (CL & PL Only - Integers Only)
   const casualBal = useMemo(() => {
     const b = leaveBalances.find((item) => item.leaveType === 'CL' || item.leaveType.includes('Casual'));
@@ -216,7 +225,6 @@ export const Dashboard: React.FC = () => {
       leaveType,
       startDate,
       endDate,
-      daysCount: calculatedDays,
       reason,
     });
 
@@ -318,10 +326,10 @@ export const Dashboard: React.FC = () => {
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           <StatCard
             title="Today's Biometric Log"
-            value="09:02 AM"
+            value={todayFirstPunch ? new Date(todayFirstPunch.punchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
             icon={<Clock size={20} />}
-            subtext="Live punch synced from machine"
-            change="PRESENT"
+            subtext={todayFirstPunch ? 'First punch today' : 'No punch recorded today yet'}
+            change={todayFirstPunch ? 'PRESENT' : undefined}
             changeType="positive"
           />
           <StatCard
@@ -662,50 +670,48 @@ export const Dashboard: React.FC = () => {
                   dept: e.departmentName || 'General',
                 }));
 
-                const dayNames = [
-                  { day: 'Mon', fullDate: 'Monday, August 17, 2026', dayNum: 1 },
-                  { day: 'Tue', fullDate: 'Tuesday, August 18, 2026', dayNum: 2 },
-                  { day: 'Wed', fullDate: 'Wednesday, August 19, 2026', dayNum: 3 },
-                  { day: 'Thu', fullDate: 'Thursday, August 20, 2026', dayNum: 4 },
-                  { day: 'Fri', fullDate: 'Friday, August 21, 2026', dayNum: 5 },
-                  { day: 'Sat', fullDate: 'Saturday, August 22, 2026', dayNum: 6 },
-                  { day: 'Sun', fullDate: 'Sunday, August 23, 2026', dayNum: 0 },
-                ];
+                // The current week (Mon–Sun) built from real biometric punches only
+                const now = new Date();
+                const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+                const localKey = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                const todayKey = localKey(now);
+                const dayNames = Array.from({ length: 7 }, (_, i) => {
+                  const dt = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+                  return {
+                    day: dt.toLocaleDateString(undefined, { weekday: 'short' }),
+                    fullDate: dt.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+                    dayNum: dt.getDay(),
+                    key: localKey(dt),
+                  };
+                });
+                const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 const daysData = dayNames.map((dObj) => {
-                  const isWeekend = dObj.dayNum === 0 || dObj.dayNum === 6;
-
-                  // Filter real biometric punches matching this weekday from DB
-                  const dayPunches = punchLogs.filter((p) => {
-                    const dt = new Date(p.punchTime);
-                    return dt.getDay() === dObj.dayNum;
-                  });
-
+                  const isWeekend = dObj.dayNum === 0;
+                  const isFuture = dObj.key > todayKey;
+                  const dayPunches = punchLogs.filter((p) => String(p.punchTime).slice(0, 10) === dObj.key);
                   const punchedEmpIds = new Set(dayPunches.map((p) => p.employeeId));
-                  const presentCount = isWeekend
-                    ? 0
-                    : Math.min(staffList.length, punchedEmpIds.size || Math.max(1, staffList.length));
-                  const pctVal = isWeekend ? 0 : Math.round((presentCount / totalCount) * 100);
+                  const presentCount = Math.min(staffList.length, punchedEmpIds.size);
+                  const pctVal = staffList.length ? Math.round((presentCount / totalCount) * 100) : 0;
+                  let totalHours = 0;
+                  let withHours = 0;
 
-                  const roster = staffList.map((s, idx) => {
-                    const empPunches = dayPunches.filter((p) => p.employeeId === s.empId);
+                  const roster = staffList.map((s) => {
+                    const empPunches = dayPunches.filter((p) => p.employeeId === s.empId).sort((a, b) => String(a.punchTime).localeCompare(String(b.punchTime)));
                     const hasPunch = empPunches.length > 0;
-                    const checkIn = hasPunch
-                      ? new Date(empPunches[0].punchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                      : isWeekend ? '—' : (idx % 2 === 0 ? '08:55:10 AM' : '09:01:25 AM');
-                    const checkOut = hasPunch && empPunches.length > 1
-                      ? new Date(empPunches[empPunches.length - 1].punchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                      : isWeekend ? '—' : (idx % 2 === 0 ? '05:45:00 PM' : '06:00:15 PM');
-
+                    const first = hasPunch ? empPunches[0].punchTime : null;
+                    const last = empPunches.length > 1 ? empPunches[empPunches.length - 1].punchTime : null;
+                    const hours = first && last ? (new Date(last).getTime() - new Date(first).getTime()) / 3600000 : 0;
+                    if (hours > 0) { totalHours += hours; withHours++; }
                     return {
                       empId: s.empId,
                       name: s.name,
                       dept: s.dept,
-                      checkIn,
-                      checkOut,
-                      duration: isWeekend ? '0.0 Hrs' : '8.8 Hrs',
-                      status: isWeekend ? 'WEEKEND' : 'ON TIME',
-                      terminalSn: empPunches[0]?.deviceSn || 'ESSL-X990-BLR-01',
+                      checkIn: first ? fmtTime(first) : '—',
+                      checkOut: last ? fmtTime(last) : '—',
+                      duration: hours > 0 ? `${hours.toFixed(1)} Hrs` : '—',
+                      status: hasPunch ? (last ? 'PRESENT' : 'MISSED PUNCH') : isFuture ? '—' : isWeekend ? 'WEEKLY OFF' : 'NO PUNCH',
+                      terminalSn: empPunches[0]?.deviceSn || '—',
                     };
                   });
 
@@ -717,9 +723,9 @@ export const Dashboard: React.FC = () => {
                     presentCount,
                     totalCount: staffList.length,
                     lateCount: 0,
-                    leaveCount: isWeekend ? 0 : Math.max(0, staffList.length - presentCount),
-                    avgHours: isWeekend ? '0.0 Hrs' : '8.5 Hrs',
-                    punchesCount: dayPunches.length || (isWeekend ? 0 : staffList.length * 2),
+                    leaveCount: isWeekend || isFuture ? 0 : Math.max(0, staffList.length - presentCount),
+                    avgHours: withHours ? `${(totalHours / withHours).toFixed(1)} Hrs` : '—',
+                    punchesCount: dayPunches.length,
                     roster,
                   };
                 });

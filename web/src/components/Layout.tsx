@@ -233,7 +233,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
       label: 'Settings',
       icon: <Settings size={18} />,
       items: [
-        { path: '/settings', label: 'Settings', icon: <Settings size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
+        { path: '/settings', label: 'Settings', icon: <Settings size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
         ...(role === UserRole.ADMIN || isSuper || user?.email?.toLowerCase() === 'amanupadhyay2030@gmail.com' ? [{ path: '/company-branding', label: 'White-Label Branding', icon: <Palette size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, UserRole.EMPLOYEE, 'SUPER_ADMIN'] }] : []),
       ],
     },
@@ -324,7 +324,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
 
   const userMenuItems = [
     { id: 'profile', label: 'View Profile', icon: <User size={16} />, onClick: () => navigate('/my-profile') },
-    ...(role === UserRole.ADMIN ? [{ id: 'settings', label: 'System Settings', icon: <Settings size={16} />, onClick: () => navigate('/settings') }] : []),
+    ...(role === UserRole.ADMIN || role === UserRole.EMPLOYER ? [{ id: 'settings', label: 'System Settings', icon: <Settings size={16} />, onClick: () => navigate('/settings') }] : []),
     { id: 'logout', label: 'Sign Out', icon: <LogOut size={16} />, danger: true, onClick: handleLogout }
   ];
 

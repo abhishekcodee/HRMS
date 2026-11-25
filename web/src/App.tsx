@@ -11,6 +11,7 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
 // Eagerly loaded primary auth routes
 import { LoginPage } from './pages/LoginPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { RequestDemoPage } from './pages/RequestDemoPage';
 
@@ -107,6 +108,7 @@ export function App() {
                   <Routes>
                     {/* Unauthenticated Login Route */}
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/request-demo" element={<RequestDemoPage />} />
 
                     {/* Mandatory First-Time Password Change Route */}
@@ -149,7 +151,7 @@ export function App() {
                       {/* Attendance & Biometric Machine Integration */}
                       <Route path="/attendance" element={<AttendancePage />} />
                       <Route path="/my-attendance" element={<AttendancePage />} />
-                      <Route path="/biometrics" element={<ProtectedRoute adminOnly><BiometricDevicesPage /></ProtectedRoute>} />
+                      <Route path="/biometrics" element={<ProtectedRoute hrOnly><BiometricDevicesPage /></ProtectedRoute>} />
                       
                       {/* Leave Management */}
                       <Route path="/leave" element={<LeavePage />} />
@@ -192,7 +194,7 @@ export function App() {
                       
                       {/* Admin System Controls */}
                       <Route path="/users-roles" element={<ProtectedRoute adminOnly><UsersRolesPage /></ProtectedRoute>} />
-                      <Route path="/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute hrOnly><SettingsPage /></ProtectedRoute>} />
                       <Route path="/settings/appointment-letters" element={<ProtectedRoute adminOnly><AppointmentLetterSettingsPage /></ProtectedRoute>} />
                       <Route path="/settings/letter-templates" element={<ProtectedRoute adminOnly><AppointmentLetterTemplatesPage /></ProtectedRoute>} />
                       <Route path="/audit" element={<ProtectedRoute adminOnly><AuditLogsPage /></ProtectedRoute>} />

@@ -149,12 +149,18 @@ interface ShiftRules {
   startMinutes: number;
   graceMinutes: number;
   fullDayHours: number;
+  /** Fewer hours than this between first and last punch = half day */
+  minFullDayHours: number;
+  /** Fewer hours than this = absent */
+  minHalfDayHours: number;
 }
 
 async function loadGlobalRules(db: Db, companyId?: string | null): Promise<ShiftRules> {
-  const rules: ShiftRules = { startMinutes: 9 * 60, graceMinutes: 15, fullDayHours: 8 };
+  const rules: ShiftRules = { startMinutes: 9 * 60, graceMinutes: 15, fullDayHours: 8, minFullDayHours: 6, minHalfDayHours: 3 };
   try {
-    const v = await readSettings(['shiftStart', 'gracePeriod', 'fullDayHours'], companyId, db as any);
+    const v = await readSettings(['shiftStart', 'gracePeriod', 'fullDayHours', 'minFullDayHours', 'minHalfDayHours'], companyId, db as any);
+    if (v.minFullDayHours !== undefined && Number(v.minFullDayHours) > 0) rules.minFullDayHours = Number(v.minFullDayHours);
+    if (v.minHalfDayHours !== undefined && Number(v.minHalfDayHours) >= 0) rules.minHalfDayHours = Number(v.minHalfDayHours);
     if (v.shiftStart !== undefined) rules.startMinutes = parseClockToMinutes(String(v.shiftStart), rules.startMinutes);
     if (v.gracePeriod !== undefined && !isNaN(Number(v.gracePeriod))) rules.graceMinutes = Number(v.gracePeriod);
     if (v.fullDayHours !== undefined && !isNaN(Number(v.fullDayHours)) && Number(v.fullDayHours) > 0) rules.fullDayHours = Number(v.fullDayHours);
@@ -235,11 +241,23 @@ export async function recomputeAttendanceDay(
 
   const lateBy = minutesOf(first) - shiftStart;
   const isLate = lateBy > rules.graceMinutes;
-  const status = isLate ? 'LATE' : 'PRESENT';
   const lateMinutes = isLate ? lateBy : 0;
   const overtime = Math.max(0, Math.round((workHours - rules.fullDayHours) * 100) / 100);
 
-  const [existing]: any = await db.query('SELECT id FROM attendance WHERE user_id = ? AND work_date = ? LIMIT 1', [userId, workDate]);
+  // Day status from the punches:
+  //  - one punch (or two within 15 minutes)  -> MISSING_PUNCH (needs a regularisation request or HR correction)
+  //  - less than minHalfDayHours             -> ABSENT
+  //  - less than minFullDayHours             -> HALF_DAY
+  //  - otherwise LATE / PRESENT
+  let status: string;
+  if (!clockOut || workHours < 0.25) status = 'MISSING_PUNCH';
+  else if (workHours < rules.minHalfDayHours) status = 'ABSENT';
+  else if (workHours < rules.minFullDayHours) status = 'HALF_DAY';
+  else status = isLate ? 'LATE' : 'PRESENT';
+
+  const [existing]: any = await db.query('SELECT id, source FROM attendance WHERE user_id = ? AND work_date = ? LIMIT 1', [userId, workDate]);
+  // HR corrections and approved regularisations are never overwritten by later punches
+  if (existing.length > 0 && ['MANUAL', 'REGULARIZED'].includes(String(existing[0].source || '').toUpperCase())) return;
   if (existing.length === 0) {
     await db.query(
       `INSERT INTO attendance (id, company_id, user_id, work_date, clock_in, clock_out, work_hours, status, late_minutes, overtime_hours, source, notes)

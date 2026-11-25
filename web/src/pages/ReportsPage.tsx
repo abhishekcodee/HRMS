@@ -373,7 +373,7 @@ export const ReportsPage: React.FC = () => {
         <StatCard
           title="New Hires"
           value={overview ? String(overview.newHires) : '0'}
-          subtext={overview?.newHiresTrendPct || '0%'}
+          subtext={overview?.newHiresTrendPct || 'In the selected period'}
           icon={<UserPlus size={22} color="#10b981" />}
         />
         <StatCard

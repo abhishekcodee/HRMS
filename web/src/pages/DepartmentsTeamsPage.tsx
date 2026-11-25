@@ -416,7 +416,7 @@ export const DepartmentsTeamsPage: React.FC = () => {
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Create Department (Save DB)
+              Create Department
             </Button>
           </div>
         </form>
@@ -488,7 +488,7 @@ export const DepartmentsTeamsPage: React.FC = () => {
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Create Team (Save DB)
+              Create Team
             </Button>
           </div>
         </form>

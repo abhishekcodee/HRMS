@@ -32,10 +32,17 @@ export async function safeFetchJson<T = any>(
     const contentType = res.headers.get('content-type') || '';
     
     if (!res.ok) {
+      // Keep the server's explanation (e.g. "Not enough Casual Leave balance…") instead of a bare HTTP status
+      let body: any = null;
+      if (contentType.includes('application/json')) {
+        try { body = await res.json(); } catch { body = null; }
+      }
+      const serverMessage = body?.error?.message || body?.message;
       return {
         ok: false,
         status: res.status,
-        error: `HTTP ${res.status}: ${res.statusText}`,
+        data: body ?? undefined,
+        error: serverMessage || `Request failed (${res.status}${res.statusText ? ` ${res.statusText}` : ''})`,
       };
     }
 

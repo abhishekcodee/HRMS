@@ -17,7 +17,7 @@ export interface PayslipData {
   designation?: string;
   workedDays?: number | string; // e.g. 28.00
   joiningDate?: string; // e.g. "1-Nov-2025"
-  uanNo?: string; // e.g. "102215947068"
+  uanNo?: string; // e.g. "000000000000"
 
   // Leave Balances
   prevBalLeaves?: number | string; // e.g. 5.50
@@ -118,17 +118,17 @@ export const PayslipPreview: React.FC<PayslipPreviewProps> = ({
   activeLetterhead = null,
 }) => {
   const {
-    companyName = 'ABSOLUTE MOTION PVT LTD',
-    companyAddress = 'Address: R-601, Midc TTC Area, Near Hitech Radiator Tank Division, Navi Mumbai, Maharashtra 400701',
+    companyName = 'YOUR COMPANY PVT LTD',
+    companyAddress = 'Company address',
     companyLogo = '',
 
     payMonthYear = 'Aug 2026',
-    employeeName = 'ABHISHEK UPADHYAY',
-    employeeCode = 'AMPL-00088',
+    employeeName = 'SAMPLE EMPLOYEE',
+    employeeCode = 'EMP-0001',
     designation = 'IOT Developer',
     workedDays = '28.00',
     joiningDate = '1-Nov-2025',
-    uanNo = '102215947068',
+    uanNo = '000000000000',
 
     prevBalLeaves = '5.50',
     enjoyedLeaves = '4.50',
@@ -572,7 +572,7 @@ export const PayslipPreview: React.FC<PayslipPreviewProps> = ({
                   <path id="curveTop" d="M 18 60 A 42 42 0 0 1 102 60" fill="none" />
                   <text fontSize="8.5" fontWeight="bold" fill="#1E3A8A" letterSpacing="1">
                     <textPath href="#curveTop" startOffset="50%" textAnchor="middle">
-                      ABSOLUTE MOTION PVT. LTD.
+                      YOUR COMPANY PVT. LTD.
                     </textPath>
                   </text>
                   <polygon points="60,54 63,63 72,63 65,68 68,77 60,71 52,77 55,68 48,63 57,63" fill="#1E3A8A" />

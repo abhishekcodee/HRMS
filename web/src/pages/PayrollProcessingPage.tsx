@@ -383,7 +383,7 @@ const ItemDetail: React.FC<{ item: any; onClose: () => void; onOpenSlip: () => v
     ['Income tax (TDS)', item.tds], ['Loan EMI', item.loan_emi_deduction], ['Other', item.other_deductions],
   ].filter(([, v]) => Number(v) > 0) as [string, any][];
 
-  const codeClass = (c: string) => (['P', 'P*'].includes(c) ? 'P' : c === 'A' ? 'A' : c === 'LWP' ? 'LWP' : c === 'HD' ? 'HD' : c === 'H' ? 'H' : c === 'WO' ? 'WO' : c === '-' ? '' : 'L');
+  const codeClass = (c: string) => (['P', 'P*'].includes(c) ? 'P' : c === 'A' ? 'A' : c === 'LWP' ? 'LWP' : c === 'HD' || c === 'MP' ? 'HD' : c === 'H' ? 'H' : c === 'WO' ? 'WO' : c === '-' ? '' : 'L');
 
   return (
     <div className="pp-overlay" onClick={onClose}>
@@ -571,6 +571,15 @@ const SettingsModal: React.FC<{ initial: PayrollSettingsResponse; onClose: () =>
                   <option value="ABSENT">Absent (loss of pay) – recommended with biometric</option>
                   <option value="PRESENT">Present – only marked absences deduct pay</option>
                 </select>
+              </div>
+              <div className="pp-field">
+                <label>A day with only one punch (missed punch) is</label>
+                <select value={s.missedPunchRule || 'HALF_DAY'} onChange={(e) => set({ missedPunchRule: e.target.value as any })}>
+                  <option value="HALF_DAY">Half day until corrected – recommended</option>
+                  <option value="ABSENT">Absent until corrected</option>
+                  <option value="PRESENT">Present (paid in full)</option>
+                </select>
+                <small>Employees can request a correction from their attendance calendar; HR approves it.</small>
               </div>
               <div className="pp-field">
                 <label>Late marks</label>

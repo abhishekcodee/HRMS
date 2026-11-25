@@ -159,6 +159,30 @@ const STATEMENTS: string[] = [
   'ALTER TABLE reimbursements ADD COLUMN company_id VARCHAR(36) NULL',
   'ALTER TABLE salary_arrears ADD COLUMN company_id VARCHAR(36) NULL',
   'ALTER TABLE leave_requests ADD COLUMN company_id VARCHAR(36) NULL',
+  'ALTER TABLE leave_requests ADD COLUMN half_day VARCHAR(12) NULL',
+  'ALTER TABLE leave_requests MODIFY days_count DECIMAL(5,1) NOT NULL DEFAULT 0',
+  // Requests rejected under the old "both must reject" rule stayed PENDING and blocked new applications
+  "UPDATE leave_requests SET status = 'REJECTED' WHERE UPPER(status) = 'PENDING' AND (UPPER(employer_status) = 'REJECTED' OR UPPER(admin_status) = 'REJECTED')",
+  `CREATE TABLE IF NOT EXISTS attendance_regularizations (
+    id VARCHAR(36) PRIMARY KEY,
+    company_id VARCHAR(36) NULL,
+    user_id VARCHAR(36) NOT NULL,
+    work_date VARCHAR(10) NOT NULL,
+    clock_in VARCHAR(5) NULL,
+    clock_out VARCHAR(5) NULL,
+    requested_status VARCHAR(20) NOT NULL DEFAULT 'PRESENT',
+    reason TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    reviewed_by VARCHAR(36) NULL,
+    reviewed_at DATETIME NULL,
+    review_note TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_regularization_company (company_id, status)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  'ALTER TABLE attendance ADD COLUMN source VARCHAR(20) NULL',
+  // Remove the sample notifications older versions seeded into every new database
+  "DELETE FROM in_app_notifications WHERE message IN ('Your Earned Leave request for Aug 11 - Aug 12 has been approved by Priya Sharma.', 'Missing check-out logged for Aug 10. Please submit regularisation if applicable.', 'HRMS platform maintenance scheduled on Sunday, Aug 16 between 02:00 AM - 04:00 AM IST.')",
+  'ALTER TABLE attendance ADD COLUMN notes TEXT NULL',
   // Older leave requests were saved without a company; take it from the employee
   'UPDATE leave_requests lr JOIN users u ON u.id = lr.user_id SET lr.company_id = u.company_id WHERE lr.company_id IS NULL AND u.company_id IS NOT NULL',
   'CREATE INDEX idx_payroll_runs_company_period ON payroll_runs (company_id, payroll_year, payroll_month)',

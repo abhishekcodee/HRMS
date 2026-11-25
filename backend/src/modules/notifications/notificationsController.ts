@@ -135,7 +135,8 @@ export async function getNotifications(req: AuthRequest, res: Response): Promise
       return;
     }
 
-    await seedInitialNotificationsIfEmpty(userId);
+    // (Sample "Aug 10/11/16" notifications are no longer seeded; real events create notifications.)
+    void seedInitialNotificationsIfEmpty;
 
     const [rows]: any = await pool.query(
       `SELECT id, user_id, type, title, message, link, is_read, created_at 
