@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { readSettings } from '../settings/companySettings.js';
 import net from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
@@ -150,19 +151,13 @@ interface ShiftRules {
   fullDayHours: number;
 }
 
-async function loadGlobalRules(db: Db): Promise<ShiftRules> {
+async function loadGlobalRules(db: Db, companyId?: string | null): Promise<ShiftRules> {
   const rules: ShiftRules = { startMinutes: 9 * 60, graceMinutes: 15, fullDayHours: 8 };
   try {
-    const [rows]: any = await db.query(
-      "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('shiftStart', 'gracePeriod', 'fullDayHours')"
-    );
-    for (const r of rows) {
-      let v: any = r.setting_value;
-      try { v = JSON.parse(v); } catch (_) { /* plain string */ }
-      if (r.setting_key === 'shiftStart') rules.startMinutes = parseClockToMinutes(String(v), rules.startMinutes);
-      if (r.setting_key === 'gracePeriod' && !isNaN(Number(v))) rules.graceMinutes = Number(v);
-      if (r.setting_key === 'fullDayHours' && !isNaN(Number(v)) && Number(v) > 0) rules.fullDayHours = Number(v);
-    }
+    const v = await readSettings(['shiftStart', 'gracePeriod', 'fullDayHours'], companyId, db as any);
+    if (v.shiftStart !== undefined) rules.startMinutes = parseClockToMinutes(String(v.shiftStart), rules.startMinutes);
+    if (v.gracePeriod !== undefined && !isNaN(Number(v.gracePeriod))) rules.graceMinutes = Number(v.gracePeriod);
+    if (v.fullDayHours !== undefined && !isNaN(Number(v.fullDayHours)) && Number(v.fullDayHours) > 0) rules.fullDayHours = Number(v.fullDayHours);
   } catch (_) { /* settings table missing -> defaults */ }
   return rules;
 }
@@ -225,7 +220,7 @@ export async function recomputeAttendanceDay(
   const first = toDbDateTime(punches[0].punch_time);
   const last = toDbDateTime(punches[punches.length - 1].punch_time);
 
-  const rules = globalRules || (await loadGlobalRules(db));
+  const rules = globalRules || (await loadGlobalRules(db, companyId));
   const userShiftStart = await loadShiftStartForUser(db, userId);
   const shiftStart = userShiftStart !== null && !isNaN(userShiftStart) ? userShiftStart : rules.startMinutes;
 
@@ -293,7 +288,7 @@ async function ingestPunches(db: Db, device: DeviceRow, punches: ParsedPunch[]):
   }
 
   if (affected.size > 0) {
-    const rules = await loadGlobalRules(db);
+    const rules = await loadGlobalRules(db, device.company_id);
     for (const [key, userId] of affected) {
       const workDate = key.split('|')[1];
       try {
@@ -344,7 +339,7 @@ async function reprocessUnmatched(db: Db, companyId: string, deviceSn?: string, 
     fixed++;
   }
 
-  const rules = await loadGlobalRules(db);
+  const rules = await loadGlobalRules(db, companyId);
   for (const [key, userId] of affected) {
     await recomputeAttendanceDay(db, userId, companyId, key.split('|')[1], rules);
   }
@@ -780,7 +775,7 @@ export async function setPinMapping(req: AuthRequest, res: Response): Promise<vo
          WHERE dv.company_id = ? AND p.employee_id = ? AND p.user_id IS NOT NULL AND p.user_id <> ?`,
         [companyId, pin, userId]
       );
-      const rules = await loadGlobalRules(pool);
+      const rules = await loadGlobalRules(pool, companyId);
       for (const r of prev) await recomputeAttendanceDay(pool, r.user_id, companyId, r.d, rules);
     }
     const fixed = await reprocessUnmatched(pool, companyId, undefined, pin || undefined);

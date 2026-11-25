@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { authenticateToken, AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { isHr, isSelf } from '../../security/accessControl.js';
 
 import {
   getDefaultTemplate,
@@ -41,6 +43,23 @@ import {
 
 const router = Router();
 router.use(authenticateToken);
+
+/**
+ * Company-level document work (companies, statutory settings, numbering, salary components, appointment and
+ * termination letters) is HR-only. Employees may only read their own letters and manage their own uploads.
+ */
+router.use((req: AuthRequest, res: Response, next) => {
+  if (isHr(req)) return next();
+  const path = req.path;
+  const ownLetter = path.match(/^\/(?:appointment-letters|termination-letters)\/employee\/([^/]+)$/);
+  if (req.method === 'GET' && ownLetter) {
+    return isSelf(req, decodeURIComponent(ownLetter[1])) ? next() : void res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own letters.' } });
+  }
+  const selfService = path === '/' || /^\/[^/]+$/.test(path) && req.method === 'DELETE';
+  const readOnlyLookups = req.method === 'GET' && ['/salary-presets', '/appointment-letters/templates/default'].includes(path);
+  if (selfService || readOnlyLookups) return next();
+  res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Only HR or company administrators can do this.' } });
+});
 
 // Companies (Multi-Entity) Endpoints
 router.get('/companies', getCompanies);
@@ -96,10 +115,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     `;
     const params: any[] = [];
 
-    if (role === 'employee') {
+    if (!isHr(req)) {
       query += ` WHERE ed.user_id = ?`;
       params.push(userId);
+    } else if (!(req.isSuperAdmin && !req.tenantId)) {
+      query += ` WHERE u.company_id = ?`;
+      params.push(getTenantId(req));
     }
+    void role;
 
     query += ` ORDER BY ed.uploaded_at DESC`;
 
@@ -144,7 +167,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await pool.query(`DELETE FROM employee_documents WHERE id = ?`, [id]);
+    // Employees can delete only their own uploads; HR only documents of its own company
+    const [result]: any = isHr(req)
+      ? await pool.query(
+          `DELETE ed FROM employee_documents ed JOIN users u ON u.id = ed.user_id WHERE ed.id = ? AND u.company_id = ?`,
+          [id, getTenantId(req)]
+        )
+      : await pool.query(`DELETE FROM employee_documents WHERE id = ? AND user_id = ?`, [id, req.user?.id]);
+    if (!result.affectedRows) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+      return;
+    }
     res.json({ success: true, message: 'Document deleted from database successfully.' });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to delete document.' } });

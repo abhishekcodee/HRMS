@@ -158,6 +158,9 @@ const STATEMENTS: string[] = [
   'ALTER TABLE employee_loans_advancements ADD COLUMN company_id VARCHAR(36) NULL',
   'ALTER TABLE reimbursements ADD COLUMN company_id VARCHAR(36) NULL',
   'ALTER TABLE salary_arrears ADD COLUMN company_id VARCHAR(36) NULL',
+  'ALTER TABLE leave_requests ADD COLUMN company_id VARCHAR(36) NULL',
+  // Older leave requests were saved without a company; take it from the employee
+  'UPDATE leave_requests lr JOIN users u ON u.id = lr.user_id SET lr.company_id = u.company_id WHERE lr.company_id IS NULL AND u.company_id IS NOT NULL',
   'CREATE INDEX idx_payroll_runs_company_period ON payroll_runs (company_id, payroll_year, payroll_month)',
   'CREATE INDEX idx_attendance_user_date ON attendance (user_id, work_date)',
 ];

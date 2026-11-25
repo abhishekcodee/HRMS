@@ -261,7 +261,7 @@ export async function adminResetUserPassword(req: AuthRequest, res: Response): P
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
     await pool.query(
-      `UPDATE users SET password_hash = ?, must_change_password = 1, updated_at = NOW() WHERE id = ?`,
+      `UPDATE users SET password_hash = ?, must_change_password = 1, password_changed_at = NOW(), updated_at = NOW() WHERE id = ?`,
       [passwordHash, targetUserId]
     );
 

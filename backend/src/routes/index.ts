@@ -25,6 +25,7 @@ import { attendanceFeedHandler } from '../modules/attendance/attendanceFeedContr
 import { payrollCronHandler } from '../modules/payroll/payrollAutomationController.js';
 
 import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
+import { isHr, isSelf, requireHr } from '../security/accessControl.js';
 import { tenantMiddleware } from '../middleware/tenantMiddleware.js';
 import { demoGuard } from '../middleware/demoGuard.js';
 import { demoRouter } from '../modules/demo/demoRoutes.js';
@@ -106,6 +107,12 @@ import {
 
 export const v1Router = Router();
 
+/** /employees/:id/... reads: the employee themself or HR only */
+function selfOrHrParam(req: any, res: any, next: any): void {
+  if (isHr(req) || isSelf(req, req.params.id)) return next();
+  res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own records.' } });
+}
+
 // Health & Readiness Routes
 v1Router.use('/', healthRouter);
 
@@ -127,8 +134,8 @@ v1Router.put('/companies/:id', authenticateToken, requireRole(['admin', 'employe
 v1Router.delete('/companies/:id', authenticateToken, requireRole(['admin', 'employer']), deleteCompany);
 
 // Statutory Settings Endpoints
-v1Router.get('/statutory-settings', authenticateToken, getStatutorySettings);
-v1Router.put('/statutory-settings', authenticateToken, requireRole(['admin', 'employer']), updateStatutorySettings);
+v1Router.get('/statutory-settings', authenticateToken, tenantMiddleware, requireHr, getStatutorySettings);
+v1Router.put('/statutory-settings', authenticateToken, tenantMiddleware, requireRole(['admin', 'employer']), updateStatutorySettings);
 
 // Reference Numbering Endpoints
 v1Router.get('/letter-numbering/company/:companyId', authenticateToken, getLetterNumberingFormats);
@@ -159,18 +166,18 @@ v1Router.get('/appointment-letters/:id', authenticateToken, getAppointmentLetter
 // Prompt Endpoints Exact Mounts
 v1Router.get('/employees/import', authenticateToken, requireRole(['admin', 'employer']), importEmployeesCsv);
 v1Router.post('/employees/import', authenticateToken, requireRole(['admin', 'employer']), importEmployeesCsv);
-v1Router.get('/employees/:id/balance', authenticateToken, getEmployeeDerivedBalance);
+v1Router.get('/employees/:id/balance', authenticateToken, tenantMiddleware, selfOrHrParam, getEmployeeDerivedBalance);
 
 v1Router.get('/policies', authenticateToken, getLeavePolicies);
 v1Router.put('/policies/:id', authenticateToken, requireRole(['admin']), updateLeavePolicy);
 
 v1Router.post('/entitlements/calculate', authenticateToken, requireRole(['admin', 'employer']), calculateEntitlements);
-v1Router.get('/entitlements', authenticateToken, getEntitlements);
+v1Router.get('/entitlements', authenticateToken, tenantMiddleware, requireHr, getEntitlements);
 
-v1Router.post('/leave-transactions', authenticateToken, createLeaveTransaction);
-v1Router.get('/leave-transactions', authenticateToken, getLeaveTransactions);
+v1Router.post('/leave-transactions', authenticateToken, tenantMiddleware, requireHr, createLeaveTransaction);
+v1Router.get('/leave-transactions', authenticateToken, tenantMiddleware, requireHr, getLeaveTransactions);
 
-v1Router.get('/reports/entitlement-register', authenticateToken, getEntitlementRegisterReport);
+v1Router.get('/reports/entitlement-register', authenticateToken, tenantMiddleware, requireHr, getEntitlementRegisterReport);
 
 // Multi-Tenant & Super Admin Mount Points
 import { superAdminRouter } from './superAdmin.routes.js';

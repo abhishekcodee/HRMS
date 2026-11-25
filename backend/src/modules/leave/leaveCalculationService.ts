@@ -1,4 +1,5 @@
 import { pool } from '../../database/index.js';
+import { readSettings } from '../settings/companySettings.js';
 import { logger } from '../../utils/logger.js';
 
 export interface FinancialYearInfo {
@@ -310,7 +311,7 @@ export async function calculatePL(userId: string, targetFYDate?: Date) {
   const conn = await pool.getConnection();
   try {
     const [userRows]: any = await conn.query(
-      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
+      `SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
               ep.joining_date as joiningDate, ep.experience_years as experienceYears
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
@@ -329,14 +330,11 @@ export async function calculatePL(userId: string, targetFYDate?: Date) {
     // Stored experience in years
     const totalExperienceYears = parseFloat(emp.experienceYears) || 0.00;
 
-    const [settingRows]: any = await conn.query(
-      `SELECT setting_value FROM system_settings WHERE setting_key IN ('earnedLeave', 'privilegeLeave')`
-    );
-
+    const plSettings = await readSettings(['earnedLeave', 'privilegeLeave'], emp.companyId, conn as any);
     let annualPL = 14.0;
-    if (settingRows.length > 0) {
-      const parsed = parseFloat(settingRows[0].setting_value);
-      if (!isNaN(parsed) && parsed > 0) annualPL = parsed;
+    for (const k of ['privilegeLeave', 'earnedLeave']) {
+      const parsed = parseFloat(plSettings[k]);
+      if (!isNaN(parsed) && parsed > 0) { annualPL = parsed; break; }
     }
 
     const plResult = calculatePLEntitlement(joiningDate, totalExperienceYears, fy, annualPL);
@@ -362,7 +360,7 @@ export async function calculateCL(userId: string, targetFYDate?: Date) {
   const conn = await pool.getConnection();
   try {
     const [userRows]: any = await conn.query(
-      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
+      `SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
               ep.joining_date as joiningDate
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
@@ -379,15 +377,10 @@ export async function calculateCL(userId: string, targetFYDate?: Date) {
     const fy = getFinancialYear(targetFYDate);
 
     // Fetch Annual CL policy setting (default 10)
-    const [settingRows]: any = await conn.query(
-      `SELECT setting_value FROM system_settings WHERE setting_key = 'casualLeave'`
-    );
-
+    const clSettings = await readSettings(['casualLeave'], emp.companyId, conn as any);
     let annualCL = 10.0;
-    if (settingRows.length > 0) {
-      const parsed = parseFloat(settingRows[0].setting_value);
-      if (!isNaN(parsed) && parsed > 0) annualCL = parsed;
-    }
+    const parsedCl = parseFloat(clSettings.casualLeave);
+    if (!isNaN(parsedCl) && parsedCl > 0) annualCL = parsedCl;
 
     const clResult = calculateCLEntitlement(joiningDate, fy, annualCL);
 
@@ -412,7 +405,7 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
   try {
     // 1. Fetch Employee Record & Date of Joining & Stored Experience
     const [userRows]: any = await conn.query(
-      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
+      `SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.created_at as createdAt,
               ep.joining_date as joiningDate, ep.experience_years as experienceYears
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
@@ -430,19 +423,15 @@ export async function calculateEmployeeLeaveSummary(userId: string): Promise<Emp
     const fy = getFinancialYear();
 
     // 2. Fetch Annual Leave Policies from system_settings or default
-    const [settingRows]: any = await conn.query(
-      `SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('casualLeave', 'earnedLeave', 'privilegeLeave')`
-    );
+    const leaveSettings = await readSettings(['casualLeave', 'earnedLeave', 'privilegeLeave'], emp.companyId, conn as any);
 
     let annualCL = 10.0; // Default 10 days for CL
     let annualPL = 14.0; // Default 14 days for PL per financial year
-
-    for (const s of settingRows) {
-      const parsed = parseFloat(s.setting_value);
-      if (!isNaN(parsed) && parsed > 0) {
-        if (s.setting_key === 'casualLeave') annualCL = parsed;
-        if (s.setting_key === 'earnedLeave' || s.setting_key === 'privilegeLeave') annualPL = parsed;
-      }
+    const clVal = parseFloat(leaveSettings.casualLeave);
+    if (!isNaN(clVal) && clVal > 0) annualCL = clVal;
+    for (const k of ['privilegeLeave', 'earnedLeave']) {
+      const v = parseFloat(leaveSettings[k]);
+      if (!isNaN(v) && v > 0) { annualPL = v; break; }
     }
 
     // 3. Compute Exact Prorated Allocations for CL & PL

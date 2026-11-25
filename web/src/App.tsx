@@ -56,7 +56,9 @@ const PageFallback = () => (
   </div>
 );
 
-const ProtectedRoute: React.FC<{ children?: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }> = ({ children, adminOnly, superAdminOnly }) => {
+const HR_VIEWS = ['ADMIN', 'EMPLOYER', 'SUPER_ADMIN', 'DEMO'];
+
+const ProtectedRoute: React.FC<{ children?: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean; hrOnly?: boolean }> = ({ children, adminOnly, superAdminOnly, hrOnly }) => {
   const { isAuthenticated, isLoading, user, activeRoleView } = useAuth();
   const location = useLocation();
 
@@ -82,6 +84,11 @@ const ProtectedRoute: React.FC<{ children?: React.ReactNode; adminOnly?: boolean
   }
 
   if (adminOnly && activeRoleView !== 'ADMIN' && !user?.isSuperAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // HR pages (payroll, salary slips, reports, company documents): employees are sent back to their dashboard
+  if (hrOnly && !user?.isSuperAdmin && !HR_VIEWS.includes(String(activeRoleView || '').toUpperCase())) {
     return <Navigate to="/" replace />;
   }
 
@@ -153,32 +160,32 @@ export function App() {
                       <Route path="/my-calendar" element={<CalendarPage />} />
                       
                       {/* Documents & Vault */}
-                      <Route path="/document-management" element={<DocumentDashboardPage />} />
-                      <Route path="/document-management/types" element={<DocumentTypesManagerPage />} />
-                      <Route path="/document-management/templates" element={<DocumentTemplateBuilderPage />} />
-                      <Route path="/document-management/generate" element={<MultiDocumentGeneratorStudio />} />
-                      <Route path="/document-management/generator" element={<MultiDocumentGeneratorStudio />} />
-                      <Route path="/appointment-letters/generator" element={<MultiDocumentGeneratorStudio />} />
-                      <Route path="/appointment-letters/generate-pdf" element={<MultiDocumentGeneratorStudio />} />
-                      <Route path="/documents" element={<DocumentsPage />} />
+                      <Route path="/document-management" element={<ProtectedRoute hrOnly><DocumentDashboardPage /></ProtectedRoute>} />
+                      <Route path="/document-management/types" element={<ProtectedRoute hrOnly><DocumentTypesManagerPage /></ProtectedRoute>} />
+                      <Route path="/document-management/templates" element={<ProtectedRoute hrOnly><DocumentTemplateBuilderPage /></ProtectedRoute>} />
+                      <Route path="/document-management/generate" element={<ProtectedRoute hrOnly><MultiDocumentGeneratorStudio /></ProtectedRoute>} />
+                      <Route path="/document-management/generator" element={<ProtectedRoute hrOnly><MultiDocumentGeneratorStudio /></ProtectedRoute>} />
+                      <Route path="/appointment-letters/generator" element={<ProtectedRoute hrOnly><MultiDocumentGeneratorStudio /></ProtectedRoute>} />
+                      <Route path="/appointment-letters/generate-pdf" element={<ProtectedRoute hrOnly><MultiDocumentGeneratorStudio /></ProtectedRoute>} />
+                      <Route path="/documents" element={<ProtectedRoute hrOnly><DocumentsPage /></ProtectedRoute>} />
                       <Route path="/my-documents" element={<EmployeeLockerPage />} />
                       
                       {/* Security & Audit Center */}
                       <Route path="/security-center" element={<ProtectedRoute adminOnly><SecurityAuditCenterPage /></ProtectedRoute>} />
 
                       {/* Production Payroll & Salary Engine */}
-                      <Route path="/payroll/processing" element={<PayrollProcessingPage />} />
+                      <Route path="/payroll/processing" element={<ProtectedRoute hrOnly><PayrollProcessingPage /></ProtectedRoute>} />
                       <Route path="/my-payslips" element={<MyPayslipsPage />} />
-                      <Route path="/payroll/upcoming" element={<UpcomingPayrollPage />} />
-                      <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
-                      <Route path="/payroll/statutory" element={<StatutorySettingsPage />} />
-                      <Route path="/payroll/bank-transfer" element={<BankTransferPage />} />
-                      <Route path="/payroll/ff-settlement" element={<FullAndFinalPage />} />
-                      <Route path="/salary-slips" element={<SalarySlipBulkPage />} />
+                      <Route path="/payroll/upcoming" element={<ProtectedRoute hrOnly><UpcomingPayrollPage /></ProtectedRoute>} />
+                      <Route path="/payroll/structures" element={<ProtectedRoute hrOnly><SalaryStructuresPage /></ProtectedRoute>} />
+                      <Route path="/payroll/statutory" element={<ProtectedRoute hrOnly><StatutorySettingsPage /></ProtectedRoute>} />
+                      <Route path="/payroll/bank-transfer" element={<ProtectedRoute hrOnly><BankTransferPage /></ProtectedRoute>} />
+                      <Route path="/payroll/ff-settlement" element={<ProtectedRoute hrOnly><FullAndFinalPage /></ProtectedRoute>} />
+                      <Route path="/salary-slips" element={<ProtectedRoute hrOnly><SalarySlipBulkPage /></ProtectedRoute>} />
 
                       {/* Reports & Analytics */}
-                      <Route path="/reports" element={<ReportsPage />} />
-                      <Route path="/reports-analytics" element={<ReportsPage />} />
+                      <Route path="/reports" element={<ProtectedRoute hrOnly><ReportsPage /></ProtectedRoute>} />
+                      <Route path="/reports-analytics" element={<ProtectedRoute hrOnly><ReportsPage /></ProtectedRoute>} />
                       
                       {/* Employee Self Service */}
                       <Route path="/my-profile" element={<EmployeeDetailPage />} />

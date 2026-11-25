@@ -5,6 +5,35 @@ import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 import { getTenantId } from '../../middleware/tenantMiddleware.js';
 import { checkCompanyEmployeeLimit } from '../../utils/employeeLimitGuard.js';
+import { assignableRole, isHr, isSelf, redactEmployee } from '../../security/accessControl.js';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_STATUSES = ['active', 'inactive', 'suspended'];
+
+/** Shared input checks for create/update. Returns an error message or null. */
+function validateEmployeeInput(body: any, isCreate: boolean): string | null {
+  if (body.email !== undefined && body.email !== null && body.email !== '' && !EMAIL_RE.test(String(body.email).trim())) {
+    return 'Enter a valid e-mail address.';
+  }
+  if (body.salary !== undefined && body.salary !== null && body.salary !== '') {
+    const n = Number(body.salary);
+    if (!Number.isFinite(n) || n < 0 || n > 100000000) return 'Monthly salary must be a positive number.';
+  }
+  if (body.status !== undefined && body.status !== null && body.status !== '' && !ALLOWED_STATUSES.includes(String(body.status).toLowerCase())) {
+    return 'Status must be active, inactive or suspended.';
+  }
+  for (const f of ['joiningDate', 'dob']) {
+    const v = body[f];
+    if (v !== undefined && v !== null && v !== '') {
+      const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+      if (!m || !d || d.getMonth() !== Number(m[2]) - 1 || d.getDate() !== Number(m[3])) return `${f === 'dob' ? 'Date of birth' : 'Joining date'} must be a valid date (YYYY-MM-DD).`;
+    }
+  }
+  if (body.fullName !== undefined && body.fullName !== null && String(body.fullName).trim().length > 150) return 'Name is too long (max 150 characters).';
+  if (isCreate && body.password !== undefined && String(body.password).length < 8) return 'Initial password must be at least 8 characters.';
+  return null;
+}
 
 /**
  * Automatically insert custom department or designation into master tables if not existing
@@ -119,7 +148,8 @@ export async function listEmployees(req: AuthRequest, res: Response): Promise<vo
 
     res.json({
       success: true,
-      data: rows,
+      // Colleagues' salary, PAN, bank and personal details are visible only to HR (or to the employee themself)
+      data: isHr(req) ? rows : rows.map((r: any) => (isSelf(req, r.id) ? r : redactEmployee(r))),
     });
   } catch (error) {
     console.error('List Employees Error:', error);
@@ -175,7 +205,7 @@ export async function getEmployeeById(req: AuthRequest, res: Response): Promise<
 
     res.json({
       success: true,
-      data: rows[0],
+      data: isHr(req) || isSelf(req, rows[0].id) ? rows[0] : redactEmployee(rows[0]),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Failed to fetch employee profile.' } });
@@ -267,6 +297,25 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
       return;
     }
 
+    const inputError = validateEmployeeInput(req.body, true);
+    if (inputError) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: inputError } });
+      return;
+    }
+    const roleCheck = assignableRole(req, role);
+    if (!roleCheck.ok) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: roleCheck.message } });
+      return;
+    }
+    const expCheck = req.body.experienceYears;
+    if (expCheck !== undefined && expCheck !== null && expCheck !== '' && (isNaN(parseFloat(expCheck)) || parseFloat(expCheck) < 0)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Total Experience must be a valid non-negative number (e.g. 0, 3.5, 4, 5).' },
+      });
+      return;
+    }
+
     const trimmedEmpId = employeeId.trim();
     const trimmedEmail = email.trim();
 
@@ -288,8 +337,8 @@ export async function createEmployee(req: AuthRequest, res: Response): Promise<v
 
     const userId = uuidv4();
     const passwordHash = await bcrypt.hash(password, 10);
-    const userRole = role || 'employee';
-    const userStatus = status || 'active';
+    const userRole = roleCheck.role || 'employee';
+    const userStatus = status ? String(status).toLowerCase() : 'active';
 
     // Strict Employee Limit Check: enforce maximum employee capacity set by Super Admin
     if (userStatus === 'active') {
@@ -456,10 +505,25 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       managerName,
     } = req.body;
 
+    const inputError = validateEmployeeInput(req.body, false);
+    if (inputError) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: inputError } });
+      return;
+    }
+    const roleCheck = assignableRole(req, role);
+    if (!roleCheck.ok) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: roleCheck.message } });
+      return;
+    }
+    if (roleCheck.role && isSelf(req, id) && !req.isSuperAdmin) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You cannot change your own role.' } });
+      return;
+    }
+
     const companyId = getTenantId(req);
     const isSuperGlobal = req.isSuperAdmin && !req.tenantId;
 
-    let userCheckSql = 'SELECT id, employee_id, full_name, email, company_id FROM users WHERE id = ?';
+    let userCheckSql = 'SELECT id, employee_id, full_name, email, company_id, role FROM users WHERE id = ?';
     const userCheckParams: any[] = [id];
     if (!isSuperGlobal) {
       userCheckSql += ' AND company_id = ?';
@@ -491,8 +555,9 @@ export async function updateEmployee(req: AuthRequest, res: Response): Promise<v
       email ? email.trim() : null,
       phone ? phone.trim() : null,
       profilePhoto ? profilePhoto.trim() : null,
-      role || null,
-      status || null,
+      // The platform super admin account's role can never be changed through this endpoint
+      currentUser.role === 'super_admin' ? null : roleCheck.role,
+      status ? String(status).toLowerCase() : null,
       id,
     ];
     if (!isSuperGlobal) {

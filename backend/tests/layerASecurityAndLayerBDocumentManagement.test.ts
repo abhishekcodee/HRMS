@@ -4,7 +4,7 @@ import { app } from '../src/app.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env.js';
 import { resolveTemplateVariables } from '../src/modules/documentManagement/variableResolver.js';
-import { generateTotpSecret, verifyTotpPin } from '../src/security/mfaService.js';
+import { generateTotpPin, generateTotpSecret, verifyTotpPin } from '../src/security/mfaService.js';
 import { pool, checkDatabaseHealth } from '../src/database/index.js';
 import crypto from 'crypto';
 
@@ -84,8 +84,13 @@ describe('Layer A (Security) & Layer B (Document Management) Enterprise Tests', 
   it('3. TOTP MFA Secret & PIN Validation - should verify 6-digit TOTP pin', () => {
     const secret = generateTotpSecret();
     expect(secret).toBeTruthy();
-    expect(verifyTotpPin(secret, '123456')).toBe(true);
-    expect(verifyTotpPin(secret, '000000')).toBe(false);
+    // A real authenticator code for this secret is accepted; fixed "backdoor" codes are not
+    expect(verifyTotpPin(secret, generateTotpPin(secret))).toBe(true);
+    const current = generateTotpPin(secret);
+    for (const fake of ['123456', '654321']) {
+      if (fake !== current) expect(verifyTotpPin(secret, fake)).toBe(false);
+    }
+    expect(verifyTotpPin(secret, 'abcdef')).toBe(false);
   });
 
   it('4. GET /api/v1/document-management/categories - should return default document categories when DB available', async () => {

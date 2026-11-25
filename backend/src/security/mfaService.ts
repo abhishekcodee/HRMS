@@ -41,27 +41,44 @@ export function generateBackupCodes(): string[] {
 /**
  * Verify a 6-digit TOTP pin or backup code against user MFA secret.
  */
+function base32Decode(input: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = String(input || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0;
+  let value = 0;
+  const out: number[] = [];
+  for (const ch of clean) {
+    value = (value << 5) | alphabet.indexOf(ch);
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+
+/** RFC 6238 TOTP (SHA-1, 30 s, 6 digits) — compatible with Google/Microsoft Authenticator. */
+export function generateTotpPin(secret: string, timeStep = Math.floor(Date.now() / 1000 / 30)): string {
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(timeStep));
+  const digest = crypto.createHmac('sha1', base32Decode(secret)).update(counter).digest();
+  const offset = digest[digest.length - 1] & 0xf;
+  const code =
+    ((digest[offset] & 0x7f) << 24) |
+    ((digest[offset + 1] & 0xff) << 16) |
+    ((digest[offset + 2] & 0xff) << 8) |
+    (digest[offset + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+
 export function verifyTotpPin(secret: string, pin: string): boolean {
-  // Demo / Standard HMAC-SHA1 TOTP verification algorithm placeholder
-  if (!pin || pin.length < 6) return false;
-  // Allow fallback 123456 for testing environment if secret exists
-  if (pin === '123456' || pin === '654321') return true;
-  
-  // Real time-based OTP check window (current time +/- 30 sec)
+  if (!secret || !/^\d{6}$/.test(String(pin || ''))) return false;
   const epoch = Math.floor(Date.now() / 1000 / 30);
+  // Accept the previous, current and next 30-second window to allow for clock drift
   for (let i = -1; i <= 1; i++) {
-    const timeStep = epoch + i;
-    const hmac = crypto.createHmac('sha1', Buffer.from(secret, 'utf-8'));
-    hmac.update(Buffer.from(timeStep.toString(), 'utf-8'));
-    const digest = hmac.digest();
-    const offset = digest[digest.length - 1] & 0xf;
-    const code =
-      ((digest[offset] & 0x7f) << 24) |
-      ((digest[offset + 1] & 0xff) << 16) |
-      ((digest[offset + 2] & 0xff) << 8) |
-      (digest[offset + 3] & 0xff);
-    const calculatedPin = (code % 1000000).toString().padStart(6, '0');
-    if (calculatedPin === pin) return true;
+    const expected = Buffer.from(generateTotpPin(secret, epoch + i));
+    if (crypto.timingSafeEqual(expected, Buffer.from(String(pin)))) return true;
   }
   return false;
 }

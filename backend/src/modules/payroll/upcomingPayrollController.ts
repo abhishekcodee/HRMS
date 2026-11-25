@@ -2,17 +2,36 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { isHr } from '../../security/accessControl.js';
+
+/** Company scope + ownership: HR sees its company; employees see only their own rows. */
+function scope(req: AuthRequest, alias: string): { where: string; params: any[] } {
+  if (isHr(req)) return { where: `WHERE u.company_id = ?`, params: [getTenantId(req)] };
+  return { where: `WHERE ${alias}.employee_id = ?`, params: [req.user?.id] };
+}
+
+/** The employee a claim is for: employees can only file for themselves; HR only for their company. */
+async function resolveClaimEmployee(req: AuthRequest, requested: any): Promise<string | null> {
+  if (!isHr(req)) return req.user?.id || null;
+  const target = requested || req.user?.id;
+  const [rows]: any = await pool.query('SELECT id FROM users WHERE id = ? AND company_id = ?', [target, getTenantId(req)]);
+  return rows.length ? rows[0].id : null;
+}
 
 /**
  * Get Reimbursement / Expense Claims
  */
 export async function getReimbursements(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const sc = scope(req, 'r');
     const [rows]: any = await pool.query(
       `SELECT r.*, u.full_name as employeeName, u.employee_id as employeeCode
        FROM reimbursements r
        JOIN users u ON u.id = r.employee_id
-       ORDER BY r.created_at DESC`
+       ${sc.where}
+       ORDER BY r.created_at DESC`,
+      sc.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -26,10 +45,11 @@ export async function getReimbursements(req: AuthRequest, res: Response): Promis
 export async function createReimbursement(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { employeeId, category, amount, claimDate, description, receiptUrl } = req.body;
-    const empId = employeeId || req.user?.id;
+    const empId = await resolveClaimEmployee(req, employeeId);
+    const amt = Number(amount);
 
-    if (!empId || !amount || !category) {
-      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Employee, Category, and Amount are required.' } });
+    if (!empId || !category || !Number.isFinite(amt) || amt <= 0 || amt > 10000000) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Employee, category and a positive amount are required.' } });
       return;
     }
 
@@ -37,7 +57,7 @@ export async function createReimbursement(req: AuthRequest, res: Response): Prom
     await pool.query(
       `INSERT INTO reimbursements (id, employee_id, category, amount, claim_date, description, receipt_url, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [rId, empId, category, Number(amount), claimDate || new Date().toISOString().split('T')[0], description || null, receiptUrl || null]
+      [rId, empId, category, amt, claimDate || new Date().toISOString().split('T')[0], description || null, receiptUrl || null]
     );
 
     res.status(201).json({ success: true, message: 'Reimbursement claim submitted successfully.' });
@@ -53,8 +73,10 @@ export async function approveReimbursement(req: AuthRequest, res: Response): Pro
   try {
     const { id } = req.params;
     await pool.query(
-      `UPDATE reimbursements SET status = 'APPROVED', approved_by = ? WHERE id = ?`,
-      [req.user?.id || null, id]
+      `UPDATE reimbursements r JOIN users u ON u.id = r.employee_id
+       SET r.status = 'APPROVED', r.approved_by = ?
+       WHERE r.id = ? AND u.company_id = ? AND r.employee_id <> ?`,
+      [req.user?.id || null, id, getTenantId(req), req.user?.id || '']
     );
     res.json({ success: true, message: 'Reimbursement claim approved.' });
   } catch (error) {
@@ -67,11 +89,14 @@ export async function approveReimbursement(req: AuthRequest, res: Response): Pro
  */
 export async function getFbpDeclarations(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const sc = scope(req, 'f');
     const [rows]: any = await pool.query(
       `SELECT f.*, u.full_name as employeeName, u.employee_id as employeeCode
        FROM flexible_benefit_plans f
        JOIN users u ON u.id = f.employee_id
-       ORDER BY f.created_at DESC`
+       ${sc.where}
+       ORDER BY f.created_at DESC`,
+      sc.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -85,7 +110,11 @@ export async function getFbpDeclarations(req: AuthRequest, res: Response): Promi
 export async function saveFbpDeclaration(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { employeeId, financialYear, ltaAmount, fuelAllowanceAmount, telephoneAllowanceAmount, foodCouponsAmount } = req.body;
-    const empId = employeeId || req.user?.id;
+    const empId = await resolveClaimEmployee(req, employeeId);
+    if (!empId) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Unknown employee.' } });
+      return;
+    }
 
     const fbpId = uuidv4();
     const lta = Number(ltaAmount) || 0;
@@ -112,11 +141,14 @@ export async function saveFbpDeclaration(req: AuthRequest, res: Response): Promi
  */
 export async function getSalaryArrears(req: AuthRequest, res: Response): Promise<void> {
   try {
+    const sc = scope(req, 'a');
     const [rows]: any = await pool.query(
       `SELECT a.*, u.full_name as employeeName, u.employee_id as employeeCode
        FROM salary_arrears a
        JOIN users u ON u.id = a.employee_id
-       ORDER BY a.created_at DESC`
+       ${sc.where}
+       ORDER BY a.created_at DESC`,
+      sc.params
     );
     res.json({ success: true, data: rows });
   } catch (error) {
@@ -129,7 +161,12 @@ export async function getSalaryArrears(req: AuthRequest, res: Response): Promise
  */
 export async function createSalaryArrear(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { employeeId, effectiveFromMonth, effectiveFromYear, effectiveToMonth, effectiveToYear, basicDifferenceTotal, grossDifferenceTotal } = req.body;
+    const { employeeId: requestedEmployee, effectiveFromMonth, effectiveFromYear, effectiveToMonth, effectiveToYear, basicDifferenceTotal, grossDifferenceTotal } = req.body;
+    const employeeId = await resolveClaimEmployee(req, requestedEmployee);
+    if (!employeeId || !requestedEmployee) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Choose an employee of your company.' } });
+      return;
+    }
 
     const arrearId = uuidv4();
     await pool.query(

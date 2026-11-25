@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
 
 /**
  * Get Comprehensive HR & Payroll Reports
@@ -10,6 +11,7 @@ export async function getPayrollReport(req: AuthRequest, res: Response): Promise
     const { reportType, month, year, department, format } = req.query;
     const m = Number(month) || new Date().getMonth() + 1;
     const y = Number(year) || new Date().getFullYear();
+    const companyId = getTenantId(req);
 
     let sql = ``;
     let params: any[] = [];
@@ -20,8 +22,8 @@ export async function getPayrollReport(req: AuthRequest, res: Response): Promise
         sql = `SELECT pi.*, pr.status as runStatus, pr.financial_year as financialYear
                FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ?`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ?`;
+        params = [companyId, m, y];
         if (department) {
           sql += ` AND pi.department = ?`;
           params.push(department);
@@ -34,8 +36,8 @@ export async function getPayrollReport(req: AuthRequest, res: Response): Promise
                       pi.basic_salary, pi.earned_basic as pfWage, pi.employee_pf, pi.employer_pf
                FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ? AND pi.employee_pf > 0`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ? AND pi.employee_pf > 0`;
+        params = [companyId, m, y];
         break;
 
       case 'esic_report':
@@ -43,31 +45,31 @@ export async function getPayrollReport(req: AuthRequest, res: Response): Promise
                       pi.employee_esic, pi.employer_esic
                FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ? AND pi.employee_esic > 0`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ? AND pi.employee_esic > 0`;
+        params = [companyId, m, y];
         break;
 
       case 'pt_report':
         sql = `SELECT pi.employee_code, pi.employee_name, pi.gross_earnings, pi.professional_tax
                FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ? AND pi.professional_tax > 0`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ? AND pi.professional_tax > 0`;
+        params = [companyId, m, y];
         break;
 
       case 'tds_report':
         sql = `SELECT pi.employee_code, pi.employee_name, pi.pan, pi.gross_earnings, pi.tds
                FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ? AND pi.tds > 0`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ? AND pi.tds > 0`;
+        params = [companyId, m, y];
         break;
 
       default:
         sql = `SELECT pi.* FROM payroll_items pi
                JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
-               WHERE pr.payroll_month = ? AND pr.payroll_year = ?`;
-        params = [m, y];
+               WHERE pr.company_id = ? AND pr.payroll_month = ? AND pr.payroll_year = ?`;
+        params = [companyId, m, y];
         break;
     }
 

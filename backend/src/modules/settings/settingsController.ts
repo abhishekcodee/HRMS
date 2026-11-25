@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { companySettingKey, readAllSettings } from './companySettings.js';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 import { logger } from '../../utils/logger.js';
@@ -33,19 +35,10 @@ const DEFAULT_SETTINGS = {
  * GET /api/v1/settings
  * Fetch all system settings from MySQL database
  */
-export async function getSettings(_req: AuthRequest, res: Response): Promise<void> {
+export async function getSettings(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const [rows]: any = await pool.query('SELECT setting_key, setting_value FROM system_settings');
-    
-    const settings: Record<string, any> = { ...DEFAULT_SETTINGS };
-
-    for (const row of rows) {
-      try {
-        settings[row.setting_key] = JSON.parse(row.setting_value);
-      } catch (_) {
-        settings[row.setting_key] = row.setting_value;
-      }
-    }
+    const companyId = req.isSuperAdmin && !req.tenantId ? null : getTenantId(req);
+    const settings: Record<string, any> = { ...DEFAULT_SETTINGS, ...(await readAllSettings(companyId)) };
 
     res.json({
       success: true,
@@ -79,13 +72,16 @@ export async function updateSettings(req: AuthRequest, res: Response): Promise<v
     try {
       await conn.beginTransaction();
 
+      // Company HR writes its own company's values; only the platform super admin (no company selected) edits defaults
+      const companyId = req.isSuperAdmin && !req.tenantId ? null : getTenantId(req);
       for (const [key, value] of Object.entries(newSettings)) {
+        if (!/^[A-Za-z][A-Za-z0-9_.-]{0,50}$/.test(key)) continue;
         const valStr = JSON.stringify(value);
         await conn.query(
           `INSERT INTO system_settings (setting_key, setting_value)
            VALUES (?, ?)
            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
-          [key, valStr]
+          [companyId ? companySettingKey(companyId, key) : key, valStr]
         );
       }
 

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { logger } from '../../utils/logger.js';
+import { loginRetryAfter, recordLoginFailure, recordLoginSuccess } from '../../security/loginRateLimiter.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +25,20 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const trimmedIdentifier = rawIdentifier.trim();
+    const trimmedIdentifier = String(rawIdentifier).trim();
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+    const retryAfter = loginRetryAfter(clientIp, trimmedIdentifier);
+    if (retryAfter > 0) {
+      res.setHeader('Retry-After', String(retryAfter));
+      res.status(429).json({
+        success: false,
+        error: {
+          code: 'TOO_MANY_ATTEMPTS',
+          message: `Too many failed sign-in attempts. Try again in ${Math.ceil(retryAfter / 60)} minute(s).`,
+        },
+      });
+      return;
+    }
 
     const [rows]: any = await pool.query(
       `SELECT id, company_id, employee_id, full_name, email, phone, password_hash, role, status, profile_photo, must_change_password
@@ -33,6 +48,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     );
 
     if (rows.length === 0) {
+      recordLoginFailure(clientIp, trimmedIdentifier);
       res.status(401).json({
         success: false,
         error: {
@@ -80,6 +96,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      recordLoginFailure(clientIp, trimmedIdentifier);
       await pool.query(
         `INSERT INTO audit_logs (id, company_id, user_id, user_email, role, action, details, ip_address)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -104,6 +121,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+
+    recordLoginSuccess(clientIp, trimmedIdentifier);
 
     // Update last_login_at in MySQL
     await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
@@ -353,10 +372,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       ]
     );
 
+    // The reset token is never returned in the response (that allowed account takeover); it only goes by e-mail.
+    if (env.NODE_ENV === 'test') logger.debug?.(`Password reset token issued for ${user.id}`);
     res.json({
       success: true,
-      message: 'Password reset request generated successfully.',
-      debugResetToken: env.NODE_ENV === 'development' ? resetToken : undefined,
+      message: 'If an account exists with this email, password reset instructions have been generated.',
     });
   } catch (error) {
     console.error('Forgot Password error:', error);
@@ -398,7 +418,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     const resetRecord = rows[0];
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?', [passwordHash, resetRecord.user_id]);
+    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 0, password_changed_at = NOW() WHERE id = ?', [passwordHash, resetRecord.user_id]);
     await pool.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?', [resetRecord.id]);
 
     await pool.query(

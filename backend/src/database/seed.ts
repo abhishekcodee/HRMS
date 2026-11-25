@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { pool, checkDatabaseHealth } from './index.js';
@@ -1015,7 +1016,6 @@ export async function seedDatabase() {
         fullName: 'Aman Upadhyay',
         email: 'amanupadhyay2030@gmail.com',
         phone: '+91 98765 99999',
-        passwordRaw: 'Amanupa10',
         role: 'super_admin',
         status: 'active',
         mustChangePassword: 0,
@@ -1048,7 +1048,13 @@ export async function seedDatabase() {
 
       if (existingUsers.length === 0) {
         userId = uuidv4();
-        const passwordHash = await bcrypt.hash(acc.passwordRaw, 10);
+        // Password comes from SUPER_ADMIN_PASSWORD; otherwise a random one is generated and shown once in the server log
+        const envPassword = process.env.SUPER_ADMIN_PASSWORD;
+        const initialPassword = envPassword && envPassword.length >= 10 ? envPassword : crypto.randomBytes(12).toString('base64url');
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        if (!envPassword) {
+          logger.warn(`Initial super admin password for ${acc.email}: ${initialPassword} (change it after first login, or set SUPER_ADMIN_PASSWORD)`);
+        }
 
         await conn.query(
           `INSERT INTO users (id, employee_id, full_name, email, phone, password_hash, role, status, must_change_password)
@@ -1069,11 +1075,22 @@ export async function seedDatabase() {
         logger.info(`Seeded administrative user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
       } else {
         userId = existingUsers[0].id;
-        const passwordHash = await bcrypt.hash(acc.passwordRaw, 10);
-        await conn.query(
-          `UPDATE users SET full_name = ?, phone = ?, password_hash = ?, role = ?, status = ?, must_change_password = ? WHERE id = ?`,
-          [acc.fullName, acc.phone, passwordHash, acc.role, acc.status, acc.mustChangePassword, userId]
-        );
+        // Never reset the password on restart. Only an explicit SUPER_ADMIN_PASSWORD (a recovery path) replaces it.
+        await conn.query(`UPDATE users SET full_name = ?, phone = ?, role = ?, status = ? WHERE id = ?`, [
+          acc.fullName, acc.phone, acc.role, acc.status, userId,
+        ]);
+        const envPassword = process.env.SUPER_ADMIN_PASSWORD;
+        if (envPassword && envPassword.length >= 10) {
+          const [cur]: any = await conn.query('SELECT password_hash FROM users WHERE id = ?', [userId]);
+          const same = cur[0]?.password_hash ? await bcrypt.compare(envPassword, cur[0].password_hash) : false;
+          if (!same) {
+            await conn.query(
+              'UPDATE users SET password_hash = ?, must_change_password = 0, password_changed_at = NOW() WHERE id = ?',
+              [await bcrypt.hash(envPassword, 10), userId]
+            );
+            logger.info(`Super admin password updated from SUPER_ADMIN_PASSWORD for ${acc.email}`);
+          }
+        }
         logger.info(`Updated administrative user: ${acc.employeeId} (${acc.email}) as ${acc.role}`);
       }
     }

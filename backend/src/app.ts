@@ -13,6 +13,8 @@ import { setSecurityHeaders } from './security/securityHeaders.js';
 import { csrfProtection } from './security/csrfSecurity.js';
 
 export const app = express();
+// Render (and Vercel's /api rewrite) sit in front of the app; use the first proxy's X-Forwarded-For for req.ip
+app.set('trust proxy', 1);
 
 // Security Middlewares
 app.use(

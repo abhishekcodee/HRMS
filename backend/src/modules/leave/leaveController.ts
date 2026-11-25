@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+import { isHr } from '../../security/accessControl.js';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
@@ -149,7 +151,7 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
 
     // Retrieve user, employee profile & manager/admin IDs from MySQL
     const [userRows]: any = await pool.query(
-      `SELECT u.id, u.employee_id as employeeId, u.full_name as fullName, u.email,
+      `SELECT u.id, u.company_id as companyId, u.employee_id as employeeId, u.full_name as fullName, u.email,
               ep.department_name as departmentName, ep.manager_id as managerId, ep.manager_name as managerName
        FROM users u
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
@@ -166,25 +168,40 @@ export async function applyLeave(req: AuthRequest, res: Response): Promise<void>
     const leaveId = uuidv4();
 
     // Determine Employer ID (Reporting Manager or default employer user)
-    let employerId = userObj.managerId;
+    // Approvers always come from the employee's own company and must be active
+    let employerId: string | null = null;
+    if (userObj.managerId) {
+      const [mgr]: any = await pool.query(
+        `SELECT id FROM users WHERE (id = ? OR employee_id = ?) AND company_id <=> ? AND LOWER(status) = 'active' LIMIT 1`,
+        [userObj.managerId, userObj.managerId, userObj.companyId]
+      );
+      if (mgr.length > 0) employerId = mgr[0].id;
+    }
     if (!employerId) {
-      const [empUser]: any = await pool.query(`SELECT id FROM users WHERE role = 'employer' LIMIT 1`);
+      const [empUser]: any = await pool.query(
+        `SELECT id FROM users WHERE role = 'employer' AND company_id <=> ? AND LOWER(status) = 'active' AND id <> ? ORDER BY created_at LIMIT 1`,
+        [userObj.companyId, userId]
+      );
       if (empUser.length > 0) employerId = empUser[0].id;
     }
 
-    // Determine Admin ID
+    // Determine Admin ID (same company only)
     let adminId: string | null = null;
-    const [adminUser]: any = await pool.query(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
+    const [adminUser]: any = await pool.query(
+      `SELECT id FROM users WHERE role = 'admin' AND company_id <=> ? AND LOWER(status) = 'active' LIMIT 1`,
+      [userObj.companyId]
+    );
     if (adminUser.length > 0) adminId = adminUser[0].id;
 
     // Step A: Save Leave Request in Database First (PENDING employer & admin status)
     await pool.query(
       `INSERT INTO leave_requests (
-        id, user_id, leave_type, start_date, end_date, days_count, reason, attachment,
+        id, company_id, user_id, leave_type, start_date, end_date, days_count, reason, attachment,
         employer_id, employer_status, admin_id, admin_status, status
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 'PENDING', 'PENDING')`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, 'PENDING', 'PENDING')`,
       [
         leaveId,
+        userObj.companyId || null,
         userId,
         normType,
         startDate.trim(),
@@ -261,7 +278,9 @@ export async function listLeaveRequests(req: AuthRequest, res: Response): Promis
     const userEmpId = req.user?.employeeId || '';
     const { status, leaveType, search, view } = req.query;
 
-    const activeView = view ? String(view).trim().toLowerCase() : (userRole || 'employee');
+    // Employees can only ever use the employee view, whatever they ask for
+    const requestedView = view ? String(view).trim().toLowerCase() : (userRole || 'employee');
+    const activeView = isHr(req) ? requestedView : 'employee';
 
     let query = `
       SELECT lr.id, lr.user_id as userId, lr.leave_type as leaveType, lr.start_date as startDate,
@@ -285,16 +304,23 @@ export async function listLeaveRequests(req: AuthRequest, res: Response): Promis
 
     const params: any[] = [];
 
+    // Company boundary
+    if (!(req.isSuperAdmin && !req.tenantId)) {
+      query += ` AND u.company_id = ?`;
+      params.push(getTenantId(req));
+    }
+
     // Role View Filtering
     if (activeView === 'employee') {
       // Employee view: ONLY show own leave applications
       query += ` AND lr.user_id = ?`;
       params.push(userId);
-    } else if (activeView === 'employer' || (userRole === 'employer' && activeView !== 'admin')) {
-      // Employer / Manager view: ONLY show leave applications for reporting employees
+    } else if (activeView === 'manager') {
+      // Reporting-manager view: only direct reports
       query += ` AND (lr.employer_id = ? OR ep.manager_id = ? OR ep.manager_id = ?)`;
       params.push(userId, userId, userEmpId);
     }
+    // HR (employer/admin) views show every request in the company
 
     if (status && String(status).trim() !== 'ALL') {
       query += ` AND lr.status = ?`;
@@ -352,8 +378,8 @@ export async function employerActionOnLeave(req: AuthRequest, res: Response): Pr
        FROM leave_requests lr
        JOIN users u ON u.id = lr.user_id
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
-       WHERE lr.id = ?`,
-      [id]
+       WHERE lr.id = ? AND (? = 1 OR u.company_id = ?)`,
+      [id, req.isSuperAdmin && !req.tenantId ? 1 : 0, getTenantId(req)]
     );
 
     if (rows.length === 0) {
@@ -511,8 +537,8 @@ export async function adminActionOnLeave(req: AuthRequest, res: Response): Promi
        FROM leave_requests lr
        JOIN users u ON u.id = lr.user_id
        LEFT JOIN employee_profiles ep ON ep.user_id = u.id
-       WHERE lr.id = ?`,
-      [id]
+       WHERE lr.id = ? AND (? = 1 OR u.company_id = ?)`,
+      [id, req.isSuperAdmin && !req.tenantId ? 1 : 0, getTenantId(req)]
     );
 
     if (rows.length === 0) {
@@ -679,9 +705,13 @@ export async function getLeaveAuditTrail(req: AuthRequest, res: Response): Promi
       `SELECT id, leave_request_id as leaveRequestId, employee_id as employeeId, action,
               previous_status as previousStatus, new_status as newStatus, action_by as actionBy,
               action_date as actionDate, remarks, ip_address as ipAddress
-       FROM leave_audit_trail
+       FROM leave_audit_trail t
+       WHERE t.leave_request_id IN (
+         SELECT lr.id FROM leave_requests lr JOIN users u ON u.id = lr.user_id WHERE u.company_id = ?
+       )
        ORDER BY action_date DESC
-       LIMIT 100`
+       LIMIT 100`,
+      [getTenantId(req)]
     );
 
     res.json({
@@ -704,9 +734,13 @@ export async function getEmailLogs(req: AuthRequest, res: Response): Promise<voi
               recipient_email as recipientEmail, email_type as emailType, subject, status,
               sent_at as sentAt, error_message as errorMessage, retry_count as retryCount,
               created_at as createdAt
-       FROM email_notifications
+       FROM email_notifications n
+       WHERE n.leave_request_id IN (
+         SELECT lr.id FROM leave_requests lr JOIN users u ON u.id = lr.user_id WHERE u.company_id = ?
+       )
        ORDER BY created_at DESC
-       LIMIT 100`
+       LIMIT 100`,
+      [getTenantId(req)]
     );
 
     res.json({

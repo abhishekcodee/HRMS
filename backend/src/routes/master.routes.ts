@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireHr } from '../security/accessControl.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import {
   getMasterDepartments,
@@ -27,7 +28,10 @@ import {
 
 export const masterRouter = Router();
 
+
 masterRouter.use(authenticateToken);
+// Reading master data is open to signed-in users; creating, editing and deleting it is HR-only
+masterRouter.use((req, res, next) => (req.method === 'GET' ? next() : requireHr(req as any, res, next)));
 
 masterRouter.get('/departments', getMasterDepartments);
 masterRouter.post('/departments', createMasterDepartment);

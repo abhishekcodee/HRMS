@@ -584,8 +584,7 @@ export const AddEditEmployeeModal: React.FC<AddEditEmployeeModalProps> = ({
               label="Account Role"
               options={[
                 { value: 'employee', label: 'Employee' },
-                { value: 'employer', label: 'Employer / HR' },
-                { value: 'admin', label: 'System Admin' }
+                { value: 'employer', label: 'Employer / HR' }
               ]}
               value={formData.role}
               onChange={e => setFormData({ ...formData, role: e.target.value })}

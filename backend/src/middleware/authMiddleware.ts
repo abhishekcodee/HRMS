@@ -45,7 +45,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     const decoded = jwt.verify(token, env.JWT_SECRET) as any;
 
     const [rows]: any = await pool.query(
-      'SELECT id, company_id, employee_id, full_name, email, role, status, profile_photo, must_change_password FROM users WHERE id = ?',
+      'SELECT id, company_id, employee_id, full_name, email, role, status, profile_photo, must_change_password, UNIX_TIMESTAMP(password_changed_at) AS pwd_changed_ts FROM users WHERE id = ?',
       [decoded.id]
     );
 
@@ -61,6 +61,18 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     }
 
     const user = rows[0];
+
+    // Sessions issued before the latest password change (or admin reset) are no longer valid
+    if (user.pwd_changed_ts && decoded.iat) {
+      const changedAtSec = Math.floor(Number(user.pwd_changed_ts));
+      if (Number.isFinite(changedAtSec) && decoded.iat < changedAtSec) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'SESSION_EXPIRED', message: 'Your password was changed. Please log in again.' },
+        });
+        return;
+      }
+    }
 
     // Enforce 30-minute limit on demo account
     if (user.role === 'demo' || user.email?.toLowerCase().includes('demo')) {

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import path from 'path';
 import { z } from 'zod';
@@ -44,3 +45,20 @@ if (!parsedEnv.success) {
 }
 
 export const env = parsedEnv.data;
+
+/**
+ * Never sign logins with the well-known default (or a short) secret: anyone who has read the source could forge
+ * tokens. Without a proper JWT_SECRET a random per-process secret is used, so the server stays secure but users
+ * are logged out whenever it restarts. Set JWT_SECRET (64+ random characters) to keep sessions across restarts.
+ */
+const DEFAULT_JWT_SECRET = 'super-secret-jwt-key-replace-in-production-min-32-chars';
+export const jwtSecretIsEphemeral = env.JWT_SECRET === DEFAULT_JWT_SECRET || env.JWT_SECRET.length < 32;
+if (jwtSecretIsEphemeral) {
+  env.JWT_SECRET = crypto.randomBytes(48).toString('hex');
+  if (env.NODE_ENV !== 'test') {
+    console.warn(
+      'SECURITY WARNING: JWT_SECRET is missing, default or shorter than 32 characters. ' +
+        'Using a random secret for this run; all users will be signed out on restart. Set JWT_SECRET to fix this.'
+    );
+  }
+}
