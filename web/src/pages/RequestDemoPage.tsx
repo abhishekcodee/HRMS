@@ -81,7 +81,7 @@ export const RequestDemoPage: React.FC = () => {
   };
 
   return (
-    <div
+    <div className="auth-shell"
       style={{
         minHeight: '100vh',
         display: 'flex',

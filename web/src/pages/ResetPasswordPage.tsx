@@ -48,7 +48,7 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16, background: 'var(--bg-app)' }}>
+    <div className="auth-shell" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16, background: 'var(--bg-app)' }}>
       <div className="pp-card" style={{ width: '100%', maxWidth: 420, padding: 24 }}>
         {done ? (
           <div style={{ textAlign: 'center' }}>

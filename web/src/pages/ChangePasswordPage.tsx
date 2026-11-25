@@ -78,7 +78,7 @@ export const ChangePasswordPage: React.FC = () => {
   };
 
   return (
-    <div
+    <div className="auth-shell"
       style={{
         minHeight: '100vh',
         display: 'flex',
