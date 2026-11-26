@@ -5,6 +5,11 @@ import { pool } from '../../database/index.js';
 import { AuthRequest } from '../../middleware/authMiddleware.js';
 import { logger } from '../../utils/logger.js';
 import { logSecurityEvent, extractReqSecurityContext } from '../../security/securityAuditLogger.js';
+import { isHr } from '../../security/accessControl.js';
+import { getTenantId } from '../../middleware/tenantMiddleware.js';
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 
 /**
  * Secure Authorized File Stream & Download.
@@ -14,8 +19,8 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
   try {
     const { id } = req.params;
     const userId = req.user?.id;
-    const userRole = req.user?.role;
-    const userCompanyId = (req.user as any)?.companyId || 'default-company';
+    const superAdminGlobal = Boolean(req.isSuperAdmin && !req.tenantId);
+    const userCompanyId = getTenantId(req);
 
     // 1. Fetch Document Metadata
     const [rows]: any = await pool.query(
@@ -37,7 +42,8 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
     const doc = rows[0];
 
     // 2. Tenant Isolation Check
-    if (userRole !== 'admin' && doc.companyId && doc.companyId !== userCompanyId) {
+    // Only the platform super admin (global view) may cross companies; company admins may not.
+    if (!superAdminGlobal && doc.companyId && doc.companyId !== userCompanyId) {
       const ctx = extractReqSecurityContext(req);
       await logSecurityEvent({
         ...ctx,
@@ -51,7 +57,8 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
     }
 
     // 3. Employee Ownership / IDOR Check
-    if (userRole === 'employee' && doc.employeeId !== userId) {
+    // Anyone who is not HR (employees, demo users) may only open their own approved documents
+    if (!isHr(req) && (doc.employeeId !== userId || !['APPROVED', 'FINAL'].includes(String(doc.status)))) {
       const ctx = extractReqSecurityContext(req);
       await logSecurityEvent({
         ...ctx,
@@ -82,7 +89,7 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
         <!DOCTYPE html>
         <html>
         <head>
-          <title>${doc.title}</title>
+          <title>${escapeHtml(doc.title)}</title>
           <style>
             body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 40px; color: #0F172A; line-height: 1.6; }
             .watermark { position: fixed; bottom: 20px; right: 20px; font-size: 12px; color: #94A3B8; }
@@ -90,7 +97,7 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
           </style>
         </head>
         <body>
-          <div class="hash-badge">Cryptographic Integrity Hash (SHA-256): ${doc.documentHash || 'VERIFIED_GENUINE'}</div>
+          <div class="hash-badge">Integrity hash (SHA-256): ${escapeHtml(doc.documentHash || 'not recorded')}</div>
           ${doc.htmlSnapshot}
           <div class="watermark">Digitally Sealed & Verified by Enterprise HRMS Architecture</div>
         </body>
@@ -111,9 +118,12 @@ export async function downloadDocumentSecurely(req: AuthRequest, res: Response):
  */
 export async function getEmployeeLocker(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const userId = req.user?.id;
-    const role = req.user?.role;
-    const targetUserId = (role === 'employee' ? userId : req.query.employeeId || userId) as string;
+    const userId = req.user?.id as string;
+    // Only HR may look at another employee's locker, and only inside its own company
+    const hr = isHr(req);
+    const requested = typeof req.query.employeeId === 'string' ? req.query.employeeId : '';
+    const targetUserId = hr && requested ? requested : userId;
+    const restrictCompany = hr && !(req.isSuperAdmin && !req.tenantId);
 
     const [rows]: any = await pool.query(
       `SELECT d.id, d.company_id as companyId, d.employee_id as employeeId,
@@ -124,9 +134,9 @@ export async function getEmployeeLocker(req: AuthRequest, res: Response): Promis
        FROM documents d
        JOIN document_types dt ON dt.id = d.document_type_id
        JOIN document_categories dc ON dc.id = dt.category_id
-       WHERE d.employee_id = ? AND d.status IN ('APPROVED', 'FINAL')
+       WHERE d.employee_id = ? AND d.status IN ('APPROVED', 'FINAL')${restrictCompany ? ' AND d.company_id = ?' : ''}
        ORDER BY d.created_at DESC`,
-      [targetUserId]
+      restrictCompany ? [targetUserId, getTenantId(req)] : [targetUserId]
     );
 
     res.json({ success: true, data: rows });

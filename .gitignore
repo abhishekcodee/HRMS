@@ -55,3 +55,7 @@ mobile/build/
 *.apk
 *.aab
 
+
+# Private uploaded documents (served only through the authenticated API)
+storage/
+backend/storage/
