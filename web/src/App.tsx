@@ -11,7 +11,6 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 
 // Eagerly loaded primary auth routes
 import { LoginPage } from './pages/LoginPage';
-import { StudentsPage } from './pages/StudentsPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { RequestDemoPage } from './pages/RequestDemoPage';
@@ -148,7 +147,6 @@ export function App() {
                       {/* Organization Hierarchy */}
                       <Route path="/departments" element={<DepartmentsTeamsPage />} />
                       <Route path="/teams" element={<DepartmentsTeamsPage />} />
-                      <Route path="/students" element={<ProtectedRoute hrOnly><StudentsPage /></ProtectedRoute>} />
                       
                       {/* Attendance & Biometric Machine Integration */}
                       <Route path="/attendance" element={<AttendancePage />} />
