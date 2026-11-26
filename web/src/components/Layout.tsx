@@ -40,6 +40,7 @@ import {
   MessageSquare,
   Globe,
   Palette,
+  GraduationCap,
 } from 'lucide-react';
 import { fetchTotalUnreadChatCount } from '../services/chatApi';
 
@@ -167,6 +168,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
         { path: '/employees', label: 'Employees', icon: <Users size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/departments', label: 'Departments', icon: <Building2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
         { path: '/teams', label: 'Teams', icon: <Users2 size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN', UserRole.DEMO, 'demo'] },
+        { path: '/students', label: 'Students & Interns', icon: <GraduationCap size={18} />, roles: [UserRole.ADMIN, UserRole.EMPLOYER, 'SUPER_ADMIN'] },
         { path: '/users-roles', label: 'Users & Roles', icon: <ShieldCheck size={18} />, roles: [UserRole.ADMIN, 'SUPER_ADMIN'] },
         { path: '/my-profile', label: 'My Profile', icon: <User size={18} />, roles: [UserRole.EMPLOYEE] },
       ],
