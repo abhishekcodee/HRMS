@@ -21,7 +21,7 @@ export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '', style, ...props }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', ...style }} className={className} {...props}>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', ...style }} className={`card-header ${className}`.trim()} {...props}>
     {children}
   </div>
 );
@@ -33,7 +33,7 @@ export const CardTitle: React.FC<{ children: React.ReactNode; className?: string
 );
 
 export const CardBody: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
-  <div style={style} className={className}>{children}</div>
+  <div style={style} className={`card-body ${className}`.trim()}>{children}</div>
 );
 
 export const CardFooter: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (

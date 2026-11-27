@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import './DocumentStudio.css';
 import {
   Button,
   Card,
@@ -53,6 +54,8 @@ import {
   Search,
   Maximize2,
   Minimize2,
+  EyeOff,
+  MousePointerClick,
 } from 'lucide-react';
 import { MultiDocumentPreview } from '../../components/documents/MultiDocumentPreview';
 import { buildNormalizedVariableMap, interpolateTemplateString, NormalizedDocumentData } from '../../utils/documentDataNormalizer';
@@ -427,13 +430,46 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
     (emp) => (emp.id || emp.userId || emp.employeeId) === selectedEmployeeId
   );
 
+  // The text box the user last typed in, so a tapped field is inserted at the cursor instead of only copied
+  const insertTargetRef = useRef<{ el: HTMLInputElement | HTMLTextAreaElement; label: string; apply: (value: string) => void } | null>(null);
+  const [insertTargetLabel, setInsertTargetLabel] = useState<string | null>(null);
+  const [fieldsOpen, setFieldsOpen] = useState<boolean>(() => typeof window === 'undefined' || window.innerWidth > 768);
+  const [fieldSearch, setFieldSearch] = useState('');
+
+  const clearInsertTarget = () => {
+    insertTargetRef.current = null;
+    setInsertTargetLabel(null);
+  };
+
+  /** Remember a text box as the insert target. Use as onFocus on every editable text of the letter. */
+  const trackInsertTarget = (label: string, apply: (value: string) => void) =>
+    (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      insertTargetRef.current = { el: e.currentTarget, label, apply };
+      setInsertTargetLabel(label);
+    };
+
   const handleInsertFieldIntoDocument = (field: DocumentFieldItem) => {
     if (field.tag === '{{page_break}}') {
       handleInsertPageBreak();
       return;
     }
-    navigator.clipboard.writeText(field.tag);
-    setSuccessMsg(`Copied ${field.label} (${field.tag}) to clipboard! Paste it wherever you want in your document text.`);
+    const target = insertTargetRef.current;
+    if (target && target.el.isConnected) {
+      const el = target.el;
+      const start = el.selectionStart ?? el.value.length;
+      const end = el.selectionEnd ?? start;
+      const next = el.value.slice(0, start) + field.tag + el.value.slice(end);
+      target.apply(next);
+      const caret = start + field.tag.length;
+      requestAnimationFrame(() => {
+        el.focus({ preventScroll: true });
+        try { el.setSelectionRange(caret, caret); } catch { /* inputs without selection support */ }
+      });
+      setSuccessMsg(`Inserted ${field.label} into ${target.label}.`);
+      return;
+    }
+    navigator.clipboard?.writeText(field.tag).catch(() => undefined);
+    setSuccessMsg(`Copied ${field.label}. Tap inside a text box first to insert fields directly.`);
   };
 
   useEffect(() => {
@@ -980,10 +1016,12 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   };
 
   const handleRemoveCustomClause = (index: number) => {
+    clearInsertTarget(); // clause positions change, so the remembered cursor would point at the wrong clause
     setCustomClauses((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleMoveClause = (index: number, direction: -1 | 1) => {
+    clearInsertTarget(); // clause positions change, so the remembered cursor would point at the wrong clause
     setCustomClauses((prev) => {
       const target = index + direction;
       if (target < 0 || target >= prev.length) return prev;
@@ -996,6 +1034,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   };
 
   const handleDuplicateClause = (index: number) => {
+    clearInsertTarget(); // clause positions change, so the remembered cursor would point at the wrong clause
     setCustomClauses((prev) => {
       const next = [...prev];
       const source = next[index];
@@ -1143,7 +1182,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1680px', margin: '0 auto' }}>
+    <div className="doc-studio-page" style={{ padding: '24px', maxWidth: '1680px', margin: '0 auto' }}>
       {/* Studio Banner */}
       <div
         style={{
@@ -1937,7 +1976,7 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
             </Card>
 
               {/* Section 3: Document Content & Clauses */}
-              <Card style={{ borderLeft: '4px solid #7C3AED' }}>
+              <Card style={{ borderTop: '3px solid #7C3AED' }}>
                 <CardHeader
                   onClick={() => toggleSection('contentTerms')}
                   style={{
@@ -1954,12 +1993,12 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                       <Edit3 style={{ width: '16px', height: '16px' }} />
                       3. Document Content & Clauses
                     </CardTitle>
-                    <span style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'block' }}>
+                    <span className="ds-hide-mobile" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
                       Customize letter title, opening statement, custom clauses, and closing remarks
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Badge variant="info">100% CUSTOMIZABLE</Badge>
+                    <span className="ds-hide-mobile"><Badge variant="info">100% CUSTOMIZABLE</Badge></span>
                     <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
                       {collapsedSections.contentTerms ? <ChevronDown style={{ width: '18px', height: '18px' }} /> : <ChevronUp style={{ width: '18px', height: '18px' }} />}
                     </div>
@@ -1967,353 +2006,240 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                 </CardHeader>
                 {!collapsedSections.contentTerms && (
                   <CardBody style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '6px' }}>
-                    {/* Friendly Document Fields Insertion Panel (Requirement 1, 2, 3, 4) */}
-                    <div
-                      style={{
-                        padding: '16px',
-                        background: '#F8FAFC',
-                        borderRadius: '12px',
-                        border: '1px solid #CBD5E1',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Tag style={{ width: '16px', height: '16px', color: '#3B82F6' }} />
-                            Document Fields
-                          </div>
-                          <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                            Select a field to insert information into your document.
+                    {/* Insert-field panel: tap a field to insert it at the cursor of the last text box */}
+                    <div className="ds-fields">
+                      <button
+                        type="button"
+                        className="ds-fields-head"
+                        aria-expanded={fieldsOpen}
+                        onClick={() => setFieldsOpen((v) => !v)}
+                      >
+                        <span className="ds-fields-icon"><Tag style={{ width: 16, height: 16 }} /></span>
+                        <span>
+                          <span className="ds-fields-title" style={{ display: 'block' }}>Insert a field</span>
+                          <span className="ds-fields-sub" style={{ display: 'block' }}>
+                            Employee, salary and company details filled in automatically
                           </span>
-                        </div>
+                        </span>
+                        <span className="ds-fields-chevron">
+                          {fieldsOpen ? <ChevronUp style={{ width: 18, height: 18 }} /> : <ChevronDown style={{ width: 18, height: 18 }} />}
+                        </span>
+                      </button>
 
-                        {/* Advanced / Developer Fields Toggle (Requirement 4) */}
-                        <button
-                          type="button"
-                          onClick={() => setShowDeveloperFields(!showDeveloperFields)}
-                          style={{
-                            padding: '5px 12px',
-                            borderRadius: '6px',
-                            border: showDeveloperFields ? '1px solid #3B82F6' : '1px solid #CBD5E1',
-                            background: showDeveloperFields ? '#EFF6FF' : '#FFFFFF',
-                            color: showDeveloperFields ? '#1D4ED8' : '#64748B',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <Sliders style={{ width: '13px', height: '13px' }} />
-                          {showDeveloperFields ? 'Hide Advanced' : 'Advanced (Developer Fields)'}
-                        </button>
-                      </div>
+                      {fieldsOpen && (() => {
+                        const q = fieldSearch.trim().toLowerCase();
+                        const visibleFields = DOCUMENT_FIELDS.filter(
+                          (f) =>
+                            (showDeveloperFields || activeFieldCategory === 'ALL' || f.category === activeFieldCategory) &&
+                            (!q || f.label.toLowerCase().includes(q) || f.tag.toLowerCase().includes(q))
+                        );
+                        return (
+                          <div className="ds-fields-body">
+                            <label className="ds-search">
+                              <Search style={{ width: 15, height: 15 }} />
+                              <input
+                                type="search"
+                                value={fieldSearch}
+                                onChange={(e) => setFieldSearch(e.target.value)}
+                                placeholder="Search fields (e.g. salary, joining)"
+                                aria-label="Search fields"
+                              />
+                            </label>
 
-                      {/* Category Filter Pills */}
-                      {!showDeveloperFields && (
-                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '10px' }}>
-                          {[
-                            { id: 'ALL', label: 'All Fields' },
-                            { id: 'EMPLOYEE', label: '👤 Employee' },
-                            { id: 'SALARY', label: '💰 Salary' },
-                            { id: 'COMPANY', label: '🏢 Company' },
-                            { id: 'SIGNATORY', label: '✍️ Signatory' },
-                            { id: 'DOCUMENT', label: '🗓️ Document' },
-                            { id: 'LAYOUT', label: '✂️ Layout' },
-                          ].map((cat) => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => setActiveFieldCategory(cat.id)}
-                              style={{
-                                padding: '4px 10px',
-                                borderRadius: '20px',
-                                border: activeFieldCategory === cat.id ? '1px solid #3B82F6' : '1px solid #CBD5E1',
-                                background: activeFieldCategory === cat.id ? '#3B82F6' : '#FFFFFF',
-                                color: activeFieldCategory === cat.id ? '#FFFFFF' : '#475569',
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                transition: 'all 0.15s ease',
-                              }}
-                            >
-                              {cat.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                            {!showDeveloperFields && (
+                              <div className="ds-cats" role="group" aria-label="Field categories">
+                                {[
+                                  { id: 'ALL', label: 'All' },
+                                  { id: 'EMPLOYEE', label: '👤 Employee' },
+                                  { id: 'SALARY', label: '💰 Salary' },
+                                  { id: 'COMPANY', label: '🏢 Company' },
+                                  { id: 'SIGNATORY', label: '✍️ Signatory' },
+                                  { id: 'DOCUMENT', label: '🗓️ Document' },
+                                  { id: 'LAYOUT', label: '✂️ Layout' },
+                                ].map((cat) => (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    className="ds-cat"
+                                    aria-pressed={activeFieldCategory === cat.id}
+                                    onClick={() => setActiveFieldCategory(cat.id)}
+                                  >
+                                    {cat.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
 
-                      {/* User-Friendly Chips View */}
-                      {!showDeveloperFields ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {DOCUMENT_FIELDS
-                            .filter((f) => activeFieldCategory === 'ALL' || f.category === activeFieldCategory)
-                            .map((field) => {
-                              const isLayout = field.category === 'LAYOUT';
-                              return (
+                            <div className="ds-chips">
+                              {visibleFields.length === 0 && <div className="ds-empty">No field matches “{fieldSearch}”.</div>}
+                              {visibleFields.map((field) => (
                                 <button
                                   key={field.tag}
                                   type="button"
+                                  // Keep the cursor in the text box the user is editing
+                                  onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => handleInsertFieldIntoDocument(field)}
-                                  title={`Click to insert ${field.label}`}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
-                                    border: isLayout ? '1.5px dashed #EF4444' : '1px solid #CBD5E1',
-                                    background: isLayout ? '#FEF2F2' : '#FFFFFF',
-                                    color: isLayout ? '#DC2626' : '#1E293B',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = isLayout ? '#DC2626' : '#3B82F6';
-                                    e.currentTarget.style.transform = 'translateY(-1px)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = isLayout ? '#EF4444' : '#CBD5E1';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                  }}
+                                  title={`${field.description} · ${field.tag}`}
+                                  className={`ds-chip${field.category === 'LAYOUT' ? ' ds-chip--layout' : ''}${showDeveloperFields ? ' ds-chip--raw' : ''}`}
                                 >
-                                  <span>{field.icon}</span>
-                                  <span>{field.label}</span>
+                                  <span aria-hidden="true">{field.icon}</span>
+                                  <span>{showDeveloperFields ? field.tag : field.label}</span>
                                 </button>
-                              );
-                            })}
-                        </div>
-                      ) : (
-                        /* Advanced / Developer Raw Placeholders View */
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ fontSize: '11px', color: '#64748B', fontStyle: 'italic' }}>
-                            Advanced Developer Placeholders: Click any token below to copy its raw placeholder syntax:
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {DOCUMENT_FIELDS.map((f) => (
-                              <span
-                                key={f.tag}
-                                onClick={() => {
-                                  navigator.clipboard.writeText(f.tag);
-                                  setSuccessMsg(`Copied raw placeholder ${f.tag} to clipboard!`);
-                                }}
-                                title={`Click to copy ${f.tag}`}
-                                style={{
-                                  padding: '3px 8px',
-                                  borderRadius: '5px',
-                                  background: f.tag === '{{page_break}}' ? '#FEF2F2' : '#FFFFFF',
-                                  border: f.tag === '{{page_break}}' ? '1.5px dashed #EF4444' : '1px solid #CBD5E1',
-                                  fontFamily: 'monospace',
-                                  fontSize: '11px',
-                                  color: f.tag === '{{page_break}}' ? '#DC2626' : '#2563EB',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {f.tag === '{{page_break}}' && <span style={{ marginRight: '4px' }}>✂️</span>}
-                                {f.tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                              ))}
+                            </div>
 
-                      <div style={{ marginTop: '10px', fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <Info style={{ width: '14px', height: '14px', color: '#3B82F6', flexShrink: 0 }} />
-                        <span>Click a field above to insert it into your document text or copy it to clipboard.</span>
-                      </div>
+                            <div className="ds-fields-foot">
+                              <span className="ds-hint">
+                                <MousePointerClick style={{ width: 14, height: 14, flexShrink: 0 }} />
+                                {insertTargetLabel ? (
+                                  <span>Inserts into <strong>{insertTargetLabel}</strong> at the cursor</span>
+                                ) : (
+                                  <span>Tap inside a text box below, then tap a field</span>
+                                )}
+                              </span>
+                              <button type="button" className="ds-link" onClick={() => setShowDeveloperFields(!showDeveloperFields)}>
+                                {showDeveloperFields ? 'Show friendly names' : 'Show placeholders'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                        Document Header Title
-                      </label>
-                      <Input
+                      <label className="ds-label" htmlFor="ds-letter-title">Document Header Title</label>
+                      <input
+                        id="ds-letter-title"
+                        className="ds-input"
                         value={letterTitle}
                         onChange={(e) => setLetterTitle(e.target.value)}
+                        onFocus={trackInsertTarget('Header Title', setLetterTitle)}
                         placeholder="e.g. APPOINTMENT LETTER / OFFER LETTER"
                       />
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                        Document Subject Line
-                      </label>
-                      <Input
+                      <label className="ds-label" htmlFor="ds-subject">Document Subject Line</label>
+                      <input
+                        id="ds-subject"
+                        className="ds-input"
+                        style={{ fontWeight: 500 }}
                         value={customSubject}
                         onChange={(e) => setCustomSubject(e.target.value)}
+                        onFocus={trackInsertTarget('Subject Line', setCustomSubject)}
                         placeholder="e.g. Subject: Appointment as {{designation}}"
                       />
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                        Opening Paragraph / Main Body Text
-                      </label>
+                      <label className="ds-label" htmlFor="ds-opening">Opening Paragraph / Main Body Text</label>
                       <textarea
+                        id="ds-opening"
+                        className="ds-textarea"
                         value={customOpeningText}
                         onChange={(e) => setCustomOpeningText(e.target.value)}
-                        rows={4}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          fontSize: '13px',
-                          fontFamily: 'inherit',
-                          lineHeight: 1.5,
-                        }}
+                        onFocus={trackInsertTarget('Opening Paragraph', setCustomOpeningText)}
+                        rows={5}
                         placeholder="Enter opening statement or letter body text..."
                       />
                     </div>
 
-                    {/* Custom Clauses Editor */}
+                    {/* Clauses */}
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-                        <strong style={{ fontSize: '13px', color: '#0F172A' }}>
-                          Document Clauses & Terms ({customClauses.length})
-                        </strong>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="ds-clauses-head">
+                        <div className="ds-clauses-title">
+                          Clauses & Terms <span className="ds-clauses-count">({customClauses.length})</span>
+                        </div>
+                        <div className="ds-clauses-actions">
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={handleInsertPageBreak}
-                            icon={<Scissors style={{ width: '14px', height: '14px', color: '#DC2626' }} />}
-                            style={{ border: '1px dashed #EF4444', color: '#DC2626', background: '#FEF2F2' }}
+                            icon={<Scissors style={{ width: 14, height: 14, color: 'var(--error-text)' }} />}
                             title="Start the next content on a new page"
                           >
                             Page Break
                           </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleAddCustomClause}
-                            icon={<Plus style={{ width: '14px', height: '14px' }} />}
-                          >
+                          <Button variant="primary" size="sm" onClick={handleAddCustomClause} icon={<Plus style={{ width: 14, height: 14 }} />}>
                             Add Clause
                           </Button>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="ds-clause-list">
                         {customClauses.map((clause, idx) => {
                           const isPageBreak = clause.text === '{{page_break}}' || clause.title === 'Page Break';
                           const isEnabled = clause.enabled !== false;
+                          const moveTools = (
+                            <>
+                              <button type="button" className="ds-tool" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)} aria-label="Move up" title="Move up">
+                                <ArrowUp style={{ width: 16, height: 16 }} />
+                              </button>
+                              <button type="button" className="ds-tool" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)} aria-label="Move down" title="Move down">
+                                <ArrowDown style={{ width: 16, height: 16 }} />
+                              </button>
+                            </>
+                          );
+                          const deleteTool = (
+                            <button type="button" className="ds-tool ds-tool--danger" onClick={() => handleRemoveCustomClause(idx)} aria-label="Delete" title="Delete">
+                              <Trash2 style={{ width: 16, height: 16 }} />
+                            </button>
+                          );
 
                           if (isPageBreak) {
                             return (
-                              <div
-                                key={idx}
-                                style={{
-                                  padding: '12px 16px',
-                                  background: '#FEF2F2',
-                                  borderRadius: '8px',
-                                  border: '1.5px dashed #EF4444',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: '12px',
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <div
-                                    style={{
-                                      width: '32px',
-                                      height: '32px',
-                                      borderRadius: '6px',
-                                      background: '#FEE2E2',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      color: '#DC2626',
-                                      fontSize: '16px',
-                                    }}
-                                  >
-                                    ✂️
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#991B1B' }}>
-                                      Page Break
-                                    </div>
-                                    <div style={{ fontSize: '11.5px', color: '#B91C1C' }}>
-                                      Start the next content on a new page.
-                                    </div>
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                  <Button variant="secondary" size="sm" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)}>↑</Button>
-                                  <Button variant="secondary" size="sm" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)}>↓</Button>
-                                  <Button variant="danger" size="sm" onClick={() => handleRemoveCustomClause(idx)} icon={<Trash2 style={{ width: '12px', height: '12px' }} />} />
-                                </div>
+                              <div key={idx} className="ds-break">
+                                <span className="ds-break-icon"><Scissors style={{ width: 16, height: 16 }} /></span>
+                                <span className="ds-break-text">
+                                  <span className="ds-break-title" style={{ display: 'block' }}>Page Break</span>
+                                  <span className="ds-break-sub" style={{ display: 'block' }}>Next content starts on a new page</span>
+                                </span>
+                                <span className="ds-tools">{moveTools}{deleteTool}</span>
                               </div>
                             );
                           }
 
                           return (
-                            <div
-                              key={idx}
-                              style={{
-                                padding: '12px',
-                                background: isEnabled ? '#F8FAFC' : '#F1F5F9',
-                                borderRadius: '8px',
-                                border: isEnabled ? '1px solid #E2E8F0' : '1px solid #CBD5E1',
-                                opacity: isEnabled ? 1 : 0.6,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px',
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span>Clause #{idx + 1}</span>
-                                  {!isEnabled && <Badge variant="warning">DISABLED</Badge>}
+                            <div key={idx} className={`ds-clause${isEnabled ? '' : ' ds-clause--off'}`}>
+                              <div className="ds-clause-top">
+                                <span className="ds-clause-num">
+                                  Clause {idx + 1}
+                                  {!isEnabled && <Badge variant="warning">Hidden</Badge>}
                                 </span>
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    title={isEnabled ? 'Disable Clause' : 'Enable Clause'}
+                                <span className="ds-tools">
+                                  {moveTools}
+                                  <button
+                                    type="button"
+                                    className={`ds-tool${isEnabled ? ' ds-tool--on' : ''}`}
                                     onClick={() => handleToggleEnableClause(idx)}
+                                    aria-label={isEnabled ? 'Hide from letter' : 'Show in letter'}
+                                    aria-pressed={isEnabled}
+                                    title={isEnabled ? 'Hide from letter' : 'Show in letter'}
                                   >
-                                    {isEnabled ? <Eye style={{ width: '12px', height: '12px' }} /> : <Eye style={{ width: '12px', height: '12px', opacity: 0.4 }} />}
-                                  </Button>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    title="Duplicate Clause"
-                                    onClick={() => handleDuplicateClause(idx)}
-                                    icon={<Copy style={{ width: '12px', height: '12px' }} />}
-                                  />
-                                  <Button variant="secondary" size="sm" disabled={idx === 0} onClick={() => handleMoveClause(idx, -1)}>↑</Button>
-                                  <Button variant="secondary" size="sm" disabled={idx === customClauses.length - 1} onClick={() => handleMoveClause(idx, 1)}>↓</Button>
-                                  <Button variant="danger" size="sm" onClick={() => handleRemoveCustomClause(idx)} icon={<Trash2 style={{ width: '12px', height: '12px' }} />} />
-                                </div>
+                                    {isEnabled ? <Eye style={{ width: 16, height: 16 }} /> : <EyeOff style={{ width: 16, height: 16 }} />}
+                                  </button>
+                                  <button type="button" className="ds-tool" onClick={() => handleDuplicateClause(idx)} aria-label="Duplicate" title="Duplicate">
+                                    <Copy style={{ width: 15, height: 15 }} />
+                                  </button>
+                                  {deleteTool}
+                                </span>
                               </div>
-                              <Input
+                              <input
+                                className="ds-input"
                                 value={clause.title}
                                 onChange={(e) => handleUpdateClause(idx, 'title', e.target.value)}
-                                placeholder="Clause Title (e.g. Terms of Employment)"
+                                onFocus={trackInsertTarget(`Clause ${idx + 1} title`, (v) => handleUpdateClause(idx, 'title', v))}
+                                placeholder="Clause title (e.g. Terms of Employment)"
+                                aria-label={`Clause ${idx + 1} title`}
                               />
                               <textarea
+                                className="ds-textarea"
                                 value={clause.text}
                                 onChange={(e) => handleUpdateClause(idx, 'text', e.target.value)}
-                                rows={2}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #CBD5E1',
-                                  fontSize: '12px',
-                                  fontFamily: 'inherit',
-                                }}
-                                placeholder="Clause Content..."
+                                onFocus={trackInsertTarget(`Clause ${idx + 1}`, (v) => handleUpdateClause(idx, 'text', v))}
+                                rows={4}
+                                placeholder="Clause content..."
+                                aria-label={`Clause ${idx + 1} text`}
                               />
                             </div>
                           );
@@ -2322,21 +2248,14 @@ export const MultiDocumentGeneratorStudio: React.FC = () => {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                        Closing Statement / Signatory Text
-                      </label>
+                      <label className="ds-label" htmlFor="ds-closing">Closing Statement / Signatory Text</label>
                       <textarea
+                        id="ds-closing"
+                        className="ds-textarea ds-textarea--sm"
                         value={customClosingText}
                         onChange={(e) => setCustomClosingText(e.target.value)}
-                        rows={2}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #CBD5E1',
-                          fontSize: '13px',
-                          fontFamily: 'inherit',
-                        }}
+                        onFocus={trackInsertTarget('Closing Statement', setCustomClosingText)}
+                        rows={3}
                         placeholder="e.g. We look forward to your contribution..."
                       />
                     </div>
