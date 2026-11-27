@@ -1,3 +1,4 @@
+import os from 'os';
 import { Request, Response } from 'express';
 import { readSettings } from '../settings/companySettings.js';
 import net from 'net';
@@ -860,8 +861,40 @@ export async function queueDeviceCommand(req: AuthRequest, res: Response): Promi
 export async function reprocessPunches(req: AuthRequest, res: Response): Promise<void> {
   try {
     await ensureBiometricSchema();
-    const fixed = await reprocessUnmatched(pool, getTenantId(req));
-    res.json({ success: true, message: `${fixed} previously unmatched punch(es) were applied to attendance.` });
+    const companyId = getTenantId(req);
+    const fixed = await reprocessUnmatched(pool, companyId);
+
+    // Also rebuild attendance from punches that are already matched, so a day whose calculation failed earlier
+    // (e.g. a database error halfway through) can be repaired. HR corrections are never overwritten.
+    const isDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const to = isDate(req.body?.to) ? String(req.body.to) : fmt(today);
+    const from = isDate(req.body?.from) ? String(req.body.from) : fmt(new Date(today.getTime() - 31 * 86400000));
+    if (from > to) {
+      res.status(400).json({ success: false, error: { message: '"from" must be on or before "to".' } });
+      return;
+    }
+
+    const [days]: any = await pool.query(
+      `SELECT DISTINCT p.user_id AS userId, DATE_FORMAT(p.punch_time, '%Y-%m-%d') AS workDate
+         FROM biometric_punch_logs p
+         JOIN users u ON u.id = p.user_id
+        WHERE u.company_id = ? AND p.punch_time >= ? AND p.punch_time < DATE_ADD(?, INTERVAL 1 DAY)
+        LIMIT 50000`,
+      [companyId, `${from} 00:00:00`, to]
+    );
+    const rules = await loadGlobalRules(pool, companyId);
+    for (const d of days) {
+      await recomputeAttendanceDay(pool, d.userId, companyId, d.workDate, rules);
+    }
+
+    res.json({
+      success: true,
+      message: `${fixed} previously unmatched punch(es) were applied; attendance rebuilt for ${days.length} employee-day(s) between ${from} and ${to}.`,
+      data: { matched: fixed, daysRecomputed: days.length, from, to },
+    });
   } catch (err: any) {
     logger.error('reprocessPunches error:', err);
     res.status(500).json({ success: false, error: { message: 'Failed to reprocess punches.' } });
@@ -908,6 +941,17 @@ export async function simulateBiometricPunch(req: AuthRequest, res: Response): P
   }
 }
 
+/** First private IPv4 address of this machine (what a device on the same LAN must use). */
+function lanIPv4(): string | undefined {
+  const candidates: string[] = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const ni of list || []) {
+      if (ni.family === 'IPv4' && !ni.internal) candidates.push(ni.address);
+    }
+  }
+  return candidates.find((ip) => /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip)) || candidates[0];
+}
+
 /**
  * GET /api/v1/zkteco/server-info
  * The address the terminal must be configured with ("Cloud Server Setting" on the device).
@@ -915,11 +959,16 @@ export async function simulateBiometricPunch(req: AuthRequest, res: Response): P
  */
 export function getServerInfo(req: AuthRequest, res: Response): void {
   const renderHost = process.env.RENDER_EXTERNAL_HOSTNAME;
-  const host = process.env.ADMS_PUBLIC_HOST || renderHost || req.hostname;
+  let host = process.env.ADMS_PUBLIC_HOST || renderHost || req.hostname;
+  // "localhost" is useless to a device on the network: show this computer's LAN address instead
+  if (!process.env.ADMS_PUBLIC_HOST && !renderHost && /^(localhost|127\.\d+\.\d+\.\d+|::1)$/i.test(host)) {
+    host = lanIPv4() || host;
+  }
   const https = process.env.ADMS_PUBLIC_HTTPS
     ? ['1', 'true', 'yes'].includes(process.env.ADMS_PUBLIC_HTTPS.toLowerCase())
     : Boolean(renderHost) || req.secure || req.headers['x-forwarded-proto'] === 'https';
-  const port = Number(process.env.ADMS_PUBLIC_PORT) || (https ? 443 : Number(process.env.PORT) || 4000);
+  const port =
+    Number(process.env.ADMS_PUBLIC_PORT) || Number(process.env.ADMS_PORT) || (https ? 443 : Number(process.env.PORT) || 4000);
   res.json({
     success: true,
     data: {

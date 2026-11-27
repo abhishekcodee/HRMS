@@ -7,6 +7,7 @@ import { seedDatabase } from './database/seed.js';
 import { setupChatSockets } from './modules/chat/chatSocket.js';
 import { runPayrollSchemaUpgrade } from './modules/payroll/payrollSchemaSetup.js';
 import { startPayrollScheduler } from './modules/payroll/payrollAutomation.js';
+import { startAdmsListener } from './modules/zkteco/admsListener.js';
 
 const server = app.listen(env.PORT, '0.0.0.0', async () => {
   logger.info(`🚀 HRMS Backend API Server started on port ${env.PORT}`);
@@ -26,6 +27,9 @@ const server = app.listen(env.PORT, '0.0.0.0', async () => {
   startPayrollScheduler();
 });
 
+// Optional extra port for eSSL / ZKTeco devices that push to a fixed port (e.g. ADMS_PORT=8888)
+const admsServer = process.env.ADMS_PORT ? startAdmsListener(Number(process.env.ADMS_PORT), Number(env.PORT)) : null;
+
 // Initialize Socket.IO Real-Time Chat Engine
 const corsOrigins = env.CORS_ORIGIN.includes('*')
   ? '*'
@@ -44,11 +48,12 @@ logger.info('⚡ Socket.IO Real-Time Engine attached to HRMS HTTP Server.');
 const shutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Gracefully shutting down HRMS backend server...`);
   
+  admsServer?.close();
   server.close(async () => {
     logger.info('HTTP server closed.');
     try {
       await pool.end();
-      logger.info('PostgreSQL connection pool closed.');
+      logger.info('MySQL connection pool closed.');
       process.exit(0);
     } catch (err) {
       logger.error('Error during shutdown database pool cleanup:', err);
