@@ -11,7 +11,14 @@ attendance machine  --HTTP-->  office PC :8888  --HTTPS-->  https://hrms-backend
 If the internet or the backend is down, the machine is told "ERROR" and keeps its punches to send again
 later, so nothing is lost. Only device traffic (`/iclock/...`) is forwarded.
 
-## Setup (once)
+## Quick install (Windows)
+
+Copy `INSTALL-ADMS-BRIDGE.bat` and `install-adms-bridge.ps1` to the office PC (same folder) and double-click
+`INSTALL-ADMS-BRIDGE.bat`. Allow the administrator prompt. It installs Node.js LTS if needed, puts the bridge in
+`C:\hrms-adms-bridge`, opens port 8888 in the firewall, makes it start with Windows, starts it, and prints the IP
+address to enter on the attendance machine. Then do step 8 and 9 below.
+
+## Setup (manual)
 
 1. Pick a PC that stays on during working hours and is on the same network as the machine.
 2. Install **Node.js LTS** from <https://nodejs.org>.
