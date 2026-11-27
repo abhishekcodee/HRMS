@@ -35,6 +35,31 @@ export const EmployeeLockerPage: React.FC = () => {
     loadLocker();
   }, []);
 
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  /** Fetches the letter with the login token and opens it in a new tab (where it can be printed or saved as PDF). */
+  const openDocument = async (doc: any) => {
+    setDownloadError(null);
+    // Open the tab right away (inside the click) so pop-up blockers allow it, then load the letter into it
+    const tab = window.open('', '_blank');
+    try {
+      const res = await fetch(`/api/v1/document-management/${doc.id}/download`, { headers: getAuthHeaders() });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message || 'The document could not be opened.');
+      }
+      const type = res.headers.get('Content-Type') || '';
+      if (!/text\/html|application\/pdf/.test(type)) throw new Error('This document has no printable file yet.');
+      const url = URL.createObjectURL(await res.blob());
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      tab?.close();
+      setDownloadError(err.message || 'The document could not be opened.');
+    }
+  };
+
   const loadLocker = async () => {
     setLoading(true);
     try {
@@ -97,9 +122,9 @@ export const EmployeeLockerPage: React.FC = () => {
             style={{
               padding: '8px 16px',
               borderRadius: '20px',
-              border: selectedCategory === cat ? 'none' : '1px solid #CBD5E1',
-              background: selectedCategory === cat ? '#4F46E5' : '#FFFFFF',
-              color: selectedCategory === cat ? '#FFFFFF' : '#475569',
+              border: selectedCategory === cat ? '1px solid transparent' : '1px solid var(--border-color)',
+              background: selectedCategory === cat ? '#4F46E5' : 'var(--bg-surface)',
+              color: selectedCategory === cat ? '#FFFFFF' : 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '13px',
               cursor: 'pointer',
@@ -116,6 +141,11 @@ export const EmployeeLockerPage: React.FC = () => {
       <Card>
         <CardHeader><CardTitle style={{ fontSize: '16px' }}>Authorized Employee Records</CardTitle></CardHeader>
         <CardBody style={{ padding: 0 }}>
+          {downloadError && (
+            <div role="alert" style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.12)', color: 'var(--error-text)', fontSize: '14px' }}>
+              {downloadError}
+            </div>
+          )}
           <TableContainer>
             <Table>
               <Thead>
@@ -131,22 +161,22 @@ export const EmployeeLockerPage: React.FC = () => {
                 {loading ? (
                   <Tr><Td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>Loading your document locker...</Td></Tr>
                 ) : filteredDocs.length === 0 ? (
-                  <Tr><Td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}>No documents available in this category.</Td></Tr>
+                  <Tr><Td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No documents available in this category.</Td></Tr>
                 ) : (
                   filteredDocs.map((doc) => (
                     <Tr key={doc.id}>
-                      <Td style={{ fontWeight: 600, color: '#0F172A' }}>{doc.title}</Td>
+                      <Td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{doc.title}</Td>
                       <Td><Badge variant="neutral">{doc.categoryName}</Badge></Td>
-                      <Td><code style={{ fontSize: '11px', background: '#F1F5F9', padding: '2px 6px' }}>{doc.referenceNumber}</code></Td>
+                      <Td><code style={{ fontSize: '11px', background: 'var(--bg-surface-hover)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px' }}>{doc.referenceNumber}</code></Td>
                       <Td>{doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'Official Record'}</Td>
                       <Td style={{ textAlign: 'right' }}>
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => window.open(`/api/v1/document-management/${doc.id}/download`, '_blank')}
+                          onClick={() => openDocument(doc)}
                           icon={<Download style={{ width: '14px', height: '14px' }} />}
                         >
-                          Download PDF
+                          View / Print
                         </Button>
                       </Td>
                     </Tr>

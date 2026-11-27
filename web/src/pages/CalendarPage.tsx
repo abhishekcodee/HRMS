@@ -449,7 +449,7 @@ export const CalendarPage: React.FC = () => {
             ) : (
               <div>
                 {/* Weekday Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
+                <div className="calendar-weekday-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
                   {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d, index) => (
                     <div
                       key={d}
@@ -470,10 +470,10 @@ export const CalendarPage: React.FC = () => {
                 </div>
 
                 {/* Day Cells Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+                <div className="calendar-month-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
                   {/* Empty Start Padding */}
                   {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ minHeight: '130px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
+                    <div key={`empty-${i}`} className="calendar-empty-cell" style={{ minHeight: '130px', opacity: 0.15, borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }} />
                   ))}
 
                   {/* Month Days */}
@@ -525,14 +525,14 @@ export const CalendarPage: React.FC = () => {
                           </span>
 
                           {dayEvents.length > 0 && (
-                            <span style={{ fontSize: '0.675rem', fontWeight: 800, padding: '1px 6px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)' }}>
-                              {dayEvents.length} event(s)
+                            <span className="calendar-day-count" style={{ fontSize: '0.675rem', fontWeight: 800, padding: '1px 6px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-400)' }}>
+                              {dayEvents.length}<span className="calendar-day-count-label"> event(s)</span>
                             </span>
                           )}
                         </div>
 
                         {/* Event Badges inside Day Cell (FULL TEXT, NO CUTOFF!) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '100px', paddingRight: '2px' }}>
+                        <div className="calendar-day-events" style={{ display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '100px', paddingRight: '2px' }}>
                           {dayEvents.map((evt) => {
                             const festVisual = evt.type === 'FESTIVAL' ? getFestivalVisual(evt.title) : null;
                             const pillClass =

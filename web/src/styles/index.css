@@ -2,6 +2,18 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* Aliases for variable names used by some pages, so their surfaces are never transparent */
+:root {
+  --card-bg: var(--bg-surface);
+  --bg-primary: var(--bg-app);
+  --bg-secondary: var(--bg-surface-hover);
+  --text-color: var(--text-primary);
+  --primary-color: var(--primary-500);
+  --accent-color: var(--primary-500);
+  --accent-primary: var(--primary-500);
+  --danger-text: var(--error-text);
+}
+
 :root,
 [data-theme="dark"] {
   /* Senior Enterprise Theme: Modern Slate & Deep Zinc Foundation */
@@ -966,7 +978,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 1000; /* above the mobile bottom navigation (z-index 90) */
   padding: 1.5rem;
   animation: fadeIn 0.2s ease;
 }
@@ -1626,17 +1638,17 @@ html, body {
    bars into horizontal scrollers so nothing is cut off or forces sideways scrolling.
    ------------------------------------------------------------------------------------------ */
 @media (max-width: 768px) {
-  .hrms-content [style*="display: grid"] > *,
-  .hrms-content [style*="display: flex"] > * {
+  :is(.hrms-content, .auth-shell) [style*="display: grid"] > *,
+  :is(.hrms-content, .auth-shell) [style*="display: flex"] > * {
     min-width: 0;
   }
 
-  .hrms-content div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]):not(:has(> .tab-btn)) {
+  :is(.hrms-content, .auth-shell) div[style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="nowrap"]):not(:has(> .tab-btn)) {
     flex-wrap: wrap;
   }
 
   .tab-list,
-  .hrms-content div:has(> .tab-btn) {
+  :is(.hrms-content, .auth-shell) div:has(> .tab-btn) {
     flex-wrap: nowrap !important;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1644,60 +1656,165 @@ html, body {
     scrollbar-width: none;
   }
   .tab-list::-webkit-scrollbar,
-  .hrms-content div:has(> .tab-btn)::-webkit-scrollbar { display: none; }
+  :is(.hrms-content, .auth-shell) div:has(> .tab-btn)::-webkit-scrollbar { display: none; }
   .tab-btn { flex: 0 0 auto; white-space: nowrap; }
 
   /* Fixed-width or wide-minimum grids become a single column */
-  .hrms-content [style*="grid-template-columns"][style*="minmax(3"],
-  .hrms-content [style*="grid-template-columns"][style*="minmax(4"],
-  .hrms-content [style*="grid-template-columns: 1fr 3"],
-  .hrms-content [style*="grid-template-columns: 1fr 4"],
-  .hrms-content [style*="grid-template-columns: 3"],
-  .hrms-content [style*="grid-template-columns: 4"],
-  .hrms-content [style*="grid-template-columns: 1fr 2fr"],
-  .hrms-content [style*="grid-template-columns: 2fr 1fr"],
-  .hrms-content [style*="grid-template-columns: 1.2fr 1fr"],
-  .hrms-content [style*="grid-template-columns: 90px"] {
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns"][style*="minmax(3"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns"][style*="minmax(4"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1fr 3"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1fr 4"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 3"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 4"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1fr 2fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 2fr 1fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1.2fr 1fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 90px"] {
     grid-template-columns: 1fr !important;
   }
 
   /* 3+ equal columns become two */
-  .hrms-content [style*="grid-template-columns: 1fr 1fr 1fr"],
-  .hrms-content [style*="grid-template-columns: 1.2fr 1fr 1fr"],
-  .hrms-content [style*="grid-template-columns: repeat(3,"],
-  .hrms-content [style*="grid-template-columns: repeat(4,"],
-  .hrms-content [style*="grid-template-columns: repeat(6,"] {
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1fr 1fr 1fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1.2fr 1fr 1fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: repeat(3,"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: repeat(4,"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: repeat(6,"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  .hrms-content img,
-  .hrms-content video,
-  .hrms-content canvas { max-width: 100%; height: auto; }
+  :is(.hrms-content, .auth-shell) img,
+  :is(.hrms-content, .auth-shell) video,
+  :is(.hrms-content, .auth-shell) canvas { max-width: 100%; height: auto; }
 
-  .hrms-content pre,
-  .hrms-content code { white-space: pre-wrap; word-break: break-word; }
+  :is(.hrms-content, .auth-shell) pre,
+  :is(.hrms-content, .auth-shell) code { white-space: pre-wrap; word-break: break-word; }
 
   /* Comfortable tap targets */
-  .hrms-content button,
-  .hrms-content .btn,
-  .hrms-content select { min-height: 38px; }
+  :is(.hrms-content, .auth-shell) button,
+  :is(.hrms-content, .auth-shell) .btn,
+  :is(.hrms-content, .auth-shell) select { min-height: 38px; }
 }
 
 @media (max-width: 480px) {
   /* Two- and three-column layouts stack; four-column stat rows stay 2 x 2 */
-  .hrms-content [style*="grid-template-columns: 1fr 1fr"]:not([style*="1fr 1fr 1fr 1fr"]),
-  .hrms-content [style*="grid-template-columns: repeat(2,"],
-  .hrms-content [style*="grid-template-columns: 1.2fr 1fr 1fr"],
-  .hrms-content [style*="grid-template-columns: repeat(3,"] {
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1fr 1fr"]:not([style*="1fr 1fr 1fr 1fr"]),
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: repeat(2,"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: 1.2fr 1fr 1fr"],
+  :is(.hrms-content, .auth-shell) [style*="grid-template-columns: repeat(3,"] {
     grid-template-columns: 1fr !important;
   }
 }
 @media (max-width: 768px) {
   /* Raw tables that are not inside a scroll wrapper scroll on their own instead of widening the page */
-  .hrms-content table:not(.pp-lines):not(.pp-table) {
+  :is(.hrms-content, .auth-shell) table:not(.pp-lines):not(.pp-table) {
     display: block;
     max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+}
+/* ------------------------------------------------------------------------------------------
+   Mobile polish (phones)
+   ------------------------------------------------------------------------------------------ */
+@media (max-width: 768px) {
+  /* Tables scroll sideways instead of squeezing every cell into a word-per-line column.
+     Header labels stay on one line; body cells keep a readable minimum width. */
+  .hrms-content table th {
+    white-space: nowrap;
+  }
+  .hrms-content table:not(.pp-lines):not(.pp-table) td {
+    min-width: 130px;
+  }
+  .hrms-content table:not(.pp-lines):not(.pp-table) td:first-child {
+    min-width: 150px;
+  }
+  /* Action buttons / chips inside a cell stay on one row (the table scrolls instead) */
+  .hrms-content td div[style*="display: flex"]:not([style*="flex-direction: column"]) {
+    flex-wrap: nowrap !important;
+  }
+  .hrms-content td .btn,
+  .hrms-content td button {
+    white-space: nowrap;
+  }
+  .hrms-content table:not(.pp-lines):not(.pp-table) th,
+  .hrms-content table:not(.pp-lines):not(.pp-table) td {
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+  }
+
+  /* Full-width / long-label buttons may wrap instead of being cut off */
+  :is(.hrms-content, .auth-shell) .btn,
+  :is(.hrms-content, .auth-shell) button[style*="width: 100%"] {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  /* Calendar month grid: compact cells, events shown as a count (tap a day for details) */
+  .calendar-month-grid,
+  .calendar-weekday-row {
+    gap: 3px !important;
+  }
+  .calendar-weekday-row > div {
+    font-size: 0.65rem !important;
+    letter-spacing: 0 !important;
+    padding: 0.35rem 0 !important;
+  }
+  .calendar-month-grid > .calendar-cell-card,
+  .calendar-month-grid > .calendar-empty-cell {
+    min-height: 54px !important;
+    padding: 4px 2px !important;
+    border-radius: var(--radius-md) !important;
+    align-items: center;
+    gap: 2px !important;
+  }
+  .calendar-month-grid > .calendar-cell-card > div:first-child {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .calendar-day-events,
+  .calendar-day-count-label {
+    display: none !important;
+  }
+  .calendar-day-count {
+    padding: 0 5px !important;
+    font-size: 0.6rem !important;
+  }
+
+  /* Modals use (almost) the full screen width */
+  .modal-overlay:not([style*="padding: 0"]) {
+    padding: 0.5rem !important;
+  }
+  .modal-content {
+    max-width: 100% !important;
+    max-height: calc(100dvh - 1rem) !important;
+  }
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+
+  /* iOS zooms into inputs below 16px */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Very narrow phones: keep every header control on screen */
+  .header-scope-selector {
+    padding: 0.2rem 0.4rem !important;
+    gap: 0.2rem !important;
+  }
+  .header-scope-selector > svg {
+    display: none;
+  }
+  .scope-select-dropdown {
+    max-width: 64px !important;
+  }
+  .header-right {
+    gap: 0.25rem !important;
+    min-width: 0;
   }
 }

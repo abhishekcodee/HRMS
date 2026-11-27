@@ -548,6 +548,14 @@
     gap: 6px;
   }
 
+  td .action-buttons {
+    flex-wrap: nowrap;
+  }
+
+  td .action-buttons button {
+    white-space: nowrap;
+  }
+
   .modal-container {
     width: 96%;
     padding: 0;
