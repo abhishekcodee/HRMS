@@ -125,15 +125,17 @@ export const ManualLetterModal: React.FC<ManualLetterModalProps> = ({
 
     setSubmitting(true);
     try {
-      // Create document entry for uploaded signed letter
+      // Upload the scanned letter itself, filed under this employee
+      const form = new FormData();
+      form.append('title', `Signed Appointment Letter (${uploadRefNumber})`);
+      form.append('category', 'Appointment Letter');
+      form.append('employeeId', employeeId);
+      form.append('file', uploadFile);
+      const { 'Content-Type': _json, ...authOnly } = getAuthHeaders() as Record<string, string>;
       const res = await fetch('/api/v1/documents', {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          title: `Signed Appointment Letter (${uploadRefNumber})`,
-          category: 'Appointment Letter',
-          fileSize: `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`,
-        }),
+        headers: authOnly, // the browser sets the multipart boundary itself
+        body: form,
       });
 
       const json = await res.json();
@@ -269,7 +271,7 @@ export const ManualLetterModal: React.FC<ManualLetterModalProps> = ({
               <input
                 type="file"
                 className="input"
-                accept=".pdf,image/*"
+                accept=".pdf,.png,.jpg,.jpeg"
                 onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                 required
               />
